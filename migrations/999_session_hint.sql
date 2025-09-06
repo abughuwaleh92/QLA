@@ -1,2 +1,1 @@
-
--- connect-pg-simple will auto-create "session" table if needed with createTableIfMissing option.
+-- connect-pg-simple will create 'session' table if missing.

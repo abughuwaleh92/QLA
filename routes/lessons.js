@@ -1,14 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
 const { Pool } = require('pg');
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.PGSSL==='disable'?false:{ rejectUnauthorized:false } });
-
 function slugify(s){ return String(s||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
 
-// Catalog from DB, with resolver base for static lessons
 router.get('/catalog', async (req,res) => {
   try {
     const grade = req.query.grade ? parseInt(req.query.grade) : null;
@@ -16,18 +12,15 @@ router.get('/catalog', async (req,res) => {
     const params = []; let where = 'WHERE is_public = true';
     if (grade && !all) { params.push(grade); where += ` AND grade = $${params.length}`; }
     const q = `SELECT id, slug, grade, unit, lesson_order as "order", title, description, video_url, html_path,
-                      CASE WHEN html_path IS NOT NULL THEN html_path
-                           ELSE '/api/lessons/'||id||'/render' END AS src
+                      CASE WHEN html_path IS NOT NULL THEN html_path ELSE '/api/lessons/'||id||'/render' END AS src
                FROM lessons ${where} ORDER BY grade, unit, lesson_order, id;`;
     const { rows } = await pool.query(q, params);
-    // Build units map
     const unitsMap = new Map();
     for (const r of rows) {
       const key = `${r.grade}-${r.unit}`;
       if (!unitsMap.has(key)) unitsMap.set(key, { grade:r.grade, num:r.unit, name:`Unit ${r.unit}`, lessons:[] });
       unitsMap.get(key).lessons.push({ id:r.id, title:r.title, grade:r.grade, unit:r.unit, order:r.order, src:r.src, html_path:r.html_path });
     }
-    // Provide resolverBase for static folders
     res.json({ units: Array.from(unitsMap.values()), resolverBase: grade?`/lessons/grade${grade}`:null });
   } catch(e){ console.error(e); res.status(500).json({ error:String(e) }); }
 });
@@ -35,11 +28,7 @@ router.get('/catalog', async (req,res) => {
 router.get('/resolve', async (req,res)=>{
   const grade = parseInt(req.query.grade), unit = parseInt(req.query.unit), order = parseInt(req.query.order);
   const base = `/lessons/grade${grade}`;
-  const candidates = [
-    `${base}/lesson-${unit}-${order}.html`,
-    `${base}/lesson-${order}.html`,
-    `${base}/welcome.html`
-  ];
+  const candidates = [`${base}/lesson-${unit}-${order}.html`, `${base}/lesson-${order}.html`, `${base}/welcome.html`];
   try {
     const { rows } = await pool.query(`SELECT html_path FROM lessons WHERE grade=$1 AND unit=$2 AND lesson_order=$3 LIMIT 1`, [grade,unit,order]);
     if (rows[0]?.html_path) return res.json({ src: rows[0].html_path });

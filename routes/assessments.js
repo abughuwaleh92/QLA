@@ -3,13 +3,11 @@ const router = express.Router();
 const { Pool } = require('pg');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.PGSSL==='disable'?false:{ rejectUnauthorized:false } });
 
-// Create/update assessment and bank
 router.post('/', express.json({limit:'1mb'}), async (req,res)=>{
   try {
-    const { lesson_id, title, pass_pct=70, bank } = req.body; // bank = { questions: [...] }
+    const { lesson_id, title, pass_pct=70, bank } = req.body;
     const ab = await pool.query(`INSERT INTO question_banks (title, created_by) VALUES ($1,$2) RETURNING id`, [title||'Bank', req.user?.email||null]);
     const bank_id = ab.rows[0].id;
-    // Insert questions
     for (const q of (bank?.questions||[])) {
       await pool.query(`INSERT INTO questions (bank_id, type, prompt, options, answer, points) VALUES ($1,$2,$3,$4,$5,$6)`,
         [bank_id, q.type, q.prompt, q.options||null, q.answer||null, q.points||1]);
@@ -20,7 +18,6 @@ router.post('/', express.json({limit:'1mb'}), async (req,res)=>{
   } catch(e){ console.error(e); res.status(500).json({ error:String(e) }); }
 });
 
-// List for lesson
 router.get('/for-lesson', async (req,res)=>{
   try {
     const lesson_id = parseInt(req.query.lesson_id);
@@ -29,7 +26,6 @@ router.get('/for-lesson', async (req,res)=>{
   } catch(e){ console.error(e); res.status(500).json({ error:String(e) }); }
 });
 
-// Fetch one assessment with questions
 router.get('/:id', async (req,res)=>{
   try {
     const id = parseInt(req.params.id);
@@ -40,11 +36,10 @@ router.get('/:id', async (req,res)=>{
   } catch(e){ console.error(e); res.status(500).json({ error:String(e) }); }
 });
 
-// Submit answers
 router.post('/:id/submit', express.json({limit:'1mb'}), async (req,res)=>{
   try {
     const id = parseInt(req.params.id);
-    const answers = req.body.answers || []; // [{question_id, value}]
+    const answers = req.body.answers || [];
     const a = await pool.query(`SELECT id, bank_id, pass_pct FROM assessments WHERE id=$1`, [id]);
     if (!a.rows.length) return res.status(404).json({ error:'not_found' });
     const qs = await pool.query(`SELECT id, type, prompt, options, answer, points FROM questions WHERE bank_id=$1 ORDER BY id`, [a.rows[0].bank_id]);

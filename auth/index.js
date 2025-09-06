@@ -1,4 +1,4 @@
-// auth/index.js — Google OAuth for qla.qfschools.qa
+// auth/index.js — Google OAuth (QLA domain), with admin/teacher/student roles
 const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -11,7 +11,8 @@ function mountAuth(app, pool){
     OAUTH_CALLBACK_URL,
     COOKIE_SECRET,
     ALLOWED_GOOGLE_DOMAIN = 'qla.qfschools.qa',
-    TEACHER_EMAILS = ''
+    TEACHER_EMAILS = '',
+    ADMIN_EMAILS = ''
   } = process.env;
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !OAUTH_CALLBACK_URL || !COOKIE_SECRET) {
@@ -19,7 +20,6 @@ function mountAuth(app, pool){
   }
 
   app.set('trust proxy', 1);
-
   const sess = {
     store: (PgStore && pool) ? new PgStore({ pool, tableName: 'session', createTableIfMissing: true }) : undefined,
     secret: COOKIE_SECRET || 'change_me',
@@ -40,10 +40,12 @@ function mountAuth(app, pool){
       const hd = profile._json && profile._json.hd || null;
       const allowed = (process.env.ALLOWED_GOOGLE_DOMAIN || 'qla.qfschools.qa').toLowerCase();
       const teacherEmails = new Set((process.env.TEACHER_EMAILS||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean));
+      const adminEmails = new Set((process.env.ADMIN_EMAILS||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean));
       if (!email.endsWith('@'+allowed) && (!hd || hd.toLowerCase()!==allowed)) {
         return done(null, false, { message: 'Unauthorized domain' });
       }
-      const user = { id: profile.id, email, name: profile.displayName || email, picture: (profile.photos && profile.photos[0] && profile.photos[0].value) || null, role: teacherEmails.has(email)?'teacher':'student' };
+      const role = adminEmails.has(email) ? 'admin' : (teacherEmails.has(email) ? 'teacher' : 'student');
+      const user = { id: profile.id, email, name: profile.displayName || email, picture: (profile.photos && profile.photos[0] && profile.photos[0].value) || null, role, is_admin: role==='admin' };
       return done(null, user);
     } catch(e){ return done(e); }
   }));
@@ -61,7 +63,7 @@ function mountAuth(app, pool){
       <h1 class="text-2xl font-extrabold mb-2">Sign in to QLA Mathematics</h1>
       <p class="text-slate-600 mb-6">Access is restricted to <strong>${ALLOWED_GOOGLE_DOMAIN}</strong> accounts.</p>
       <a href="/auth/google" class="inline-flex items-center justify-center gap-3 bg-[var(--maroon)] hover:bg-[var(--maroon2)] text-white font-semibold px-6 py-3 rounded-lg transition-colors">
-      <i class="fab fa-google"></i> Sign in with Google</a>
+      <i class="fab fa-google"></></i> Sign in with Google</a>
       <p class="text-xs text-slate-500 mt-6">By continuing you agree to our acceptable use policy.</p></div></body></html>`);
   });
 
@@ -70,7 +72,7 @@ function mountAuth(app, pool){
   );
   app.get('/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/login?error=unauthorized' }),
-    (req,res)=>{ const dest = req.session.returnTo || (req.user.role==='teacher'?'/portal/teacher':'/portal/student'); delete req.session.returnTo; res.redirect(dest); }
+    (req,res)=>{ const dest = req.session.returnTo || (req.user.role==='teacher' || req.user.role==='admin' ? '/portal/teacher' : '/portal/student'); delete req.session.returnTo; res.redirect(dest); }
   );
   app.post('/auth/logout', (req,res)=>{ req.logout(()=>{ req.session.destroy(()=>{ res.clearCookie('connect.sid'); res.json({ ok:true });});}); });
   app.get('/api/auth/me', (req,res)=> res.json({ user: req.user || null }));
@@ -84,8 +86,13 @@ function requireAuth(req,res,next){
 }
 function requireTeacher(req,res,next){
   if (!req.user) return res.status(401).json({ error:'auth_required' });
-  if (req.user.role === 'teacher') return next();
+  if (req.user.role === 'teacher' || req.user.role === 'admin') return next();
   return res.status(403).json({ error:'teacher_only' });
 }
+function requireAdmin(req,res,next){
+  if (!req.user) return res.status(401).json({ error:'auth_required' });
+  if (req.user.role === 'admin') return next();
+  return res.status(403).json({ error:'admin_only' });
+}
 
-module.exports = { mountAuth, requireAuth, requireTeacher };
+module.exports = { mountAuth, requireAuth, requireTeacher, requireAdmin };

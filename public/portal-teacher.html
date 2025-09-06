@@ -14,24 +14,20 @@
     :root{ --maroon:#6C1D45; --maroon2:#8B2450; --gold:#C7A34F; --gold2:#E4D4A8; --ink:#0F172A; --slate:#5b6572; --line:#e9eef2; --bg:#F7FAFC; --ok:#136f3a; --soon:#8a3d00; --purple:#7C3AED; --blue:#1D4ED8; }
     *{box-sizing:border-box} html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5}
     .hero{position:relative;color:#fff;background:linear-gradient(135deg,rgba(108,29,69,.9) 0%,rgba(139,36,80,.86) 45%,rgba(108,29,69,.9) 100%);overflow:hidden}
-    .hero::before{content:"";position:absolute;inset:-40% -40% auto auto;width:200%;height:200%;background:radial-gradient(circle,rgba(199,163,79,.22) 0%,transparent 70%);animation:float 22s ease-in-out infinite;pointer-events:none}
-    @keyframes float{0%,100%{transform:translate(0,0) rotate(0)} 33%{transform:translate(30px,-30px) rotate(120deg)} 66%{transform:translate(-20px,20px) rotate(240deg)}}
     .nav-tabs{ display:flex; gap:8px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:6px; flex-wrap:wrap }
     .nav-tab{ flex:1; min-width:120px; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.35); color:#fff; background:transparent; cursor:pointer; font-weight:600; text-align:center; transition:all .3s ease }
     .nav-tab.active{ background:linear-gradient(135deg,var(--gold),var(--gold2)); color:var(--maroon); transform:scale(1.02) }
-    .card{ background:#fff; border:1px solid var(--line); border-radius:18px; transition:all .3s ease }
-    .card:hover{ transform:translateY(-2px); box-shadow:0 20px 40px rgba(0,0,0,.1) }
+    .card{ background:#fff; border:1px solid var(--line); border-radius:18px; transition:all .3s ease } .card:hover{ transform:translateY(-2px); box-shadow:0 20px 40px rgba(0,0,0,.1) }
     .interactive-row{ border:1px solid var(--line); border-radius:12px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fff; transition:all .3s ease; cursor:pointer; position:relative; overflow:hidden }
     .interactive-row::before{ content:""; position:absolute; left:-100%; top:0; bottom:0; width:4px; background:linear-gradient(135deg,var(--gold),var(--maroon)); transition:left .3s ease }
-    .interactive-row:hover{ transform:translateX(4px); box-shadow:0 12px 28px rgba(0,0,0,.08) }
-    .interactive-row:hover::before{ left:0 } .interactive-row.completed::before{ left:0; background:var(--ok) }
+    .interactive-row:hover{ transform:translateX(4px); box-shadow:0 12px 28px rgba(0,0,0,.08) } .interactive-row:hover::before{ left:0 }
     iframe.lesson-frame{width:100%;height:60vh;border:1px solid var(--line);border-radius:14px}
     textarea.code{ min-height:220px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; border:1px solid var(--line); border-radius:12px; padding:12px }
   </style>
 </head>
 <body>
 <header class="hero">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between py-6">
       <div class="flex items-center gap-4">
         <div class="w-16 h-16 bg-[var(--maroon)] rounded-lg flex items-center justify-center text-white font-bold text-xl">QLA</div>
@@ -40,15 +36,14 @@
       <div class="hidden lg:flex items-center gap-4"><div class="bg-white/10 backdrop-blur rounded-full p-2"><i class="fas fa-user-tie text-2xl"></i></div>
         <div class="text-right"><div class="font-semibold">Teacher</div><div class="text-xs opacity-80" id="teacherEmail">—</div></div></div>
     </div>
-    <div class="pb-6 flex flex-col gap-4">
-      <div class="nav-tabs" role="tablist" aria-label="Main navigation">
-        <button class="nav-tab active" data-tab="lessons"><i class="fas fa-book mr-2"></i>Lessons</button>
-        <button class="nav-tab" data-tab="create"><i class="fas fa-plus mr-2"></i>Create Lesson</button>
-        <button class="nav-tab" data-tab="assign"><i class="fas fa-tasks mr-2"></i>Assignments</button>
-        <button class="nav-tab" data-tab="live"><i class="fas fa-chalkboard-teacher mr-2"></i>Classroom Mode</button>
-        <button class="nav-tab" data-tab="analytics"><i class="fas fa-chart-simple mr-2"></i>Analytics</button>
-        <a class="nav-tab" href="#" onclick="logout()"><i class="fas fa-sign-out-alt mr-2"></i>Sign out</a>
-      </div>
+    <div class="pb-6 nav" role="tablist">
+      <button class="nav-tab active" data-tab="lessons"><i class="fas fa-book mr-2"></i>Lessons</button>
+      <button class="nav-tab" data-tab="create"><i class="fas fa-plus mr-2"></i>Create Lesson</button>
+      <button class="nav-tab" data-tab="assign"><i class="fas fa-tasks mr-2"></i>Assignments</button>
+      <button class="nav-tab" data-tab="classes"><i class="fas fa-users mr-2"></i>Classes</button>
+      <button class="nav-tab" data-tab="live"><i class="fas fa-chalkboard-teacher mr-2"></i>Classroom Mode</button>
+      <button class="nav-tab" data-tab="analytics"><i class="fas fa-chart-simple mr-2"></i>Analytics</button>
+      <a class="nav-tab" href="#" onclick="logout()"><i class="fas fa-sign-out-alt mr-2"></i>Sign out</a>
     </div>
   </div>
 </header>
@@ -118,6 +113,22 @@
     </div>
   </section>
 
+  <section id="classes-tab" class="tab-content hidden">
+    <div class="card p-6 mb-6">
+      <h3 class="font-bold text-lg mb-3"><i class="fas fa-users mr-2 text-[var(--gold)]"></i>Create Class</h3>
+      <div class="grid md:grid-cols-4 gap-3">
+        <input id="ccode" placeholder="Code (e.g., MATH7A)" class="rounded border px-3 py-2"/>
+        <input id="cname" placeholder="Name (e.g., Grade 7 A)" class="rounded border px-3 py-2"/>
+        <input id="cgrade" type="number" min="1" max="12" value="7" class="rounded border px-3 py-2"/>
+        <button class="bg-[var(--maroon)] text-white px-4 py-2 rounded" onclick="createClass()">Create</button>
+      </div>
+    </div>
+    <div class="card p-6">
+      <h3 class="font-bold text-lg mb-3">My Classes</h3>
+      <div id="myClasses" class="space-y-3"></div>
+    </div>
+  </section>
+
   <section id="live-tab" class="tab-content hidden">
     <div class="card p-6">
       <h3 class="font-bold text-lg mb-4"><i class="fas fa-broadcast-tower mr-2 text-[var(--gold)]"></i>Presentation</h3>
@@ -135,10 +146,8 @@
   </section>
 
   <section id="analytics-tab" class="tab-content hidden">
-    <div class="card p-6">
-      <h3 class="font-bold text-lg mb-2"><i class="fas fa-chart-simple mr-2 text-[var(--gold)]"></i>Overview</h3>
-      <p class="text-slate-600">Assignment completion and assessment results will appear here.</p>
-    </div>
+    <div class="card p-6"><h3 class="font-bold text-lg mb-2"><i class="fas fa-chart-simple mr-2 text-[var(--gold)]"></i>Overview</h3>
+      <p class="text-slate-600">Assignment completion and assessment results will appear here.</p></div>
   </section>
 </main>
 
@@ -156,7 +165,7 @@ async function loadLessons(){
     card.innerHTML = `<div class="font-semibold mb-1">${L.title}</div>
       <div class="text-sm text-slate-600">Grade ${L.grade} • Unit ${L.unit} • Order ${L.order}</div>
       <div class="mt-2 flex items-center gap-2">
-        <button class="bg-[var(--blue)] text-white px-3 py-1 rounded" onclick="preview('${(L.src||'').replace(/'/g,'\\' )}','${(L.title||'').replace(/'/g,'\\' )}')">Preview</button>
+        <a class="bg-[var(--blue)] text-white px-3 py-1 rounded" target="_blank" href="${L.src}">Preview</a>
         <button class="bg-[var(--maroon)] text-white px-3 py-1 rounded" onclick="editLesson(${L.id})">Edit</button>
         <button class="bg-red-600 text-white px-3 py-1 rounded" onclick="delLesson(${L.id})">Delete</button>
       </div>`;
@@ -164,7 +173,7 @@ async function loadLessons(){
     const opt = document.createElement('option'); opt.value=L.id; opt.textContent = `${L.title} (G${L.grade} U${L.unit} L${L.order})`; sel.appendChild(opt);
   }));
 }
-function preview(src,title){ const w=window.open(src||'#','_blank'); if (!src) alert('Lesson has no static HTML; if created in the builder it will render from DB.'); }
+function preview(src,title){ const w=window.open(src||'#','_blank'); if (!src) alert('No HTML path; DB-rendered lesson will open when students view it.'); }
 async function saveLesson(){
   const payload = { title:document.getElementById('title').value, grade:parseInt(document.getElementById('grade').value), unit:parseInt(document.getElementById('unit').value), lesson_order:parseInt(document.getElementById('order').value), description:document.getElementById('description').value, video_url:document.getElementById('videoUrl').value||null, html_content:document.getElementById('htmlContent').value };
   await api('/api/lessons', { method:'POST', body: JSON.stringify(payload) }); alert('Saved'); await loadLessons();
@@ -175,11 +184,12 @@ async function delLesson(id){ if (!confirm('Delete this lesson?')) return; await
 async function uploadVideo(){ const f = document.getElementById('videoFile').files[0]; if (!f) return alert('Choose a file'); const fd=new FormData(); fd.append('video',f); const r=await fetch('/api/uploads/video',{ method:'POST', body:fd }); const j=await r.json(); document.getElementById('videoUploadResult').textContent='Uploaded: '+j.url; document.getElementById('videoUrl').value=j.url; }
 async function createAssignment(){ const payload={ lesson_id: document.getElementById('assignLesson').value, class_code: document.getElementById('classCode').value, pass_pct: parseInt(document.getElementById('passPct').value)||70, due_at: document.getElementById('dueDate').value||null }; const r=await api('/api/assignments',{ method:'POST', body: JSON.stringify(payload) }); document.getElementById('assignResult').textContent=`Assigned to ${r.class_code} (pass ${r.pass_pct}%)`; await loadAssignments(); }
 async function loadAssignments(){ const r=await api('/api/assignments'); const list=document.getElementById('assignmentsList'); list.innerHTML=''; r.forEach(a=>{ const div=document.createElement('div'); div.className='interactive-row'; div.innerHTML=`<div><div class="font-semibold">Lesson ${a.lesson_id} → ${a.class_code}</div><div class="text-sm text-slate-600">Due: ${a.due_at||'—'} • Pass: ${a.pass_pct}%</div></div><span class="status">Active</span>`; list.appendChild(div); }); }
-function startBroadcast(){ const code=document.getElementById('liveCode').value; socket.emit('class:start',{ code }); log('Started '+code); }
-function sendGoto(){ const code=document.getElementById('liveCode').value; const grade=parseInt(document.getElementById('liveGrade').value); const lessonId=document.getElementById('liveLessonId').value; socket.emit('class:event',{ code, action:'gotoLesson', grade, lessonId, title:'Live lesson', ts:Date.now() }); log('Goto '+lessonId); }
-function log(m){ document.getElementById('liveLog').innerHTML += `<div>• ${new Date().toLocaleTimeString()} — ${m}</div>`; }
+async function loadMyClasses(){ const r = await api('/api/classes'); const list=document.getElementById('myClasses'); list.innerHTML=''; r.forEach(c=>{ const div=document.createElement('div'); div.className='interactive-row'; div.innerHTML=`<div><div class="font-semibold">${c.name}</div><div class="text-xs text-slate-600">${c.code} • Grade ${c.grade||'-'} • ${c.students||0} student(s)</div></div><button class="status open">Add Student</button>`; div.querySelector('button').onclick = async ()=>{ const email = prompt('Student email to enroll:'); if (!email) return; await api('/api/classes/'+c.id+'/enroll',{ method:'POST', body: JSON.stringify({ student_email: email }) }); alert('Enrolled'); await loadMyClasses(); }; list.appendChild(div); }); }
+async function createClass(){ const payload={ code: document.getElementById('ccode').value, name: document.getElementById('cname').value, grade: parseInt(document.getElementById('cgrade').value)||null }; await api('/api/classes',{ method:'POST', body: JSON.stringify(payload) }); await loadMyClasses(); }
+function startBroadcast(){ const code=document.getElementById('liveCode').value; socket.emit('class:start',{ code }); document.getElementById('liveLog').innerHTML += `<div>• Started ${code}</div>`; }
+function sendGoto(){ const code=document.getElementById('liveCode').value; const grade=parseInt(document.getElementById('liveGrade').value); const lessonId=document.getElementById('liveLessonId').value; socket.emit('class:event',{ code, action:'gotoLesson', grade, lessonId, title:'Live lesson', ts:Date.now() }); document.getElementById('liveLog').innerHTML += `<div>• Goto ${lessonId}</div>`; }
 async function logout(){ await fetch('/auth/logout', { method:'POST' }); location.href='/login'; }
-async function init(){ await me(); await loadLessons(); await loadAssignments(); }
+async function init(){ await me(); await loadLessons(); await loadAssignments(); await loadMyClasses(); }
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body></html>

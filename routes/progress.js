@@ -29,4 +29,21 @@ router.get('/summary', async (req,res)=>{
   } catch(e){ console.error(e); res.status(500).json({ error:String(e) }); }
 });
 
+// Progress for a class (teacher/admin)
+router.get('/for-class', async (req,res)=>{
+  try {
+    const class_id = parseInt(req.query.class_id);
+    const { rows } = await pool.query(`
+      SELECT e.student_email AS email,
+             COUNT(p.*) FILTER (WHERE p.completed_at IS NOT NULL) AS completed_lessons
+      FROM enrollments e
+      LEFT JOIN progress p ON p.user_email = e.student_email
+      WHERE e.class_id=$1
+      GROUP BY e.student_email
+      ORDER BY email
+    `, [class_id]);
+    res.json(rows);
+  } catch(e){ console.error(e); res.status(500).json({ error:String(e) }); }
+});
+
 module.exports = router;

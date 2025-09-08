@@ -1,4 +1,4 @@
-// server.js — QLA Mathematics Platform v3.0 (Fully Enhanced)
+// server.js — QLA Mathematics Platform v3.0.1 (Railway-Ready)
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
@@ -34,6 +34,8 @@ const config = {
   SESSION_TIMEOUT: parseInt(process.env.SESSION_TIMEOUT) || 604800000,
   RATE_LIMIT_WINDOW: 15 * 60 * 1000, // 15 minutes
   RATE_LIMIT_MAX: 100, // requests per window
+  DB_RETRY_ATTEMPTS: 30, // Retry database connection 30 times
+  DB_RETRY_DELAY: 2000, // Wait 2 seconds between retries
 };
 
 // Initialize Express app
@@ -57,7 +59,7 @@ const pool = new Pool({
   ssl: config.PGSSL,
   max: 30,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 5000,
   statement_timeout: 30000,
   query_timeout: 30000,
   application_name: 'qla-math-platform'
@@ -103,9 +105,14 @@ app.use(cors({
 if (config.ENV === 'development') {
   app.use(morgan('dev'));
 } else {
-  // Production logging to file
+  // Create logs directory if it doesn't exist
+  const logsDir = path.join(__dirname, 'logs');
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+  
   const accessLogStream = fs.createWriteStream(
-    path.join(__dirname, 'access.log'), 
+    path.join(logsDir, 'access.log'), 
     { flags: 'a' }
   );
   app.use(morgan('combined', { stream: accessLogStream }));
@@ -339,7 +346,28 @@ app.use((req, res) => {
   });
 });
 
-// Database initialization functions
+// Database helper functions with Railway-specific retry logic
+async function waitForDatabase() {
+  console.log('🔌 Waiting for database connection...');
+  
+  for (let attempt = 1; attempt <= config.DB_RETRY_ATTEMPTS; attempt++) {
+    try {
+      const result = await pool.query('SELECT NOW() as time');
+      console.log(`✅ Database connected at ${result.rows[0].time}`);
+      return true;
+    } catch (error) {
+      console.log(`⏳ Database connection attempt ${attempt}/${config.DB_RETRY_ATTEMPTS}...`);
+      if (attempt === config.DB_RETRY_ATTEMPTS) {
+        console.error('❌ Failed to connect to database after all attempts');
+        console.error('   Error:', error.message);
+        return false;
+      }
+      await new Promise(resolve => setTimeout(resolve, config.DB_RETRY_DELAY));
+    }
+  }
+  return false;
+}
+
 async function createTables() {
   console.log('📊 Creating/updating database tables...');
   
@@ -397,46 +425,95 @@ async function createTables() {
     
     console.log('✅ Additional tables created successfully');
   } catch (error) {
-    console.error('❌ Error creating tables:', error);
-    throw error;
+    console.error('⚠️  Error creating tables:', error.message);
+    // Don't throw - continue with startup
   }
 }
 
 async function runMigrations() {
   console.log('🔄 Running database migrations...');
   const dir = path.join(__dirname, 'migrations');
+  
+  // Create migrations directory if it doesn't exist
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log('📁 Created migrations directory');
+    return;
+  }
+  
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
   
-  // Create migrations tracking table
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS migrations (
-      filename VARCHAR(255) PRIMARY KEY,
-      executed_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
+  if (files.length === 0) {
+    console.log('ℹ️  No migration files found');
+    return;
+  }
   
-  for (const file of files) {
-    // Check if migration was already run
-    const { rows } = await pool.query('SELECT 1 FROM migrations WHERE filename = $1', [file]);
-    if (rows.length > 0) {
-      console.log('⏭️  Migration already executed:', file);
-      continue;
+  try {
+    // Create migrations tracking table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS migrations (
+        filename VARCHAR(255) PRIMARY KEY,
+        executed_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    
+    for (const file of files) {
+      // Check if migration was already run
+      const { rows } = await pool.query('SELECT 1 FROM migrations WHERE filename = $1', [file]);
+      if (rows.length > 0) {
+        console.log(`⏭️  Migration already executed: ${file}`);
+        continue;
+      }
+      
+      const sql = fs.readFileSync(path.join(dir, file), 'utf8');
+      if (!sql.trim()) {
+        console.log(`⏭️  Skipped empty migration: ${file}`);
+        continue;
+      }
+      
+      try {
+        // Split by semicolons and execute each statement
+        const statements = sql
+          .split(';')
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
+        
+        await pool.query('BEGIN');
+        
+        for (const statement of statements) {
+          try {
+            await pool.query(statement);
+          } catch (stmtError) {
+            // Skip if object already exists
+            if (stmtError.message.includes('already exists')) {
+              console.log(`  ⚠️  Object already exists (continuing)`);
+            } else {
+              throw stmtError;
+            }
+          }
+        }
+        
+        // Record successful migration
+        await pool.query(
+          'INSERT INTO migrations (filename) VALUES ($1)',
+          [file]
+        );
+        
+        await pool.query('COMMIT');
+        console.log(`✅ Migration executed: ${file}`);
+        
+      } catch (error) {
+        await pool.query('ROLLBACK');
+        console.error(`⚠️  Migration failed: ${file}`);
+        console.error(`   Error: ${error.message}`);
+        // Continue with other migrations
+      }
     }
     
-    const sql = fs.readFileSync(path.join(dir, file), 'utf8');
-    if (!sql.trim()) continue;
-    
-    try {
-      await pool.query('BEGIN');
-      await pool.query(sql);
-      await pool.query('INSERT INTO migrations (filename) VALUES ($1)', [file]);
-      await pool.query('COMMIT');
-      console.log('✅ Migration executed:', file);
-    } catch (error) {
-      await pool.query('ROLLBACK');
-      console.error('❌ Migration failed:', file, error.message);
-      throw error;
-    }
+    console.log('✅ Migrations complete');
+  } catch (error) {
+    console.error('⚠️  Migration error:', error.message);
+    // Don't throw - continue with startup
   }
 }
 
@@ -444,67 +521,77 @@ async function syncLessons() {
   console.log('📚 Syncing lessons from filesystem...');
   const grades = [7, 8];
   
-  for (const grade of grades) {
-    const dir = path.join(__dirname, `grade${grade}`);
-    if (!fs.existsSync(dir)) continue;
-    
-    const files = fs.readdirSync(dir)
-      .filter(fn => fn.toLowerCase().endsWith('.html'))
-      .sort();
-    
-    for (let i = 0; i < files.length; i++) {
-      const filename = files[i];
-      const filepath = path.join(dir, filename);
-      const stats = fs.statSync(filepath);
-      
-      // Parse lesson info from filename
-      let unit = Math.floor(i / 5) + 1;
-      let order = (i % 5) + 1;
-      
-      const match = filename.match(/lesson-(\d+)-(\d+)\.html/i) || 
-                    filename.match(/lesson-(\d+)\.html/i);
-      if (match) {
-        if (match.length === 3) {
-          unit = parseInt(match[1]);
-          order = parseInt(match[2]);
-        } else {
-          order = parseInt(match[1]);
-        }
+  try {
+    for (const grade of grades) {
+      const dir = path.join(__dirname, `grade${grade}`);
+      if (!fs.existsSync(dir)) {
+        console.log(`⚠️  Grade ${grade} directory not found`);
+        continue;
       }
       
-      // Extract title from HTML
-      let title = filename.replace(/[-_]/g, ' ').replace(/\.html$/i, '');
-      try {
-        const content = fs.readFileSync(filepath, 'utf8');
-        const titleMatch = content.match(/<title>([^<]+)<\/title>/i);
-        if (titleMatch) {
-          title = titleMatch[1]
-            .replace(/QLA|Grade \d+|G\d+|[•·]/g, '')
-            .trim();
+      const files = fs.readdirSync(dir)
+        .filter(fn => fn.toLowerCase().endsWith('.html'))
+        .sort();
+      
+      console.log(`  Found ${files.length} lessons for Grade ${grade}`);
+      
+      for (let i = 0; i < files.length; i++) {
+        const filename = files[i];
+        const filepath = path.join(dir, filename);
+        const stats = fs.statSync(filepath);
+        
+        // Parse lesson info from filename
+        let unit = Math.floor(i / 5) + 1;
+        let order = (i % 5) + 1;
+        
+        const match = filename.match(/lesson-(\d+)-(\d+)\.html/i) || 
+                      filename.match(/lesson-(\d+)\.html/i);
+        if (match) {
+          if (match.length === 3) {
+            unit = parseInt(match[1]);
+            order = parseInt(match[2]);
+          } else {
+            order = parseInt(match[1]);
+          }
         }
-      } catch (e) {
-        console.warn('Could not extract title from:', filename);
+        
+        // Extract title from HTML
+        let title = filename.replace(/[-_]/g, ' ').replace(/\.html$/i, '');
+        try {
+          const content = fs.readFileSync(filepath, 'utf8');
+          const titleMatch = content.match(/<title>([^<]+)<\/title>/i);
+          if (titleMatch) {
+            title = titleMatch[1]
+              .replace(/QLA|Grade \d+|G\d+|[•·]/g, '')
+              .trim();
+          }
+        } catch (e) {
+          // Continue with filename-based title
+        }
+        
+        const slug = `${grade}-${unit}-${order}`;
+        const htmlPath = `/lessons/grade${grade}/${filename}`;
+        
+        await pool.query(
+          `INSERT INTO lessons 
+           (slug, grade, unit, lesson_order, title, html_path, is_public, created_at, updated_at) 
+           VALUES ($1, $2, $3, $4, $5, $6, true, $7, $7)
+           ON CONFLICT (slug) 
+           DO UPDATE SET 
+             title = EXCLUDED.title,
+             html_path = EXCLUDED.html_path,
+             updated_at = NOW()`,
+          [slug, grade, unit, order, title, htmlPath, new Date(stats.mtime)]
+        );
       }
-      
-      const slug = `${grade}-${unit}-${order}`;
-      const htmlPath = `/lessons/grade${grade}/${filename}`;
-      
-      await pool.query(
-        `INSERT INTO lessons 
-         (slug, grade, unit, lesson_order, title, html_path, is_public, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, true, $7, $7)
-         ON CONFLICT (slug) 
-         DO UPDATE SET 
-           title = EXCLUDED.title,
-           html_path = EXCLUDED.html_path,
-           updated_at = NOW()`,
-        [slug, grade, unit, order, title, htmlPath, new Date(stats.mtime)]
-      );
     }
+    
+    const { rows } = await pool.query('SELECT COUNT(*) as count FROM lessons');
+    console.log(`✅ Synced ${rows[0].count} lessons total`);
+  } catch (error) {
+    console.error('⚠️  Lesson sync error:', error.message);
+    // Don't throw - continue with startup
   }
-  
-  const { rows } = await pool.query('SELECT COUNT(*) as count FROM lessons');
-  console.log(`✅ Synced ${rows[0].count} lessons`);
 }
 
 async function seedData() {
@@ -525,8 +612,8 @@ async function seedData() {
       console.log('✅ Created default classes');
     }
     
-    // Create sample question banks for each lesson
-    const { rows: lessons } = await pool.query('SELECT id, title FROM lessons LIMIT 10');
+    // Create sample question banks for each lesson (limit to 5 for performance)
+    const { rows: lessons } = await pool.query('SELECT id, title FROM lessons LIMIT 5');
     for (const lesson of lessons) {
       const { rows: existing } = await pool.query(
         'SELECT 1 FROM assessments WHERE lesson_id = $1 LIMIT 1',
@@ -581,7 +668,8 @@ async function seedData() {
     
     console.log('✅ Seeding complete');
   } catch (error) {
-    console.error('Seeding error:', error);
+    console.error('⚠️  Seeding error:', error.message);
+    // Don't throw - continue with startup
   }
 }
 
@@ -613,14 +701,16 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 // Uncaught exception handler
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  // Log to database if possible
+  // Try to log to database
   pool.query(
     'INSERT INTO error_logs (error_message, error_stack) VALUES ($1, $2)',
     [error.message, error.stack]
   ).catch(console.error);
   
-  // Graceful shutdown after logging
-  gracefulShutdown('UNCAUGHT_EXCEPTION');
+  // Don't exit immediately in production
+  if (config.ENV !== 'production') {
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
+  }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -632,29 +722,37 @@ process.on('unhandledRejection', (reason, promise) => {
   ).catch(console.error);
 });
 
-// Main initialization
+// Main initialization function
 async function initialize() {
   console.log('\n╔════════════════════════════════════════════════════════════╗');
-  console.log('║     🚀 QLA Mathematics Platform v3.0                      ║');
-  console.log('║     Enhanced Interactive Learning System                   ║');
+  console.log('║     🚀 QLA Mathematics Platform v3.0.1                    ║');
+  console.log('║     Railway-Ready Enhanced Learning System                 ║');
   console.log('╚════════════════════════════════════════════════════════════╝\n');
   
   try {
-    // Test database connection
-    console.log('🔌 Connecting to database...');
-    const { rows } = await pool.query('SELECT NOW() as time');
-    console.log(`✅ Database connected at ${rows[0].time}\n`);
+    // Wait for database with Railway-specific retry logic
+    const dbConnected = await waitForDatabase();
     
-    // Run initialization tasks
-    await createTables();
-    await runMigrations();
-    await syncLessons();
-    await seedData();
+    if (!dbConnected) {
+      console.error('❌ Could not establish database connection');
+      console.log('⚠️  Starting server anyway - some features may be unavailable');
+    } else {
+      // Run initialization tasks only if database is connected
+      try {
+        await createTables();
+        await runMigrations();
+        await syncLessons();
+        await seedData();
+      } catch (initError) {
+        console.error('⚠️  Initialization error:', initError.message);
+        console.log('   Continuing with server startup...');
+      }
+    }
     
-    // Start server
+    // Start server regardless of database status
     server.listen(config.PORT, '0.0.0.0', () => {
       console.log('\n╔════════════════════════════════════════════════════════════╗');
-      console.log('║     ✨ Server is running successfully!                     ║');
+      console.log('║     ✨ Server is running!                                  ║');
       console.log('║                                                            ║');
       console.log(`║     🌍 Environment:  ${config.ENV.padEnd(37)}║`);
       console.log(`║     🔌 Port:         ${String(config.PORT).padEnd(37)}║`);
@@ -677,15 +775,20 @@ async function initialize() {
       
       // Log configuration warnings
       if (!process.env.GOOGLE_CLIENT_ID) {
-        console.warn('⚠️  Warning: Google OAuth not configured');
+        console.warn('⚠️  Warning: Google OAuth not configured - authentication may not work');
+      }
+      if (!process.env.DATABASE_URL) {
+        console.warn('⚠️  Warning: DATABASE_URL not set - database features disabled');
       }
       if (config.ENV === 'development') {
         console.log('📝 Development mode - verbose logging enabled');
       }
+      
+      console.log('🚀 Platform ready for use!\n');
     });
     
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('❌ Fatal error during startup:', error);
     process.exit(1);
   }
 }

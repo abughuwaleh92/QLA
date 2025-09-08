@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Introduction to Algebra - Interactive Lesson | QLA Mathematics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+  
+  <!-- KaTeX for Math Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  
+  <style>
+    :root {
+      --maroon: #6C1D45;
+      --gold: #C7A34F;
+      --success: #10b981;
+      --error: #ef4444;
+      --info: #3b82f6;
+    }
+    
+    .section-locked {
+      opacity: 0.5;
+      pointer-events: none;
+      position: relative;
+    }
+    
+    .section-locked::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(0,0,0,0.1) 10px,
+        rgba(0,0,0,0.1) 20px
+      );
+      border-radius: 12px;
+    }
+    
+    .progress-ring {
+      transform: rotate(-90deg);
+    }
+    
+    .progress-ring-circle {
+      transition: stroke-dashoffset 0.5s ease;
+    }
+    
+    .activity-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .activity-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    
+    .correct-answer {
+      animation: correctPulse 0.5s ease;
+      background: #f0fdf4 !important;
+      border-color: var(--success) !important;
+    }
+    
+    .incorrect-answer {
+      animation: shake 0.5s ease;
+      background: #fef2f2 !important;
+      border-color: var(--error) !important;
+    }
+    
+    @keyframes correctPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+    
+    .draggable {
+      cursor: move;
+      transition: all 0.3s ease;
+    }
+    
+    .draggable.dragging {
+      opacity: 0.5;
+      transform: scale(1.1);
+    }
+    
+    .drop-zone {
+      min-height: 60px;
+      border: 2px dashed #cbd5e1;
+      transition: all 0.3s ease;
+    }
+    
+    .drop-zone.drag-over {
+      background: #f0f9ff;
+      border-color: var(--info);
+      transform: scale(1.02);
+    }
+    
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: var(--gold);
+      animation: confetti-fall 3s ease-out forwards;
+      pointer-events: none;
+      z-index: 1000;
+    }
+    
+    @keyframes confetti-fall {
+      to {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+    
+    .video-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.5rem;
+      font-weight: bold;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .video-locked .video-overlay {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Header with Progress -->
+  <header class="bg-gradient-to-r from-[var(--maroon)] to-[var(--gold)] text-white p-4 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button onclick="showExitConfirm()" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition-colors">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <div>
+            <h1 class="text-xl font-bold">Introduction to Algebra</h1>
+            <p class="text-sm opacity-90">Grade 7 • Unit 3 • Lesson 1</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-6">
+          <!-- Points Display -->
+          <div class="text-center">
+            <div class="text-2xl font-bold">
+              <i class="fas fa-star text-yellow-300"></i>
+              <span id="totalPoints">0</span>
+            </div>
+            <div class="text-xs opacity-90">Points</div>
+          </div>
+          
+          <!-- Overall Progress -->
+          <div class="relative">
+            <svg width="60" height="60" class="progress-ring">
+              <circle cx="30" cy="30" r="25" stroke="white" stroke-width="3" fill="none" opacity="0.3"/>
+              <circle id="progressCircle" cx="30" cy="30" r="25" stroke="white" stroke-width="3" fill="none"
+                      stroke-dasharray="157" stroke-dashoffset="157" class="progress-ring-circle"/>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <span id="progressPercent" class="text-sm font-bold">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Section Progress Indicators -->
+      <div class="flex gap-2 mt-4" id="sectionIndicators">
+        <!-- Will be populated dynamically -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto p-6">
+    <!-- Section 1: Video Introduction -->
+    <section id="section-1" class="mb-8" data-type="video" data-points="100">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-[var(--maroon)]">
+            <i class="fas fa-play-circle mr-2"></i>
+            Video: What is Algebra?
+          </h2>
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+              100 points
+            </span>
+            <span id="section-1-status" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+              <i class="fas fa-lock"></i> Not Started
+            </span>
+          </div>
+        </div>
+        
+        <div class="relative aspect-video bg-black rounded-lg overflow-hidden video-locked" id="videoContainer">
+          <video id="lessonVideo" class="w-full h-full" controls controlsList="nodownload">
+            <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <div class="video-overlay">
+            <div class="text-center">
+              <i class="fas fa-lock text-4xl mb-2"></i>
+              <p>Complete previous sections to unlock</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-4 bg-blue-50 p-4 rounded-lg">
+          <p class="text-sm text-blue-800">
+            <i class="fas fa-info-circle mr-2"></i>
+            Watch the complete video to earn 100 points and unlock the next section.
+          </p>
+          <div class="mt-3">
+            <div class="flex justify-between text-sm mb-1">
+              <span>Progress</span>
+              <span id="videoTime">0:00 / 0:00</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div id="videoProgress" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Key Concepts -->
+    <section id="section-2" class="mb-8 section-locked" data-type="content" data-points="50">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-[var(--maroon)]">
+            <i class="fas fa-book-open mr-2"></i>
+            Understanding Variables and Expressions
+          </h2>
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+              50 points
+            </span>
+            <span id="section-2-status" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+              <i class="fas fa-lock"></i> Locked
+            </span>
+          </div>
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl">
+            <h3 class="text-xl font-bold mb-3 text-purple-900">What is a Variable?</h3>
+            <p class="mb-4">A variable is a letter that represents an unknown number. Think of it as a mystery box!</p>
+            <div class="bg-white p-4 rounded-lg">
+              <p class="font-mono text-lg text-center">
+                If <span class="text-purple-600 font-bold">x = 5</span>
+              </p>
+              <p class="font-mono text-lg text-center mt-2">
+                Then <span class="text-purple-600 font-bold">2x = 10</span>
+              </p>
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-br from-blue-50 to-green-50 p-6 rounded-xl">
+            <h3 class="text-xl font-bold mb-3 text-blue-900">Algebraic Expressions</h3>
+            <p class="mb-4">An expression combines numbers, variables, and operations.</p>
+            <div class="bg-white p-4 rounded-lg">
+              <p class="text-center mb-2 font-semibold">Examples:</p>
+              <ul class="space-y-2">
+                <li class="font-mono">• 3x + 5</li>
+                <li class="font-mono">• 2y - 7</li>
+                <li class="font-mono">• 4(x + 2)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <button onclick="completeReading()" class="mt-6 bg-[var(--maroon)] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+          <i class="fas fa-check mr-2"></i>I understand these concepts
+        </button>
+      </div>
+    </section>
+
+    <!-- Section 3: Interactive Activity - Drag and Drop -->
+    <section id="section-3" class="mb-8 section-locked" data-type="activity" data-points="150">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-[var(--maroon)]">
+            <i class="fas fa-puzzle-piece mr-2"></i>
+            Activity: Build Algebraic Expressions
+          </h2>
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+              150 points
+            </span>
+            <span id="section-3-status" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+              <i class="fas fa-lock"></i> Locked
+            </span>
+          </div>
+        </div>
+        
+        <div class="bg-yellow-50 p-4 rounded-lg mb-6">
+          <p class="text-yellow-800">
+            <i class="fas fa-lightbulb mr-2"></i>
+            <strong>Instructions:</strong> Drag the terms to create the correct algebraic expression.
+          </p>
+        </div>
+        
+        <!-- Activity 1 -->
+        <div class="mb-6 p-4 border-2 border-gray-200 rounded-lg activity-card">
+          <h4 class="font-semibold mb-3">Create: "Three times x plus five"</h4>
+          <div class="flex flex-wrap gap-3 mb-4">
+            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="3x">3x</div>
+            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="+">+</div>
+            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="5">5</div>
+            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="2x">2x</div>
+            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="-">-</div>
+            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="3">3</div>
+          </div>
+          <div class="drop-zone p-4 rounded-lg bg-gray-50" data-answer="3x+5">
+            <p class="text-gray-400 text-center">Drop terms here</p>
+          </div>
+          <button onclick="checkDragDrop(this, '3x+5', 50)" class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg">
+            Check Answer
+          </button>
+        </div>
+        
+        <!-- Activity 2 -->
+        <div class="mb-6 p-4 border-2 border-gray-200 rounded-lg activity-card">
+          <h4 class="font-semibold mb-3">Create: "Two times the sum of x and four"</h4>
+          <div class="flex flex-wrap gap-3 mb-4">
+            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="2">2</div>
+            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="(">(</div>
+            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="x">x</div>
+            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="+">+</div>
+            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="4">4</div>
+            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value=")">)</div>
+            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="×">×</div>
+          </div>
+          <div class="drop-zone p-4 rounded-lg bg-gray-50" data-answer="2(x+4)">
+            <p class="text-gray-400 text-center">Drop terms here</p>
+          </div>
+          <button onclick="checkDragDrop(this, '2(x+4)', 50)" class="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg">
+            Check Answer
+          </button>
+        </div>
+        
+        <!-- Activity 3 -->
+        <div class="mb-6 p-4 border-2 border-gray-200 rounded-lg activity-card">
+          <h4 class="font-semibold mb-3">Solve: If x = 3, what is 2x + 1?</h4>
+          <input type="number" id="solveInput" class="border-2 border-gray-300 rounded-lg px-4 py-2 w-32" placeholder="Answer">
+          <button onclick="checkSolve(7, 50)" class="ml-3 bg-purple-600 text-white px-4 py-2 rounded-lg">
+            Check Answer
+          </button>
+          <div id="solveHint" class="mt-2 text-sm text-gray-600 hidden">
+            <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
+            Hint: Replace x with 3, so 2(3) + 1 = ?
+          </div>
+        </div>
+        
+        <div id="activityFeedback" class="mt-4"></div>
+      </div>
+    </section>
+
+    <!-- Section 4: Quiz -->
+    <section id="section-4" class="mb-8 section-locked" data-type="quiz" data-points="200">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-[var(--maroon)]">
+            <i class="fas fa-clipboard-check mr-2"></i>
+            Quiz: Test Your Knowledge
+          </h2>
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+              200 points
+            </span>
+            <span id="section-4-status" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+              <i class="fas fa-lock"></i> Locked
+            </span>
+          </div>
+        </div>
+        
+        <div class="bg-amber-50 p-4 rounded-lg mb-6">
+          <p class="text-amber-800">
+            <i class="fas fa-trophy mr-2"></i>
+            Score at least 70% to complete this section. You can retry if needed!
+          </p>
+        </div>
+        
+        <!-- Question 1 -->
+        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h4 class="font-semibold mb-3">Question 1: Which of the following is an algebraic expression?</h4>
+          <div class="space-y-2">
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q1" value="a" class="w-4 h-4">
+              <span>5 + 3 = 8</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q1" value="b" class="w-4 h-4">
+              <span>2x + 7</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q1" value="c" class="w-4 h-4">
+              <span>10 > 5</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q1" value="d" class="w-4 h-4">
+              <span>Hello World</span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Question 2 -->
+        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h4 class="font-semibold mb-3">Question 2: If y = 4, what is the value of 3y - 2?</h4>
+          <div class="space-y-2">
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q2" value="a" class="w-4 h-4">
+              <span>14</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q2" value="b" class="w-4 h-4">
+              <span>10</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q2" value="c" class="w-4 h-4">
+              <span>12</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q2" value="d" class="w-4 h-4">
+              <span>8</span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Question 3 -->
+        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h4 class="font-semibold mb-3">Question 3: Which expression represents "five less than twice a number"?</h4>
+          <div class="space-y-2">
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q3" value="a" class="w-4 h-4">
+              <span>5 - 2n</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q3" value="b" class="w-4 h-4">
+              <span>2n - 5</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q3" value="c" class="w-4 h-4">
+              <span>5n - 2</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q3" value="d" class="w-4 h-4">
+              <span>2 - 5n</span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Question 4 -->
+        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h4 class="font-semibold mb-3">Question 4: True or False: Variables can only be letters like x, y, or z.</h4>
+          <div class="space-y-2">
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q4" value="true" class="w-4 h-4">
+              <span>True</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
+              <input type="radio" name="q4" value="false" class="w-4 h-4">
+              <span>False</span>
+            </label>
+          </div>
+        </div>
+        
+        <button onclick="submitQuiz()" class="bg-[var(--maroon)] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+          <i class="fas fa-paper-plane mr-2"></i>Submit Quiz
+        </button>
+        
+        <div id="quizResults" class="mt-6 hidden"></div>
+      </div>
+    </section>
+
+    <!-- Section 5: Summary and Certificate -->
+    <section id="section-5" class="mb-8 section-locked" data-type="summary" data-points="0">
+      <div class="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl shadow-lg p-8">
+        <div class="text-center">
+          <div class="text-6xl mb-4">🎉</div>
+          <h2 class="text-3xl font-bold text-[var(--maroon)] mb-4">Congratulations!</h2>
+          <p class="text-xl mb-6">You've completed "Introduction to Algebra"</p>
+          
+          <div class="grid md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-white rounded-lg p-4">
+              <div class="text-3xl font-bold text-[var(--gold)]" id="finalScore">0</div>
+              <div class="text-sm text-gray-600">Total Points</div>
+            </div>
+            <div class="bg-white rounded-lg p-4">
+              <div class="text-3xl font-bold text-[var(--success)]" id="finalGrade">A</div>
+              <div class="text-sm text-gray-600">Grade</div>
+            </div>
+            <div class="bg-white rounded-lg p-4">
+              <div class="text-3xl font-bold text-[var(--info)]" id="finalTime">0m</div>
+              <div class="text-sm text-gray-600">Time Spent</div>
+            </div>
+          </div>
+          
+          <div class="bg-white rounded-lg p-6 mb-6">
+            <h3 class="text-xl font-bold mb-4">What You Learned:</h3>
+            <ul class="text-left max-w-md mx-auto space-y-2">
+              <li><i class="fas fa-check text-green-500 mr-2"></i>What variables are and how they work</li>
+              <li><i class="fas fa-check text-green-500 mr-2"></i>How to create algebraic expressions</li>
+              <li><i class="fas fa-check text-green-500 mr-2"></i>How to evaluate expressions with given values</li>
+              <li><i class="fas fa-check text-green-500 mr-2"></i>How to translate words into algebra</li>
+            </ul>
+          </div>
+          
+          <div class="flex gap-4 justify-center">
+            <button onclick="retryLesson()" class="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700">
+              <i class="fas fa-redo mr-2"></i>Try Again
+            </button>
+            <button onclick="nextLesson()" class="bg-[var(--maroon)] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90">
+              <i class="fas fa-arrow-right mr-2"></i>Next Lesson
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Exit Confirmation Modal -->
+  <div id="exitModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 max-w-md">
+      <h3 class="text-xl font-bold mb-4">Leave Lesson?</h3>
+      <p class="mb-6">Your progress will be saved, but you'll need to restart this section.</p>
+      <div class="flex gap-4">
+        <button onclick="closeExitModal()" class="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">
+          Stay
+        </button>
+        <button onclick="confirmExit()" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg">
+          Leave
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Lesson State Management
+    const lessonState = {
+      currentSection: 1,
+      totalSections: 5,
+      sections: {
+        1: { completed: false, points: 0, maxPoints: 100, locked: false },
+        2: { completed: false, points: 0, maxPoints: 50, locked: true },
+        3: { completed: false, points: 0, maxPoints: 150, locked: true },
+        4: { completed: false, points: 0, maxPoints: 200, locked: true },
+        5: { completed: false, points: 0, maxPoints: 0, locked: true }
+      },
+      totalPoints: 0,
+      startTime: Date.now(),
+      videoWatched: 0,
+      activities: {},
+      quizAttempts: 0
+    };
+
+    // Initialize lesson on load
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeLesson();
+      setupVideoTracking();
+      setupDragAndDrop();
+      renderSectionIndicators();
+      updateProgress();
+      
+      // Initialize KaTeX
+      if (window.renderMathInElement) {
+        renderMathInElement(document.body);
+      }
+    });
+
+    function initializeLesson() {
+      // Send initialization event to parent
+      sendProgressUpdate('lesson-started', { lessonId: 'algebra-intro' });
+      
+      // Unlock first section
+      unlockSection(1);
+    }
+
+    function renderSectionIndicators() {
+      const container = document.getElementById('sectionIndicators');
+      container.innerHTML = '';
+      
+      for (let i = 1; i <= lessonState.totalSections; i++) {
+        const section = lessonState.sections[i];
+        const indicator = document.createElement('div');
+        indicator.className = `flex-1 h-2 rounded-full transition-all duration-300 ${
+          section.completed ? 'bg-white' : 
+          section.locked ? 'bg-white/30' : 'bg-white/60'
+        }`;
+        container.appendChild(indicator);
+      }
+    }
+
+    function updateProgress() {
+      const maxPoints = Object.values(lessonState.sections).reduce((sum, s) => sum + s.maxPoints, 0);
+      const earnedPoints = Object.values(lessonState.sections).reduce((sum, s) => sum + s.points, 0);
+      const percentage = maxPoints > 0 ? Math.round((earnedPoints / maxPoints) * 100) : 0;
+      
+      lessonState.totalPoints = earnedPoints;
+      
+      // Update UI
+      document.getElementById('totalPoints').textContent = earnedPoints;
+      document.getElementById('progressPercent').textContent = percentage + '%';
+      
+      // Update progress circle
+      const circle = document.getElementById('progressCircle');
+      const circumference = 2 * Math.PI * 25;
+      const offset = circumference - (percentage / 100) * circumference;
+      circle.style.strokeDashoffset = offset;
+      
+      // Update section indicators
+      renderSectionIndicators();
+      
+      // Send progress to parent
+      sendProgressUpdate('progress-update', {
+        percentage,
+        points: earnedPoints,
+        sections: lessonState.sections
+      });
+    }
+
+    function unlockSection(sectionId) {
+      const section = document.getElementById(`section-${sectionId}`);
+      if (section) {
+        section.classList.remove('section-locked');
+        lessonState.sections[sectionId].locked = false;
+        
+        const statusEl = document.getElementById(`section-${sectionId}-status`);
+        if (statusEl) {
+          statusEl.innerHTML = '<i class="fas fa-unlock text-yellow-500"></i> Available';
+          statusEl.className = 'px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm';
+        }
+        
+        // Special handling for video section
+        if (sectionId === 1) {
+          document.getElementById('videoContainer').classList.remove('video-locked');
+        }
+      }
+    }
+
+    function completeSection(sectionId, points = 0) {
+      lessonState.sections[sectionId].completed = true;
+      lessonState.sections[sectionId].points = points;
+      
+      const statusEl = document.getElementById(`section-${sectionId}-status`);
+      if (statusEl) {
+        statusEl.innerHTML = '<i class="fas fa-check-circle text-green-500"></i> Completed';
+        statusEl.className = 'px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm';
+      }
+      
+      // Unlock next section
+      if (sectionId < lessonState.totalSections) {
+        unlockSection(sectionId + 1);
+        
+        // Auto-scroll to next section
+        setTimeout(() => {
+          document.getElementById(`section-${sectionId + 1}`).scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }, 1000);
+      }
+      
+      // Check if lesson is complete
+      if (sectionId === 4) { // After quiz
+        completeLessonSummary();
+      }
+      
+      updateProgress();
+      createConfetti();
+    }
+
+    // Video Tracking
+    function setupVideoTracking() {
+      const video = document.getElementById('lessonVideo');
+      let watchedSegments = new Set();
+      const segmentDuration = 2; // Track 2-second segments
+      
+      video.addEventListener('timeupdate', () => {
+        const currentSegment = Math.floor(video.currentTime / segmentDuration);
+        watchedSegments.add(currentSegment);
+        
+        const totalSegments = Math.ceil(video.duration / segmentDuration);
+        const watchedPercent = (watchedSegments.size / totalSegments) * 100;
+        
+        document.getElementById('videoProgress').style.width = watchedPercent + '%';
+        document.getElementById('videoTime').textContent = 
+          `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+        
+        lessonState.videoWatched = watchedPercent;
+        
+        // Complete video section when 90% watched
+        if (watchedPercent >= 90 && !lessonState.sections[1].completed) {
+          completeSection(1, 100);
+          showNotification('Video completed! +100 points', 'success');
+        }
+      });
+      
+      // Prevent skipping ahead
+      let lastTime = 0;
+      video.addEventListener('timeupdate', () => {
+        if (video.currentTime > lastTime + 1.5) {
+          video.currentTime = lastTime;
+          showNotification('Please watch the video without skipping', 'warning');
+        }
+        lastTime = video.currentTime;
+      });
+    }
+
+    // Reading Section
+    function completeReading() {
+      if (!lessonState.sections[2].completed) {
+        completeSection(2, 50);
+        showNotification('Concepts understood! +50 points', 'success');
+      }
+    }
+
+    // Drag and Drop Activity
+    function setupDragAndDrop() {
+      const draggables = document.querySelectorAll('.draggable');
+      const dropZones = document.querySelectorAll('.drop-zone');
+      
+      draggables.forEach(draggable => {
+        draggable.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text', e.target.dataset.value);
+          e.target.classList.add('dragging');
+        });
+        
+        draggable.addEventListener('dragend', (e) => {
+          e.target.classList.remove('dragging');
+        });
+      });
+      
+      dropZones.forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          zone.classList.add('drag-over');
+        });
+        
+        zone.addEventListener('dragleave', () => {
+          zone.classList.remove('drag-over');
+        });
+        
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const value = e.dataTransfer.getData('text');
+          
+          // Create element in drop zone
+          const element = document.createElement('span');
+          element.className = 'inline-block bg-blue-100 px-3 py-1 rounded-lg font-mono mx-1';
+          element.textContent = value;
+          element.onclick = () => element.remove();
+          
+          if (zone.querySelector('.text-gray-400')) {
+            zone.innerHTML = '';
+          }
+          zone.appendChild(element);
+          zone.classList.remove('drag-over');
+        });
+      });
+    }
+
+    function checkDragDrop(button, correctAnswer, points) {
+      const dropZone = button.previousElementSibling;
+      const elements = dropZone.querySelectorAll('span');
+      const userAnswer = Array.from(elements).map(el => el.textContent).join('');
+      
+      const activityCard = button.closest('.activity-card');
+      
+      if (userAnswer === correctAnswer) {
+        activityCard.classList.add('correct-answer');
+        button.disabled = true;
+        button.textContent = '✓ Correct!';
+        button.className = 'mt-3 bg-green-600 text-white px-4 py-2 rounded-lg';
+        
+        // Track activity completion
+        const activityId = correctAnswer;
+        if (!lessonState.activities[activityId]) {
+          lessonState.activities[activityId] = true;
+          lessonState.sections[3].points += points;
+          showNotification(`Correct! +${points} points`, 'success');
+        }
+      } else {
+        activityCard.classList.add('incorrect-answer');
+        setTimeout(() => activityCard.classList.remove('incorrect-answer'), 500);
+        showNotification('Not quite right. Try again!', 'error');
+      }
+      
+      // Check if all activities completed
+      checkActivitiesComplete();
+    }
+
+    function checkSolve(correctAnswer, points) {
+      const input = document.getElementById('solveInput');
+      const userAnswer = parseInt(input.value);
+      
+      if (userAnswer === correctAnswer) {
+        input.classList.add('correct-answer');
+        input.disabled = true;
+        
+        if (!lessonState.activities['solve']) {
+          lessonState.activities['solve'] = true;
+          lessonState.sections[3].points += points;
+          showNotification(`Correct! +${points} points`, 'success');
+        }
+      } else {
+        input.classList.add('incorrect-answer');
+        setTimeout(() => input.classList.remove('incorrect-answer'), 500);
+        document.getElementById('solveHint').classList.remove('hidden');
+        showNotification('Try again! Check the hint.', 'error');
+      }
+      
+      checkActivitiesComplete();
+    }
+
+    function checkActivitiesComplete() {
+      const totalActivities = 3;
+      const completedActivities = Object.keys(lessonState.activities).length;
+      
+      if (completedActivities === totalActivities && !lessonState.sections[3].completed) {
+        completeSection(3, lessonState.sections[3].points);
+        document.getElementById('activityFeedback').innerHTML = `
+          <div class="bg-green-100 text-green-800 p-4 rounded-lg">
+            <i class="fas fa-trophy mr-2"></i>
+            All activities completed! Great job!
+          </div>
+        `;
+      }
+    }
+
+    // Quiz Section
+    function submitQuiz() {
+      const answers = {
+        q1: document.querySelector('input[name="q1"]:checked')?.value,
+        q2: document.querySelector('input[name="q2"]:checked')?.value,
+        q3: document.querySelector('input[name="q3"]:checked')?.value,
+        q4: document.querySelector('input[name="q4"]:checked')?.value
+      };
+      
+      const correctAnswers = {
+        q1: 'b', // 2x + 7 is an algebraic expression
+        q2: 'b', // 3(4) - 2 = 10
+        q3: 'b', // 2n - 5
+        q4: 'false' // Variables can be any letter or symbol
+      };
+      
+      let correct = 0;
+      const totalQuestions = 4;
+      const pointsPerQuestion = 50;
+      
+      // Check answers and show feedback
+      Object.keys(answers).forEach(q => {
+        if (answers[q] === correctAnswers[q]) {
+          correct++;
+          document.querySelector(`input[name="${q}"][value="${answers[q]}"]`)
+            .closest('label').classList.add('correct-answer');
+        } else {
+          if (answers[q]) {
+            document.querySelector(`input[name="${q}"][value="${answers[q]}"]`)
+              .closest('label').classList.add('incorrect-answer');
+          }
+          document.querySelector(`input[name="${q}"][value="${correctAnswers[q]}"]`)
+            .closest('label').classList.add('correct-answer');
+        }
+      });
+      
+      const score = (correct / totalQuestions) * 100;
+      const points = correct * pointsPerQuestion;
+      
+      lessonState.quizAttempts++;
+      
+      const resultsDiv = document.getElementById('quizResults');
+      resultsDiv.classList.remove('hidden');
+      
+      if (score >= 70) {
+        resultsDiv.innerHTML = `
+          <div class="bg-green-100 text-green-800 p-4 rounded-lg">
+            <i class="fas fa-check-circle mr-2"></i>
+            <strong>Excellent!</strong> You scored ${score}% (${correct}/${totalQuestions} correct)
+            <br>You earned ${points} points!
+          </div>
+        `;
+        
+        if (!lessonState.sections[4].completed) {
+          lessonState.sections[4].points = points;
+          completeSection(4, points);
+        }
+      } else {
+        resultsDiv.innerHTML = `
+          <div class="bg-amber-100 text-amber-800 p-4 rounded-lg">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            You scored ${score}%. You need 70% to pass.
+            <br>Review the correct answers and try again!
+            <button onclick="resetQuiz()" class="ml-4 bg-amber-600 text-white px-3 py-1 rounded">
+              Try Again
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    function resetQuiz() {
+      // Clear all selections and feedback
+      document.querySelectorAll('input[type="radio"]').forEach(input => {
+        input.checked = false;
+        input.closest('label').classList.remove('correct-answer', 'incorrect-answer');
+      });
+      document.getElementById('quizResults').classList.add('hidden');
+    }
+
+    // Lesson Completion
+    function completeLessonSummary() {
+      unlockSection(5);
+      
+      const timeSpent = Math.round((Date.now() - lessonState.startTime) / 60000);
+      const totalPoints = lessonState.totalPoints;
+      const maxPoints = 500;
+      const percentage = Math.round((totalPoints / maxPoints) * 100);
+      
+      let grade = 'F';
+      if (percentage >= 90) grade = 'A+';
+      else if (percentage >= 85) grade = 'A';
+      else if (percentage >= 80) grade = 'B+';
+      else if (percentage >= 75) grade = 'B';
+      else if (percentage >= 70) grade = 'C';
+      
+      document.getElementById('finalScore').textContent = totalPoints;
+      document.getElementById('finalGrade').textContent = grade;
+      document.getElementById('finalTime').textContent = timeSpent + 'm';
+      
+      // Scroll to summary
+      setTimeout(() => {
+        document.getElementById('section-5').scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 1000);
+      
+      // Send completion event
+      sendProgressUpdate('lesson-complete', {
+        lessonId: 'algebra-intro',
+        score: totalPoints,
+        grade: grade,
+        timeSpent: timeSpent,
+        attempts: lessonState.quizAttempts
+      });
+      
+      // Big celebration!
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => createConfetti(), i * 200);
+      }
+    }
+
+    // Utility Functions
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function showNotification(message, type = 'info') {
+      const colors = {
+        success: 'bg-green-100 text-green-800 border-green-300',
+        error: 'bg-red-100 text-red-800 border-red-300',
+        warning: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+        info: 'bg-blue-100 text-blue-800 border-blue-300'
+      };
+      
+      const notification = document.createElement('div');
+      notification.className = `fixed top-20 right-4 p-4 rounded-lg border-2 ${colors[type]} z-50 animate-fade-in shadow-lg`;
+      notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} mr-2"></i>
+        ${message}
+      `;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    function createConfetti() {
+      const colors = ['#6C1D45', '#C7A34F', '#10b981', '#3b82f6', '#ef4444'];
+      
+      for (let i = 0; i < 20; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.animationDelay = Math.random() * 0.5 + 's';
+        confetti.style.animationDuration = (Math.random() * 1 + 2) + 's';
+        document.body.appendChild(confetti);
+        
+        setTimeout(() => confetti.remove(), 3000);
+      }
+    }
+
+    function sendProgressUpdate(type, data) {
+      // Send message to parent window
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: type,
+          timestamp: Date.now(),
+          ...data
+        }, '*');
+      }
+      
+      // Also send to server via API
+      fetch('/api/interactive/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lessonId: 'algebra-intro',
+          eventType: type,
+          data: data
+        })
+      }).catch(console.error);
+    }
+
+    // Navigation Functions
+    function showExitConfirm() {
+      document.getElementById('exitModal').classList.remove('hidden');
+    }
+
+    function closeExitModal() {
+      document.getElementById('exitModal').classList.add('hidden');
+    }
+
+    function confirmExit() {
+      sendProgressUpdate('lesson-exit', {
+        lessonId: 'algebra-intro',
+        progress: lessonState
+      });
+      window.location.href = '/portal/student';
+    }
+
+    function retryLesson() {
+      location.reload();
+    }
+
+    function nextLesson() {
+      sendProgressUpdate('next-lesson-requested', {
+        currentLesson: 'algebra-intro'
+      });
+      window.location.href = '/portal/student#next-lesson';
+    }
+  </script>
+</body>
+</html>

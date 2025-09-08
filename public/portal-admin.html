@@ -1,40 +1,314 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>QLA Mathematics — Admin Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-  <style>:root{ --maroon:#6C1D45; --maroon2:#8B2450; --gold:#C7A34F; --gold2:#E4D4A8; --line:#e9eef2; --bg:#F7FAFC } body{ background:var(--bg); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif } .hero{color:#fff;background:linear-gradient(135deg,rgba(108,29,69,.9),rgba(139,36,80,.86))} .card{ background:#fff; border:1px solid var(--line); border-radius:18px; } .nav{ display:flex; gap:8px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:6px; flex-wrap:wrap } .tab{ padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.35); color:#fff; background:transparent; cursor:pointer; font-weight:600 } .tab.active{ background:linear-gradient(135deg,var(--gold),var(--gold2)); color:var(--maroon) }</style>
+  <link rel="icon" type="image/png" href="/assets/logo/qla-favicon.png"/>
+  <style>
+    :root{ 
+      --maroon:#6C1D45; 
+      --maroon2:#8B2450; 
+      --gold:#C7A34F; 
+      --gold2:#E4D4A8; 
+      --line:#e9eef2; 
+      --bg:#F7FAFC 
+    } 
+    body{ 
+      background:var(--bg); 
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif 
+    } 
+    .hero{
+      color:#fff;
+      background:linear-gradient(135deg,rgba(108,29,69,.9),rgba(139,36,80,.86))
+    } 
+    .card{ 
+      background:#fff; 
+      border:1px solid var(--line); 
+      border-radius:18px; 
+    } 
+    .nav{ 
+      display:flex; 
+      gap:8px; 
+      background:rgba(255,255,255,.14); 
+      border:1px solid rgba(255,255,255,.35); 
+      border-radius:14px; 
+      padding:6px; 
+      flex-wrap:wrap 
+    } 
+    .tab{ 
+      padding:10px 14px; 
+      border-radius:10px; 
+      border:1px solid rgba(255,255,255,.35); 
+      color:#fff; 
+      background:transparent; 
+      cursor:pointer; 
+      font-weight:600 
+    } 
+    .tab.active{ 
+      background:linear-gradient(135deg,var(--gold),var(--gold2)); 
+      color:var(--maroon) 
+    }
+    .logo-main {
+      height: 64px;
+      width: auto;
+      filter: brightness(0) invert(1);
+      transition: transform 0.3s ease;
+    }
+    .logo-main:hover {
+      transform: scale(1.05);
+    }
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .fallback-logo {
+      background: white;
+      border-radius: 16px;
+      padding: 14px 18px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .fallback-logo-text {
+      font-size: 1.75rem;
+      font-weight: bold;
+      color: var(--maroon);
+    }
+  </style>
 </head>
 <body>
-<header class="hero p-6"><div class="max-w-7xl mx-auto"><div class="flex justify-between items-center"><div class="flex items-center gap-4"><div class="w-14 h-14 bg-[var(--maroon)] rounded-lg text-white font-bold flex items-center justify-center">QLA</div><div><h1 class="text-3xl font-extrabold">Admin Portal</h1><p class="opacity-90 text-sm">Qatar Leadership Academy</p></div></div><a href="#" onclick="logout()" class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg">Sign out</a></div>
-<div class="mt-4 nav"><button class="tab active" data-tab="overview">Overview</button><button class="tab" data-tab="classes">Classes & Rosters</button><button class="tab" data-tab="analytics">Analytics</button><button class="tab" data-tab="integrations">Integrations</button></div></div></header>
-<main class="max-w-7xl mx-auto p-6">
-<section id="overview" class="tabc"><div class="grid md:grid-cols-3 gap-6">
-  <div class="card p-6"><div class="text-sm text-slate-600">Lessons</div><div id="m_lessons" class="text-3xl font-extrabold">—</div></div>
-  <div class="card p-6"><div class="text-sm text-slate-600">Assessments</div><div id="m_assessments" class="text-3xl font-extrabold">—</div></div>
-  <div class="card p-6"><div class="text-sm text-slate-600">Completions</div><div id="m_completions" class="text-3xl font-extrabold">—</div></div>
-  <div class="card p-6"><div class="text-sm text-slate-600">Assignments</div><div id="m_assignments" class="text-3xl font-extrabold">—</div></div>
-  <div class="card p-6"><div class="text-sm text-slate-600">Attempts</div><div id="m_attempts" class="text-3xl font-extrabold">—</div></div></div></section>
-<section id="classes" class="tabc hidden"><div class="card p-6 mb-6"><h3 class="font-bold mb-3"><i class="fas fa-file-import mr-2 text-[var(--gold)]"></i>Import roster CSV</h3>
-<form id="csvForm" class="flex items-center gap-3"><input type="file" id="csvFile" accept=".csv" class="border rounded px-3 py-2"/><button class="bg-[var(--maroon)] text-white px-4 py-2 rounded">Upload</button><div class="text-xs text-slate-600">Columns: <code>class_code,student_email</code></div></form>
-<div id="csvResult" class="text-sm text-slate-600 mt-2"></div></div>
-<div class="card p-6"><h3 class="font-bold mb-3">All Classes</h3><div id="classList" class="space-y-2"></div></div></section>
-<section id="analytics" class="tabc hidden"><div class="card p-6 mb-6"><h3 class="font-bold mb-3">Top Lessons</h3><div id="topLessons" class="space-y-2"></div></div><div class="card p-6"><h3 class="font-bold mb-3">Active Users</h3><div id="users" class="space-y-2"></div></div></section>
-<section id="integrations" class="tabc hidden"><div class="card p-6"><h3 class="font-bold mb-3">Google Classroom</h3><div id="gclassStatus" class="text-sm text-slate-600">Checking configuration…</div><div id="courseList" class="mt-3 space-y-2"></div></div></section>
-</main>
-<script>
-function show(n){ const d=document.createElement('div'); d.className='fixed bottom-4 right-4 bg-black/80 text-white px-4 py-2 rounded'; d.textContent=n; document.body.appendChild(d); setTimeout(()=>d.remove(),2000); }
-async function api(p,opts){ const r = await fetch(p, Object.assign({ headers:{'Content-Type':'application/json'} }, opts||{})); if (!r.ok) throw new Error(await r.text()); return r.json(); }
-document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); document.querySelectorAll('.tabc').forEach(c=>c.classList.add('hidden')); document.getElementById(b.dataset.tab).classList.remove('hidden'); }));
-async function loadMetrics(){ const m = await api('/api/admin/metrics'); m && (document.getElementById('m_lessons').textContent=m.lessons, document.getElementById('m_assessments').textContent=m.assessments, document.getElementById('m_completions').textContent=m.completions, document.getElementById('m_assignments').textContent=m.assignments, document.getElementById('m_attempts').textContent=m.attempts); }
-async function loadClasses(){ const c = await api('/api/classes'); const list=document.getElementById('classList'); list.innerHTML=''; c.forEach(x=>{ const div=document.createElement('div'); div.className='border rounded p-3 flex justify-between'; div.innerHTML=`<div><div class="font-semibold">${x.name}</div><div class="text-xs text-slate-600">${x.code} • Grade ${x.grade||'-'} • ${x.students||0} student(s)</div></div>`; list.appendChild(div); }); }
-async function loadTop(){ const t = await api('/api/admin/top-lessons'); const list=document.getElementById('topLessons'); list.innerHTML=''; t.forEach(x=>{ const div=document.createElement('div'); div.className='border rounded p-3'; div.innerHTML=`<div class="font-semibold">${x.title}</div><div class="text-xs text-slate-600">G${x.grade} U${x.unit} L${x.lesson_order} • Attempts: ${x.attempts} • Completions: ${x.completions}</div>`; list.appendChild(div); }); }
-async function loadUsers(){ const u = await api('/api/admin/users'); const list=document.getElementById('users'); list.innerHTML=''; u.forEach(x=>{ const div=document.createElement('div'); div.className='border rounded p-3'; div.innerHTML=`<div class="font-semibold">${x.email}</div><div class="text-xs text-slate-600">${x.events} event(s)</div>`; list.appendChild(div); }); }
-async function checkGClass(){ const res = await api('/api/admin/gclass/courses').catch(()=>({configured:false})); const status = document.getElementById('gclassStatus'); if (!res.configured){ status.textContent = 'Google Classroom is not configured (set GC_SERVICE_ACCOUNT & GC_IMPERSONATE_USER).'; return; } status.textContent = 'Google Classroom connected. Courses:'; const list=document.getElementById('courseList'); list.innerHTML=''; res.courses.forEach(c=>{ const div=document.createElement('div'); div.className='border rounded p-3 flex justify-between items-center'; div.innerHTML=`<div><div class="font-semibold">${c.name}</div><div class="text-xs text-slate-600">${c.id} • Section ${c.section||'-'}</div></div><button class="bg-[var(--maroon)] text-white px-4 py-2 rounded">View Students</button>`; div.querySelector('button').onclick = async ()=>{ const s = await api('/api/admin/gclass/'+c.id+'/students'); alert('Students:\n'+s.students.map(x=>x.name+' <'+x.email+'>').join('\n')); }; list.appendChild(div); }); }
-document.getElementById('csvForm').addEventListener('submit', async (e)=>{ e.preventDefault(); const f = document.getElementById('csvFile').files[0]; if (!f) return show('Choose a CSV'); const fd = new FormData(); fd.append('csv', f); const r = await fetch('/api/classes/import', { method:'POST', body: fd }); const j = await r.json(); document.getElementById('csvResult').textContent = `Imported ${j.added}/${j.rows} rows.`; });
-async function logout(){ await fetch('/auth/logout',{method:'POST'}); location.href='/login'; }
-async function init(){ await loadMetrics(); await loadClasses(); await loadTop(); await loadUsers(); await checkGClass(); } document.addEventListener('DOMContentLoaded', init);
-</script>
-</body></html>
+  <header class="hero p-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex justify-between items-center">
+        <div class="logo-container">
+          <!-- Main Logo -->
+          <img src="/assets/logo/qla-logo.png" 
+               alt="Qatar Leadership Academy" 
+               class="logo-main"
+               onerror="this.style.display='none'; document.getElementById('admin-fallback-logo').style.display='flex';">
+          
+          <!-- Fallback Logo -->
+          <div id="admin-fallback-logo" class="fallback-logo" style="display:none;">
+            <span class="fallback-logo-text">QLA</span>
+          </div>
+          
+          <div>
+            <h1 class="text-3xl font-extrabold">Admin Portal</h1>
+            <p class="opacity-90 text-sm">Qatar Leadership Academy</p>
+          </div>
+        </div>
+        
+        <a href="#" onclick="logout()" class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg">Sign out</a>
+      </div>
+      
+      <div class="mt-4 nav">
+        <button class="tab active" data-tab="overview">Overview</button>
+        <button class="tab" data-tab="classes">Classes & Rosters</button>
+        <button class="tab" data-tab="analytics">Analytics</button>
+        <button class="tab" data-tab="integrations">Integrations</button>
+      </div>
+    </div>
+  </header>
+  
+  <main class="max-w-7xl mx-auto p-6">
+    <!-- [Rest of main content remains the same] -->
+    <section id="overview" class="tabc">
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="card p-6">
+          <div class="text-sm text-slate-600">Lessons</div>
+          <div id="m_lessons" class="text-3xl font-extrabold">—</div>
+        </div>
+        <div class="card p-6">
+          <div class="text-sm text-slate-600">Assessments</div>
+          <div id="m_assessments" class="text-3xl font-extrabold">—</div>
+        </div>
+        <div class="card p-6">
+          <div class="text-sm text-slate-600">Completions</div>
+          <div id="m_completions" class="text-3xl font-extrabold">—</div>
+        </div>
+        <div class="card p-6">
+          <div class="text-sm text-slate-600">Assignments</div>
+          <div id="m_assignments" class="text-3xl font-extrabold">—</div>
+        </div>
+        <div class="card p-6">
+          <div class="text-sm text-slate-600">Attempts</div>
+          <div id="m_attempts" class="text-3xl font-extrabold">—</div>
+        </div>
+      </div>
+    </section>
+    
+    <section id="classes" class="tabc hidden">
+      <div class="card p-6 mb-6">
+        <h3 class="font-bold mb-3">
+          <i class="fas fa-file-import mr-2 text-[var(--gold)]"></i>Import roster CSV
+        </h3>
+        <form id="csvForm" class="flex items-center gap-3">
+          <input type="file" id="csvFile" accept=".csv" class="border rounded px-3 py-2"/>
+          <button class="bg-[var(--maroon)] text-white px-4 py-2 rounded">Upload</button>
+          <div class="text-xs text-slate-600">Columns: <code>class_code,student_email</code></div>
+        </form>
+        <div id="csvResult" class="text-sm text-slate-600 mt-2"></div>
+      </div>
+      <div class="card p-6">
+        <h3 class="font-bold mb-3">All Classes</h3>
+        <div id="classList" class="space-y-2"></div>
+      </div>
+    </section>
+    
+    <section id="analytics" class="tabc hidden">
+      <div class="card p-6 mb-6">
+        <h3 class="font-bold mb-3">Top Lessons</h3>
+        <div id="topLessons" class="space-y-2"></div>
+      </div>
+      <div class="card p-6">
+        <h3 class="font-bold mb-3">Active Users</h3>
+        <div id="users" class="space-y-2"></div>
+      </div>
+    </section>
+    
+    <section id="integrations" class="tabc hidden">
+      <div class="card p-6">
+        <h3 class="font-bold mb-3">Google Classroom</h3>
+        <div id="gclassStatus" class="text-sm text-slate-600">Checking configuration…</div>
+        <div id="courseList" class="mt-3 space-y-2"></div>
+      </div>
+    </section>
+  </main>
+  
+  <!-- Footer with Logo -->
+  <footer class="mt-12 p-6 text-center">
+    <div class="flex items-center justify-center gap-4">
+      <img src="/assets/logo/qla-logo.png" 
+           alt="QLA" 
+           class="h-8 opacity-50"
+           onerror="this.style.display='none'">
+      <p class="text-sm text-slate-500">© 2024 Qatar Leadership Academy — Member of Qatar Foundation</p>
+      <img src="/assets/logo/qf-logo.png" 
+           alt="Qatar Foundation" 
+           class="h-8 opacity-50"
+           onerror="this.style.display='none'">
+    </div>
+  </footer>
+
+  <script>
+    // [All JavaScript remains the same as original]
+    function show(n){ 
+      const d=document.createElement('div'); 
+      d.className='fixed bottom-4 right-4 bg-black/80 text-white px-4 py-2 rounded'; 
+      d.textContent=n; 
+      document.body.appendChild(d); 
+      setTimeout(()=>d.remove(),2000); 
+    }
+    
+    async function api(p,opts){ 
+      const r = await fetch(p, Object.assign({ headers:{'Content-Type':'application/json'} }, opts||{})); 
+      if (!r.ok) throw new Error(await r.text()); 
+      return r.json(); 
+    }
+    
+    document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{ 
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); 
+      b.classList.add('active'); 
+      document.querySelectorAll('.tabc').forEach(c=>c.classList.add('hidden')); 
+      document.getElementById(b.dataset.tab).classList.remove('hidden'); 
+    }));
+    
+    async function loadMetrics(){ 
+      const m = await api('/api/admin/metrics'); 
+      m && (
+        document.getElementById('m_lessons').textContent=m.lessons, 
+        document.getElementById('m_assessments').textContent=m.assessments, 
+        document.getElementById('m_completions').textContent=m.completions, 
+        document.getElementById('m_assignments').textContent=m.assignments, 
+        document.getElementById('m_attempts').textContent=m.attempts
+      ); 
+    }
+    
+    async function loadClasses(){ 
+      const c = await api('/api/classes'); 
+      const list=document.getElementById('classList'); 
+      list.innerHTML=''; 
+      c.forEach(x=>{ 
+        const div=document.createElement('div'); 
+        div.className='border rounded p-3 flex justify-between'; 
+        div.innerHTML=`<div><div class="font-semibold">${x.name}</div><div class="text-xs text-slate-600">${x.code} • Grade ${x.grade||'-'} • ${x.students||0} student(s)</div></div>`; 
+        list.appendChild(div); 
+      }); 
+    }
+    
+    async function loadTop(){ 
+      const t = await api('/api/admin/top-lessons'); 
+      const list=document.getElementById('topLessons'); 
+      list.innerHTML=''; 
+      t.forEach(x=>{ 
+        const div=document.createElement('div'); 
+        div.className='border rounded p-3'; 
+        div.innerHTML=`<div class="font-semibold">${x.title}</div><div class="text-xs text-slate-600">G${x.grade} U${x.unit} L${x.lesson_order} • Attempts: ${x.attempts} • Completions: ${x.completions}</div>`; 
+        list.appendChild(div); 
+      }); 
+    }
+    
+    async function loadUsers(){ 
+      const u = await api('/api/admin/users'); 
+      const list=document.getElementById('users'); 
+      list.innerHTML=''; 
+      u.forEach(x=>{ 
+        const div=document.createElement('div'); 
+        div.className='border rounded p-3'; 
+        div.innerHTML=`<div class="font-semibold">${x.email}</div><div class="text-xs text-slate-600">${x.events} event(s)</div>`; 
+        list.appendChild(div); 
+      }); 
+    }
+    
+    async function checkGClass(){ 
+      const res = await api('/api/admin/gclass/courses').catch(()=>({configured:false})); 
+      const status = document.getElementById('gclassStatus'); 
+      if (!res.configured){ 
+        status.textContent = 'Google Classroom is not configured (set GC_SERVICE_ACCOUNT & GC_IMPERSONATE_USER).'; 
+        return; 
+      } 
+      status.textContent = 'Google Classroom connected. Courses:'; 
+      const list=document.getElementById('courseList'); 
+      list.innerHTML=''; 
+      res.courses.forEach(c=>{ 
+        const div=document.createElement('div'); 
+        div.className='border rounded p-3 flex justify-between items-center'; 
+        div.innerHTML=`<div><div class="font-semibold">${c.name}</div><div class="text-xs text-slate-600">${c.id} • Section ${c.section||'-'}</div></div><button class="bg-[var(--maroon)] text-white px-4 py-2 rounded">View Students</button>`; 
+        div.querySelector('button').onclick = async ()=>{ 
+          const s = await api('/api/admin/gclass/'+c.id+'/students'); 
+          alert('Students:\n'+s.students.map(x=>x.name+' <'+x.email+'>').join('\n')); 
+        }; 
+        list.appendChild(div); 
+      }); 
+    }
+    
+    document.getElementById('csvForm').addEventListener('submit', async (e)=>{ 
+      e.preventDefault(); 
+      const f = document.getElementById('csvFile').files[0]; 
+      if (!f) return show('Choose a CSV'); 
+      const fd = new FormData(); 
+      fd.append('csv', f); 
+      const r = await fetch('/api/classes/import', { method:'POST', body: fd }); 
+      const j = await r.json(); 
+      document.getElementById('csvResult').textContent = `Imported ${j.added}/${j.rows} rows.`; 
+    });
+    
+    async function logout(){ 
+      await fetch('/auth/logout',{method:'POST'}); 
+      location.href='/login'; 
+    }
+    
+    async function init(){ 
+      await loadMetrics(); 
+      await loadClasses(); 
+      await loadTop(); 
+      await loadUsers(); 
+      await checkGClass(); 
+    } 
+    
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

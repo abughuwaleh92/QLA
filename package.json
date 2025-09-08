@@ -1,7 +1,7 @@
 {
   "name": "qla-math-platform",
-  "version": "3.0.1",
-  "description": "QLA Mathematics Platform - Enhanced Interactive Learning System",
+  "version": "3.1.0",
+  "description": "QLA Mathematics Platform - Fixed Version with Enhanced Stability",
   "private": true,
   "engines": {
     "node": ">=18.0.0",
@@ -13,7 +13,12 @@
     "migrate": "node scripts/run-migrations.js",
     "test": "node scripts/test-platform.js",
     "seed": "node scripts/seed-data.js",
-    "build": "echo 'Build phase complete - migrations will run at startup'"
+    "build": "echo 'Build phase complete - migrations will run at startup'",
+    "fix:sessions": "node scripts/fix-sessions.js",
+    "fix:lessons": "node scripts/fix-lessons.js",
+    "fix:all": "node scripts/fix-all.js",
+    "doctor": "node scripts/fix-all.js",
+    "clean": "node -e \"require('pg').Pool({connectionString:process.env.DATABASE_URL}).query('DELETE FROM session WHERE expire < NOW()').then(r=>console.log('Cleaned',r.rowCount,'expired sessions')).catch(console.error)\""
   },
   "dependencies": {
     "compression": "^1.7.4",
@@ -44,8 +49,13 @@
     "learning",
     "interactive",
     "platform",
-    "qatar"
+    "qatar",
+    "qla"
   ],
   "author": "QLA Development Team",
-  "license": "PROPRIETARY"
+  "license": "PROPRIETARY",
+  "repository": {
+    "type": "git",
+    "url": "private"
+  }
 }

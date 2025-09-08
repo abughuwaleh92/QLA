@@ -1,1069 +1,479 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Introduction to Algebra - Interactive Lesson | QLA Mathematics</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-  
-  <!-- KaTeX for Math Rendering -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-  
-  <style>
-    :root {
-      --maroon: #6C1D45;
-      --gold: #C7A34F;
-      --success: #10b981;
-      --error: #ef4444;
-      --info: #3b82f6;
-    }
-    
-    .section-locked {
-      opacity: 0.5;
-      pointer-events: none;
-      position: relative;
-    }
-    
-    .section-locked::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 10px,
-        rgba(0,0,0,0.1) 10px,
-        rgba(0,0,0,0.1) 20px
-      );
-      border-radius: 12px;
-    }
-    
-    .progress-ring {
-      transform: rotate(-90deg);
-    }
-    
-    .progress-ring-circle {
-      transition: stroke-dashoffset 0.5s ease;
-    }
-    
-    .activity-card {
-      transition: all 0.3s ease;
-      cursor: pointer;
-    }
-    
-    .activity-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    }
-    
-    .correct-answer {
-      animation: correctPulse 0.5s ease;
-      background: #f0fdf4 !important;
-      border-color: var(--success) !important;
-    }
-    
-    .incorrect-answer {
-      animation: shake 0.5s ease;
-      background: #fef2f2 !important;
-      border-color: var(--error) !important;
-    }
-    
-    @keyframes correctPulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-    
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-10px); }
-      75% { transform: translateX(10px); }
-    }
-    
-    .draggable {
-      cursor: move;
-      transition: all 0.3s ease;
-    }
-    
-    .draggable.dragging {
-      opacity: 0.5;
-      transform: scale(1.1);
-    }
-    
-    .drop-zone {
-      min-height: 60px;
-      border: 2px dashed #cbd5e1;
-      transition: all 0.3s ease;
-    }
-    
-    .drop-zone.drag-over {
-      background: #f0f9ff;
-      border-color: var(--info);
-      transform: scale(1.02);
-    }
-    
-    .confetti {
-      position: fixed;
-      width: 10px;
-      height: 10px;
-      background: var(--gold);
-      animation: confetti-fall 3s ease-out forwards;
-      pointer-events: none;
-      z-index: 1000;
-    }
-    
-    @keyframes confetti-fall {
-      to {
-        transform: translateY(100vh) rotate(720deg);
-        opacity: 0;
-      }
-    }
-    
-    .video-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 1.5rem;
-      font-weight: bold;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    
-    .video-locked .video-overlay {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>G7 • Unit 3 • Proportional Relationships & Unit Rate — QLA</title>
+
+<!-- Fonts & Tailwind -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- KaTeX (auto-render) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\\\(',right:'\\\\)',display:false}]})"></script>
+
+<style>
+  :root{--maroon:#6C1D45;--gold:#C7A34F;--dark:#2C2C2E;--light:#F5F5F5;--accent:#E8D5B7}
+  html,body{height:100%;background:#2d3748;color:#111;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  #deck{position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;padding:10px}
+  #slides{position:relative;width:100%;max-width:1280px;aspect-ratio:16/9;background:#fff;box-shadow:0 14px 36px rgba(0,0,0,.35);overflow:hidden;border-radius:18px}
+  .slide{position:absolute;inset:0;padding:3.5%;display:flex;flex-direction:column;gap:1rem;opacity:0;transform:translateY(14px) scale(.985);transition:.55s ease;pointer-events:none}
+  .slide.active{opacity:1;transform:none;pointer-events:auto}
+  .bg-maroon{background-color:var(--maroon)} .text-maroon{color:var(--maroon)} .text-gold{color:var(--gold)}
+  .banner{width:100%;height:110px;background:#fff center/contain no-repeat;border-bottom:3px solid var(--gold);border-radius:10px}
+  .card{border:1px solid #e5e7eb;border-radius:14px;background:#fafafa}
+  .chip{display:inline-flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e5e7eb;padding:.35rem .75rem;border-radius:9999px;cursor:pointer}
+  .chip:hover{outline:2px solid var(--gold)}
+  .btn{padding:.55rem 1rem;border-radius:999px;border:1px solid #e5e7eb;background:#fff;font-weight:700}
+  .btn.maroon{background:var(--maroon);color:#fff;border-color:var(--maroon)}
+  .btn:hover{filter:brightness(0.98)}
+  #controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.75rem;padding:.4rem .6rem;border-radius:999px;z-index:20;backdrop-filter:blur(6px)}
+  #controls button{width:42px;height:42px;border-radius:999px;border:none;background:#fff;cursor:pointer;font-weight:700}
+  #controls button:hover{transform:scale(1.06)}
+  #counter{color:#fff;font-weight:700;min-width:120px;text-align:center}
+  #progress{position:fixed;left:0;bottom:0;height:5px;width:0;background:var(--gold);z-index:30;transition:width .35s ease}
+  .pill{display:inline-block;padding:.2rem .6rem;border-radius:999px;border:1px solid #e5e7eb;background:#fff}
+  .kbd{display:inline-block;border:1px solid #e5e7eb;border-bottom-width:3px;border-radius:6px;padding:.15rem .4rem;background:#fff}
+  .confetti{position:fixed;pointer-events:none;z-index:50}
+  .disabled{opacity:.5;pointer-events:none}
+  .locked::after{content:'🔒';margin-left:.35rem}
+  .scorebox{font-weight:800}
+  .ytwrap{position:relative;width:100%;height:0;padding-bottom:56.25%;border-radius:12px;overflow:hidden}
+  .ytwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+</style>
 </head>
-<body class="bg-gray-50">
-  <!-- Header with Progress -->
-  <header class="bg-gradient-to-r from-[var(--maroon)] to-[var(--gold)] text-white p-4 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <button onclick="showExitConfirm()" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition-colors">
-            <i class="fas fa-arrow-left"></i>
-          </button>
-          <div>
-            <h1 class="text-xl font-bold">Introduction to Algebra</h1>
-            <p class="text-sm opacity-90">Grade 7 • Unit 3 • Lesson 1</p>
-          </div>
-        </div>
-        
-        <div class="flex items-center gap-6">
-          <!-- Points Display -->
-          <div class="text-center">
-            <div class="text-2xl font-bold">
-              <i class="fas fa-star text-yellow-300"></i>
-              <span id="totalPoints">0</span>
-            </div>
-            <div class="text-xs opacity-90">Points</div>
-          </div>
-          
-          <!-- Overall Progress -->
-          <div class="relative">
-            <svg width="60" height="60" class="progress-ring">
-              <circle cx="30" cy="30" r="25" stroke="white" stroke-width="3" fill="none" opacity="0.3"/>
-              <circle id="progressCircle" cx="30" cy="30" r="25" stroke="white" stroke-width="3" fill="none"
-                      stroke-dasharray="157" stroke-dashoffset="157" class="progress-ring-circle"/>
-            </svg>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <span id="progressPercent" class="text-sm font-bold">0%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Section Progress Indicators -->
-      <div class="flex gap-2 mt-4" id="sectionIndicators">
-        <!-- Will be populated dynamically -->
-      </div>
-    </div>
-  </header>
+<body>
 
-  <!-- Main Content -->
-  <main class="max-w-7xl mx-auto p-6">
-    <!-- Section 1: Video Introduction -->
-    <section id="section-1" class="mb-8" data-type="video" data-points="100">
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-bold text-[var(--maroon)]">
-            <i class="fas fa-play-circle mr-2"></i>
-            Video: What is Algebra?
-          </h2>
-          <div class="flex items-center gap-2">
-            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-              100 points
-            </span>
-            <span id="section-1-status" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-              <i class="fas fa-lock"></i> Not Started
-            </span>
-          </div>
+<div id="deck" aria-live="polite">
+  <div id="slides" class="relative">
+    <div id="fsHint">Press <strong>F</strong> for fullscreen</div>
+
+    <!-- 0 • Title -->
+    <section class="slide active bg-maroon text-white" id="titleSlide">
+      <div class="w-full h-16 banner mb-6 rounded-md" style="background:url('qla_banner.png') center/contain no-repeat" aria-label="QLA Partner Banner"></div>
+      <div class="flex items-center gap-8">
+        <img src="qla_logo.png" alt="QLA Logo" class="h-20 w-auto" onerror="this.style.display='none'"/>
+        <div class="text-left">
+          <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight">Proportional Relationships & Unit Rate</h1>
+          <p class="text-gold text-2xl md:text-3xl mt-2 font-semibold">When one doubles, the other doubles — the constant of proportionality \(k\).</p>
+          <p class="mt-2 text-lg">Qatar Leadership Academy — Grade 7</p>
         </div>
-        
-        <div class="relative aspect-video bg-black rounded-lg overflow-hidden video-locked" id="videoContainer">
-          <video id="lessonVideo" class="w-full h-full" controls controlsList="nodownload">
-            <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
-            Your browser does not support the video tag.
-          </video>
-          <div class="video-overlay">
-            <div class="text-center">
-              <i class="fas fa-lock text-4xl mb-2"></i>
-              <p>Complete previous sections to unlock</p>
-            </div>
-          </div>
+      </div>
+      <div class="mt-auto text-sm text-gray-100">Aligned to AERO 7.RP.1–3.</div>
+    </section>
+
+    <!-- 1 • Objectives -->
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold text-maroon">Lesson Objectives</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card p-5">
+          <h3 class="text-xl font-bold mb-2">You will be able to…</h3>
+          <ul class="list-disc pl-6 space-y-2 text-lg">
+            <li>Decide if two quantities are in a proportional relationship.</li>
+            <li>Compute and interpret the constant of proportionality \(k\) and unit rate.</li>
+            <li>Represent proportional relationships using tables, equations \(y=kx\), and graphs.</li>
+          </ul>
         </div>
-        
-        <div class="mt-4 bg-blue-50 p-4 rounded-lg">
-          <p class="text-sm text-blue-800">
-            <i class="fas fa-info-circle mr-2"></i>
-            Watch the complete video to earn 100 points and unlock the next section.
-          </p>
-          <div class="mt-3">
-            <div class="flex justify-between text-sm mb-1">
-              <span>Progress</span>
-              <span id="videoTime">0:00 / 0:00</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div id="videoProgress" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-            </div>
-          </div>
+        <div class="card p-5">
+          <h3 class="text-xl font-bold mb-2">Success Criteria</h3>
+          <ul class="list-disc pl-6 space-y-2 text-lg">
+            <li>Score <span class="font-extrabold">≥ 80%</span> on the Mastery Quiz.</li>
+            <li>Watch <span class="font-extrabold">≥ 80%</span> of the lesson video.</li>
+            <li>Explain what the number \(k\) means in a real context.</li>
+          </ul>
+          <div class="mt-3 text-sm">Progress gates are enforced: you must satisfy the criteria to unlock the final slide.</div>
         </div>
       </div>
     </section>
 
-    <!-- Section 2: Key Concepts -->
-    <section id="section-2" class="mb-8 section-locked" data-type="content" data-points="50">
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-bold text-[var(--maroon)]">
-            <i class="fas fa-book-open mr-2"></i>
-            Understanding Variables and Expressions
-          </h2>
-          <div class="flex items-center gap-2">
-            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-              50 points
-            </span>
-            <span id="section-2-status" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-              <i class="fas fa-lock"></i> Locked
-            </span>
-          </div>
+    <!-- 2 • Video (with progress tracking + gate) -->
+    <section class="slide" id="videoSlide">
+      <h2 class="text-3xl font-extrabold text-maroon">Watch: Proportional Relationships</h2>
+      <div class="text-sm text-gray-600">You must watch at least 80% to unlock the next section.</div>
+      <!-- Option A: Local/hosted MP4 -->
+      <video id="lessonVideo" class="w-full rounded-lg border border-gray-200" controls preload="metadata"
+             src="/uploads/videos/proportional_relationships_intro.mp4"
+             onerror="document.getElementById('ytFallback').classList.remove('hidden')"></video>
+      <!-- Option B: YouTube fallback (replace data-youtube-id as needed) -->
+      <div id="ytFallback" class="hidden mt-3">
+        <div class="ytwrap">
+          <iframe id="ytPlayer" data-youtube-id="w8Jp5h8Y-ow"
+                  src="https://www.youtube.com/embed/w8Jp5h8Y-ow?enablejsapi=1&rel=0&modestbranding=1"
+                  title="Proportional Relationships — Lesson Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen></iframe>
         </div>
-        
-        <div class="grid md:grid-cols-2 gap-6">
-          <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl">
-            <h3 class="text-xl font-bold mb-3 text-purple-900">What is a Variable?</h3>
-            <p class="mb-4">A variable is a letter that represents an unknown number. Think of it as a mystery box!</p>
-            <div class="bg-white p-4 rounded-lg">
-              <p class="font-mono text-lg text-center">
-                If <span class="text-purple-600 font-bold">x = 5</span>
-              </p>
-              <p class="font-mono text-lg text-center mt-2">
-                Then <span class="text-purple-600 font-bold">2x = 10</span>
-              </p>
-            </div>
-          </div>
-          
-          <div class="bg-gradient-to-br from-blue-50 to-green-50 p-6 rounded-xl">
-            <h3 class="text-xl font-bold mb-3 text-blue-900">Algebraic Expressions</h3>
-            <p class="mb-4">An expression combines numbers, variables, and operations.</p>
-            <div class="bg-white p-4 rounded-lg">
-              <p class="text-center mb-2 font-semibold">Examples:</p>
-              <ul class="space-y-2">
-                <li class="font-mono">• 3x + 5</li>
-                <li class="font-mono">• 2y - 7</li>
-                <li class="font-mono">• 4(x + 2)</li>
-              </ul>
-            </div>
-          </div>
+        <p class="text-sm text-gray-600 mt-2">If your platform hosts an MP4 at <code>/uploads/videos/proportional_relationships_intro.mp4</code> it will be used automatically.</p>
+      </div>
+      <div class="mt-2"><span class="pill">Watched: <span id="videoPct" class="font-bold">0%</span></span></div>
+    </section>
+
+    <!-- 3 • Explain & Explore -->
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold text-maroon">What is a proportional relationship?</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card p-5 text-lg leading-7">
+          <p>Two quantities \(x\) and \(y\) are <em>proportional</em> if there exists a constant \(k\) such that \(y=kx\).</p>
+          <p class="mt-2">The number \(k\) is the <strong>constant of proportionality</strong> (unit rate): the amount of \(y\) per \(1\) unit of \(x\).</p>
+          <p class="mt-2">Check proportionality by verifying that the ratio \(\\frac{y}{x}\) is constant across all nonzero \(x\), or that the graph is a straight line through the origin.</p>
+          <div class="mt-3 text-sm text-gray-600">Examples: price per kilogram, speed (km/h), density (g/cm\(^3\)).</div>
         </div>
-        
-        <button onclick="completeReading()" class="mt-6 bg-[var(--maroon)] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
-          <i class="fas fa-check mr-2"></i>I understand these concepts
-        </button>
+        <div class="card p-5">
+          <h3 class="text-xl font-bold">Mini‑check: Constant \(k\)</h3>
+          <div id="miniCheck" class="space-y-3"></div>
+          <button class="btn maroon" id="miniCheckBtn">Check answers</button>
+          <div id="miniCheckFb" class="mt-2 text-lg font-bold"></div>
+        </div>
       </div>
     </section>
 
-    <!-- Section 3: Interactive Activity - Drag and Drop -->
-    <section id="section-3" class="mb-8 section-locked" data-type="activity" data-points="150">
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-bold text-[var(--maroon)]">
-            <i class="fas fa-puzzle-piece mr-2"></i>
-            Activity: Build Algebraic Expressions
-          </h2>
-          <div class="flex items-center gap-2">
-            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-              150 points
-            </span>
-            <span id="section-3-status" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-              <i class="fas fa-lock"></i> Locked
-            </span>
-          </div>
-        </div>
-        
-        <div class="bg-yellow-50 p-4 rounded-lg mb-6">
-          <p class="text-yellow-800">
-            <i class="fas fa-lightbulb mr-2"></i>
-            <strong>Instructions:</strong> Drag the terms to create the correct algebraic expression.
-          </p>
-        </div>
-        
-        <!-- Activity 1 -->
-        <div class="mb-6 p-4 border-2 border-gray-200 rounded-lg activity-card">
-          <h4 class="font-semibold mb-3">Create: "Three times x plus five"</h4>
-          <div class="flex flex-wrap gap-3 mb-4">
-            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="3x">3x</div>
-            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="+">+</div>
-            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="5">5</div>
-            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="2x">2x</div>
-            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="-">-</div>
-            <div class="draggable bg-blue-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="3">3</div>
-          </div>
-          <div class="drop-zone p-4 rounded-lg bg-gray-50" data-answer="3x+5">
-            <p class="text-gray-400 text-center">Drop terms here</p>
-          </div>
-          <button onclick="checkDragDrop(this, '3x+5', 50)" class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg">
-            Check Answer
-          </button>
-        </div>
-        
-        <!-- Activity 2 -->
-        <div class="mb-6 p-4 border-2 border-gray-200 rounded-lg activity-card">
-          <h4 class="font-semibold mb-3">Create: "Two times the sum of x and four"</h4>
-          <div class="flex flex-wrap gap-3 mb-4">
-            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="2">2</div>
-            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="(">(</div>
-            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="x">x</div>
-            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="+">+</div>
-            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="4">4</div>
-            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value=")">)</div>
-            <div class="draggable bg-green-100 px-4 py-2 rounded-lg font-mono" draggable="true" data-value="×">×</div>
-          </div>
-          <div class="drop-zone p-4 rounded-lg bg-gray-50" data-answer="2(x+4)">
-            <p class="text-gray-400 text-center">Drop terms here</p>
-          </div>
-          <button onclick="checkDragDrop(this, '2(x+4)', 50)" class="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg">
-            Check Answer
-          </button>
-        </div>
-        
-        <!-- Activity 3 -->
-        <div class="mb-6 p-4 border-2 border-gray-200 rounded-lg activity-card">
-          <h4 class="font-semibold mb-3">Solve: If x = 3, what is 2x + 1?</h4>
-          <input type="number" id="solveInput" class="border-2 border-gray-300 rounded-lg px-4 py-2 w-32" placeholder="Answer">
-          <button onclick="checkSolve(7, 50)" class="ml-3 bg-purple-600 text-white px-4 py-2 rounded-lg">
-            Check Answer
-          </button>
-          <div id="solveHint" class="mt-2 text-sm text-gray-600 hidden">
-            <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
-            Hint: Replace x with 3, so 2(3) + 1 = ?
-          </div>
-        </div>
-        
-        <div id="activityFeedback" class="mt-4"></div>
+    <!-- 4 • Quick Check (MCQ) -->
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold text-maroon">Quick Check</h2>
+      <div id="qcBox" class="space-y-4"></div>
+      <div class="flex items-center gap-3 mt-2">
+        <button class="btn maroon" id="qcSubmit">Submit</button>
+        <div class="pill">Score: <span id="qcScore" class="scorebox">0</span> / <span id="qcTotal">0</span></div>
       </div>
+      <div id="qcFb" class="mt-2 text-lg font-bold"></div>
     </section>
 
-    <!-- Section 4: Quiz -->
-    <section id="section-4" class="mb-8 section-locked" data-type="quiz" data-points="200">
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-bold text-[var(--maroon)]">
-            <i class="fas fa-clipboard-check mr-2"></i>
-            Quiz: Test Your Knowledge
-          </h2>
-          <div class="flex items-center gap-2">
-            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-              200 points
-            </span>
-            <span id="section-4-status" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-              <i class="fas fa-lock"></i> Locked
-            </span>
-          </div>
-        </div>
-        
-        <div class="bg-amber-50 p-4 rounded-lg mb-6">
-          <p class="text-amber-800">
-            <i class="fas fa-trophy mr-2"></i>
-            Score at least 70% to complete this section. You can retry if needed!
-          </p>
-        </div>
-        
-        <!-- Question 1 -->
-        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h4 class="font-semibold mb-3">Question 1: Which of the following is an algebraic expression?</h4>
-          <div class="space-y-2">
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q1" value="a" class="w-4 h-4">
-              <span>5 + 3 = 8</span>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q1" value="b" class="w-4 h-4">
-              <span>2x + 7</span>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q1" value="c" class="w-4 h-4">
-              <span>10 > 5</span>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q1" value="d" class="w-4 h-4">
-              <span>Hello World</span>
-            </label>
-          </div>
-        </div>
-        
-        <!-- Question 2 -->
-        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h4 class="font-semibold mb-3">Question 2: If y = 4, what is the value of 3y - 2?</h4>
-          <div class="space-y-2">
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q2" value="a" class="w-4 h-4">
-              <span>14</span>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q2" value="b" class="w-4 h-4">
-              <span>10</span>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q2" value="c" class="w-4 h-4">
-              <span>12</span>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q2" value="d" class="w-4 h-4">
-              <span>8</span>
-            </label>
-          </div>
-        </div>
-        
-        <!-- Question 3 -->
-        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h4 class="font-semibold mb-3">Question 3: Which expression represents "five less than twice a number"?</h4>
-          <div class="space-y-2">
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q3" value="a" class="w-4 h-4">
-              <span>5 - 2n</span>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q3" value="b" class="w-4 h-4">
-              <span>2n - 5</span>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q3" value="c" class="w-4 h-4">
-              <span>5n - 2</span>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q3" value="d" class="w-4 h-4">
-              <span>2 - 5n</span>
-            </label>
-          </div>
-        </div>
-        
-        <!-- Question 4 -->
-        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h4 class="font-semibold mb-3">Question 4: True or False: Variables can only be letters like x, y, or z.</h4>
-          <div class="space-y-2">
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q4" value="true" class="w-4 h-4">
-              <span>True</span>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded">
-              <input type="radio" name="q4" value="false" class="w-4 h-4">
-              <span>False</span>
-            </label>
-          </div>
-        </div>
-        
-        <button onclick="submitQuiz()" class="bg-[var(--maroon)] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
-          <i class="fas fa-paper-plane mr-2"></i>Submit Quiz
-        </button>
-        
-        <div id="quizResults" class="mt-6 hidden"></div>
+    <!-- 5 • Practice Generator (free response with autograde) -->
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold text-maroon">Practice Generator</h2>
+      <p class="text-lg">Find the unit rate and write \(y=kx\).</p>
+      <div class="card p-5" id="genBox"></div>
+      <div class="flex items-center gap-3 mt-3">
+        <button class="btn" id="genNew">New item</button>
+        <button class="btn maroon" id="genCheck">Check</button>
+        <div class="pill">Streak: <span id="genStreak" class="scorebox">0</span></div>
       </div>
+      <div id="genFb" class="mt-2 text-lg font-bold"></div>
     </section>
 
-    <!-- Section 5: Summary and Certificate -->
-    <section id="section-5" class="mb-8 section-locked" data-type="summary" data-points="0">
-      <div class="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl shadow-lg p-8">
-        <div class="text-center">
-          <div class="text-6xl mb-4">🎉</div>
-          <h2 class="text-3xl font-bold text-[var(--maroon)] mb-4">Congratulations!</h2>
-          <p class="text-xl mb-6">You've completed "Introduction to Algebra"</p>
-          
-          <div class="grid md:grid-cols-3 gap-4 mb-8">
-            <div class="bg-white rounded-lg p-4">
-              <div class="text-3xl font-bold text-[var(--gold)]" id="finalScore">0</div>
-              <div class="text-sm text-gray-600">Total Points</div>
-            </div>
-            <div class="bg-white rounded-lg p-4">
-              <div class="text-3xl font-bold text-[var(--success)]" id="finalGrade">A</div>
-              <div class="text-sm text-gray-600">Grade</div>
-            </div>
-            <div class="bg-white rounded-lg p-4">
-              <div class="text-3xl font-bold text-[var(--info)]" id="finalTime">0m</div>
-              <div class="text-sm text-gray-600">Time Spent</div>
-            </div>
+    <!-- 6 • Mastery Quiz (gated) -->
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold text-maroon">Mastery Quiz</h2>
+      <p class="text-lg">Earn at least <strong>80%</strong> (8/10) to unlock completion.</p>
+      <div id="mqBox" class="space-y-4"></div>
+      <div class="flex items-center gap-3 mt-2">
+        <button class="btn maroon" id="mqSubmit">Submit</button>
+        <div class="pill">Points: <span id="mqPoints" class="scorebox">0</span></div>
+        <div class="pill">Correct: <span id="mqScore" class="scorebox">0</span> / <span id="mqTotal">0</span></div>
+      </div>
+      <div id="mqFb" class="mt-2 text-lg font-bold"></div>
+    </section>
+
+    <!-- 7 • Reflection + Completion (locked until gates passed) -->
+    <section class="slide locked" id="finalSlide">
+      <h2 class="text-3xl font-extrabold text-maroon">Reflect & Submit</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card p-5">
+          <h3 class="text-xl font-bold">Explain:</h3>
+          <p class="text-lg">In your own words, what does the constant \(k\) mean in a real context from this lesson?</p>
+          <textarea id="reflection" class="w-full h-40 p-3 border border-gray-200 rounded-md" placeholder="Write 4–5 sentences…"></textarea>
+          <div class="mt-2 text-sm text-gray-600">This reflection is shared with your teacher.</div>
+        </div>
+        <div class="card p-5">
+          <h3 class="text-xl font-bold">Your Results</h3>
+          <ul class="text-lg space-y-1">
+            <li>Video watched: <strong id="outVid">0%</strong></li>
+            <li>Mastery quiz: <strong id="outMQ">0/0</strong> (points: <strong id="outPts">0</strong>)</li>
+          </ul>
+          <div class="mt-3 flex flex-wrap items-center gap-3">
+            <button class="btn" id="exportCSV">Export CSV</button>
+            <button class="btn" id="exportJSON">Export JSON</button>
+            <button class="btn maroon btn-complete disabled" id="markComplete" disabled>Mark lesson complete</button>
           </div>
-          
-          <div class="bg-white rounded-lg p-6 mb-6">
-            <h3 class="text-xl font-bold mb-4">What You Learned:</h3>
-            <ul class="text-left max-w-md mx-auto space-y-2">
-              <li><i class="fas fa-check text-green-500 mr-2"></i>What variables are and how they work</li>
-              <li><i class="fas fa-check text-green-500 mr-2"></i>How to create algebraic expressions</li>
-              <li><i class="fas fa-check text-green-500 mr-2"></i>How to evaluate expressions with given values</li>
-              <li><i class="fas fa-check text-green-500 mr-2"></i>How to translate words into algebra</li>
-            </ul>
-          </div>
-          
-          <div class="flex gap-4 justify-center">
-            <button onclick="retryLesson()" class="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700">
-              <i class="fas fa-redo mr-2"></i>Try Again
-            </button>
-            <button onclick="nextLesson()" class="bg-[var(--maroon)] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90">
-              <i class="fas fa-arrow-right mr-2"></i>Next Lesson
-            </button>
-          </div>
+          <div class="mt-2 text-sm text-gray-600">Completion will be sent to the QLA platform when unlocked.</div>
         </div>
       </div>
+      <div class="mt-auto text-sm text-gray-500">Gates: watch ≥80% and score ≥80% on Mastery Quiz.</div>
     </section>
-  </main>
 
-  <!-- Exit Confirmation Modal -->
-  <div id="exitModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-xl p-6 max-w-md">
-      <h3 class="text-xl font-bold mb-4">Leave Lesson?</h3>
-      <p class="mb-6">Your progress will be saved, but you'll need to restart this section.</p>
-      <div class="flex gap-4">
-        <button onclick="closeExitModal()" class="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">
-          Stay
-        </button>
-        <button onclick="confirmExit()" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg">
-          Leave
-        </button>
-      </div>
-    </div>
   </div>
+</div>
 
-  <script>
-    // Lesson State Management
-    const lessonState = {
-      currentSection: 1,
-      totalSections: 5,
-      sections: {
-        1: { completed: false, points: 0, maxPoints: 100, locked: false },
-        2: { completed: false, points: 0, maxPoints: 50, locked: true },
-        3: { completed: false, points: 0, maxPoints: 150, locked: true },
-        4: { completed: false, points: 0, maxPoints: 200, locked: true },
-        5: { completed: false, points: 0, maxPoints: 0, locked: true }
-      },
-      totalPoints: 0,
-      startTime: Date.now(),
-      videoWatched: 0,
-      activities: {},
-      quizAttempts: 0
-    };
+<!-- Controls -->
+<div id="controls">
+  <button id="prevBtn" title="Previous (←)">←</button>
+  <div id="counter" class="text-white"></div>
+  <button id="nextBtn" title="Next (→)">→</button>
+</div>
+<div id="progress"></div>
 
-    // Initialize lesson on load
-    document.addEventListener('DOMContentLoaded', () => {
-      initializeLesson();
-      setupVideoTracking();
-      setupDragAndDrop();
-      renderSectionIndicators();
-      updateProgress();
-      
-      // Initialize KaTeX
-      if (window.renderMathInElement) {
-        renderMathInElement(document.body);
+<script>
+(function(){
+  const $ = (s, r)=> (r||document).querySelector(s);
+  const $$ = (s, r)=> Array.from((r||document).querySelectorAll(s));
+  const id = (s)=> document.getElementById(s);
+  const slides = $$('#slides > section');
+  const total  = slides.length;
+  let cur = 0;
+
+  const gates = {
+    video: false,   // ≥80% watched
+    mastery: false  // ≥80% correct
+  };
+
+  function updateControls(){
+    $('#counter').textContent = (cur+1) + ' / ' + total;
+    $('#progress').style.width = (((cur+1)/total)*100).toFixed(2) + '%';
+    id('prevBtn').classList.toggle('disabled', cur===0);
+    id('nextBtn').classList.toggle('disabled', cur===total-1 || !canGoNext());
+  }
+
+  function canGoNext(){
+    // Enforce gates after their slides
+    if (cur === 2) { return gates.video; }             // leaving video slide (index 2)
+    if (cur === 6) { return gates.mastery; }           // leaving mastery quiz slide
+    return true;
+  }
+
+  function show(n){
+    slides[cur].classList.remove('active');
+    cur = Math.max(0, Math.min(total-1, n));
+    slides[cur].classList.add('active');
+    // Communicate progress to parent (lesson-bridge.js listens)
+    try { window.parent.postMessage({type:'lesson-progress', slide:cur+1, total:total}, '*'); } catch(e){}
+    updateControls();
+  }
+
+  id('prevBtn').addEventListener('click', ()=> show(cur-1));
+  id('nextBtn').addEventListener('click', ()=> { if (canGoNext()) show(cur+1); });
+  document.addEventListener('keydown', (e)=>{
+    if (e.key==='ArrowRight') { if (canGoNext()) show(cur+1); }
+    else if (e.key==='ArrowLeft') show(cur-1);
+    else if (e.key==='f' || e.key==='F') document.documentElement.requestFullscreen?.();
+  });
+
+  /* --------- Video tracking (local MP4 and YouTube fallback) --------- */
+  const vid = id('lessonVideo');
+  const yt = id('ytPlayer');
+  let videoPct = 0;
+  function setVideoPct(p){
+    videoPct = Math.max(videoPct, p); // keep max seen
+    id('videoPct').textContent = Math.round(videoPct*100) + '%';
+    if (videoPct >= 0.8) { gates.video = true; id('videoSlide').classList.remove('locked'); updateControls(); }
+  }
+
+  if (vid){
+    vid.addEventListener('timeupdate', ()=>{
+      if (vid.duration && isFinite(vid.duration)) setVideoPct(vid.currentTime/vid.duration);
+    });
+  }
+  // YouTube API fallback
+  let ytPlayerObj=null;
+  function onYouTubeIframeAPIReady(){
+    ytPlayerObj = new YT.Player('ytPlayer', {
+      events: {
+        onReady: (ev)=>{
+          // Poll percent watched
+          setInterval(()=>{
+            try{
+              const d = ev.target.getDuration();
+              const t = ev.target.getCurrentTime();
+              if (d>0) setVideoPct(t/d);
+            }catch(_){}
+          }, 1000);
+        }
       }
     });
+  }
+  if (yt && typeof YT==='undefined'){ // load API only if needed
+    const s=document.createElement('script'); s.src="https://www.youtube.com/iframe_api";
+    document.body.appendChild(s);
+    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+  }
 
-    function initializeLesson() {
-      // Send initialization event to parent
-      sendProgressUpdate('lesson-started', { lessonId: 'algebra-intro' });
-      
-      // Unlock first section
-      unlockSection(1);
-    }
+  /* --------- Mini Check --------- */
+  const miniItems = [
+    {q:'Table: x: 2,4,6; y: 10,20,30. Is y proportional to x? What is k?', a:'Yes, k=5'},
+    {q:'Equation: y = 0.75 x. What is the unit rate?', a:'0.75'},
+    {q:'Graph passes through (0,0) and (3,12). What is k?', a:'4'}
+  ];
+  function renderMini(){
+    const box = id('miniCheck'); box.innerHTML='';
+    miniItems.forEach((o,i)=>{
+      const row=document.createElement('div'); row.className='card p-4';
+      row.innerHTML = `<div class="font-semibold mb-1">Q${i+1}. ${o.q}</div>
+        <input class="w-full p-2 border border-gray-200 rounded-md" data-i="${i}" placeholder="Your answer">`;
+      box.appendChild(row);
+    });
+  }
+  renderMini();
+  id('miniCheckBtn').addEventListener('click', ()=>{
+    let ok=0;
+    $$('#miniCheck input').forEach((inp,i)=>{
+      const val=(inp.value||'').trim().toLowerCase();
+      const ans=(miniItems[i].a+'').trim().toLowerCase();
+      if (val.includes(ans)) ok++;
+    });
+    id('miniCheckFb').textContent = ok===miniItems.length ? '✅ Excellent — exactly right.' : `Score: ${ok}/${miniItems.length}. Revisit the definitions if needed.`;
+  });
 
-    function renderSectionIndicators() {
-      const container = document.getElementById('sectionIndicators');
-      container.innerHTML = '';
-      
-      for (let i = 1; i <= lessonState.totalSections; i++) {
-        const section = lessonState.sections[i];
-        const indicator = document.createElement('div');
-        indicator.className = `flex-1 h-2 rounded-full transition-all duration-300 ${
-          section.completed ? 'bg-white' : 
-          section.locked ? 'bg-white/30' : 'bg-white/60'
-        }`;
-        container.appendChild(indicator);
-      }
-    }
+  /* --------- Quick Check (MCQ) --------- */
+  const qcItems = [
+    {q:'Which equation represents a proportional relationship?', opts:['y=2x+3','y=5x','y=x+0','y=7+x'], ans:1},
+    {q:'A car travels 150 km in 3 h. Unit rate (km/h)?', opts:['45','50','55','60'], ans:1},
+    {q:'Price is proportional to weight with k=12 (QR/kg). Cost for 3.5 kg?', opts:['QR 36','QR 40','QR 42','QR 48'], ans:2},
+    {q:'If y=kx and k>0, which is true?', opts:['Graph crosses y-axis at 3','Line passes through origin','Slope is 0','Relationship is not linear'], ans:1},
+    {q:'Table shows x: 4,8,12 and y: 10,20,30. What is k?', opts:['2.5','5/2','2','2.25'], ans:0}
+  ];
+  function renderQC(){
+    const box=id('qcBox'); box.innerHTML='';
+    qcItems.forEach((o,i)=>{
+      const row=document.createElement('div'); row.className='card p-4';
+      row.innerHTML = `<div class="text-xl">${i+1}. ${o.q}</div>
+        <div class="mt-2 space-y-2">
+          ${o.opts.map((opt,j)=>`<label class="block"><input type="radio" name="qc${i}" value="${j}"> ${opt}</label>`).join('')}
+        </div>`;
+      box.appendChild(row);
+    });
+    id('qcTotal').textContent = qcItems.length;
+  }
+  renderQC();
+  id('qcSubmit').addEventListener('click', ()=>{
+    let ok=0;
+    qcItems.forEach((o,i)=>{
+      const sel = document.querySelector(`input[name="qc${i}"]:checked`);
+      if (sel && +sel.value===o.ans) ok++;
+    });
+    id('qcScore').textContent = ok;
+    id('qcFb').textContent = ok===qcItems.length ? '✅ Great job!' : `You got ${ok}/${qcItems.length}. Aim for full marks.`;
+  });
 
-    function updateProgress() {
-      const maxPoints = Object.values(lessonState.sections).reduce((sum, s) => sum + s.maxPoints, 0);
-      const earnedPoints = Object.values(lessonState.sections).reduce((sum, s) => sum + s.points, 0);
-      const percentage = maxPoints > 0 ? Math.round((earnedPoints / maxPoints) * 100) : 0;
-      
-      lessonState.totalPoints = earnedPoints;
-      
-      // Update UI
-      document.getElementById('totalPoints').textContent = earnedPoints;
-      document.getElementById('progressPercent').textContent = percentage + '%';
-      
-      // Update progress circle
-      const circle = document.getElementById('progressCircle');
-      const circumference = 2 * Math.PI * 25;
-      const offset = circumference - (percentage / 100) * circumference;
-      circle.style.strokeDashoffset = offset;
-      
-      // Update section indicators
-      renderSectionIndicators();
-      
-      // Send progress to parent
-      sendProgressUpdate('progress-update', {
-        percentage,
-        points: earnedPoints,
-        sections: lessonState.sections
-      });
-    }
+  /* --------- Practice Generator --------- */
+  const ctxs = [
+    (a,b)=>({text:`A runner covers ${a} km in ${b} h. What is the speed (km/h) and equation y = kx?`, k: a/b, x:'hours', y:'km'}),
+    (a,b)=>({text:`QR ${a*b} for ${b} kg of fruit. What is the unit price (QR/kg) and equation y = kx?`, k:a, x:'kg', y:'QR'}),
+    (a,b)=>({text:`${a} liters fill ${b} bottles equally. Liters per bottle and equation y = kx?`, k: a/b, x:'bottles', y:'L'})
+  ];
+  let curGen=null, streak=0;
+  function newGen(){
+    const a = Math.floor(20+Math.random()*60);
+    const b = Math.floor(2+Math.random()*6);
+    const f = ctxs[Math.floor(Math.random()*ctxs.length)];
+    curGen = f(a,b);
+    id('genBox').innerHTML = `<div class="text-xl">${curGen.text}</div>
+      <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div><label class="text-sm block mb-1">Unit rate k</label><input id="genK" class="w-full p-2 border border-gray-200 rounded-md" placeholder="e.g., 12.5"></div>
+        <div><label class="text-sm block mb-1">Equation</label><input id="genEq" class="w-full p-2 border border-gray-200 rounded-md" placeholder="y=kx"></div>
+        <div class="self-end"><span class="pill">Expected form: y = kx</span></div>
+      </div>`;
+  }
+  newGen();
+  id('genNew').addEventListener('click', newGen);
+  id('genCheck').addEventListener('click', ()=>{
+    const kVal = parseFloat((id('genK').value||'').replace(',','.'));
+    const eq = (id('genEq').value||'').replace(/\s+/g,'').toLowerCase();
+    const goodK = Number.isFinite(kVal) && Math.abs(kVal - curGen.k) < 1e-6;
+    const goodEq = eq === `y=${(curGen.k).toString()}x` || /y=kx/.test(eq) || Math.abs(parseFloat(eq.split('=')[1]) - curGen.k) < 1e-6;
+    if (goodK && goodEq){ streak++; id('genFb').textContent = '✅ Correct!'; }
+    else { streak=0; id('genFb').textContent = `❌ Not quite. Expected k≈${(+curGen.k.toFixed(4))}`; }
+    id('genStreak').textContent = streak;
+  });
 
-    function unlockSection(sectionId) {
-      const section = document.getElementById(`section-${sectionId}`);
-      if (section) {
-        section.classList.remove('section-locked');
-        lessonState.sections[sectionId].locked = false;
-        
-        const statusEl = document.getElementById(`section-${sectionId}-status`);
-        if (statusEl) {
-          statusEl.innerHTML = '<i class="fas fa-unlock text-yellow-500"></i> Available';
-          statusEl.className = 'px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm';
-        }
-        
-        // Special handling for video section
-        if (sectionId === 1) {
-          document.getElementById('videoContainer').classList.remove('video-locked');
-        }
-      }
-    }
+  /* --------- Mastery Quiz (points + gate) --------- */
+  const mqItems = [
+    {q:'A recipe uses 9 cups of flour for 6 batches. What is k (cups per batch)?', opts:['1.25','1.5','1.6','1.75'], ans:1, points:10},
+    {q:'The graph of a relationship passes through (0,0) and (5,20). Which equation?', opts:['y=3x','y=4x','y=5x','y=6x'], ans:1, points:10},
+    {q:'y is proportional to x and y=18 when x=12. Find k.', opts:['1.25','1.5','1.6','2'], ans:2, points:10},
+    {q:'Which table could be proportional?', opts:['x:1,2,3 | y:2,5,8','x:2,4,6 | y:3,6,9','x:3,6,9 | y:5,11,17','x:2,3,4 | y:6,8,10'], ans:1, points:10},
+    {q:'If y=kx and k=0.4, what is y when x=35?', opts:['12','14','15','16'], ans:1, points:10},
+    {q:'A biker rides at 24 km/h. Which is true?', opts:['k=24 and equation y=24x','k=24 and equation x=24y','k=1/24 and equation y=24x','Not proportional'], ans:0, points:10},
+    {q:'You pay QR 63 for 4.5 kg. What is k (QR/kg)?', opts:['12','13','13.5','14'], ans:2, points:10},
+    {q:'Which point must lie on every graph of y=kx?', opts:['(0,1)','(1,0)','(0,0)','(1,1)'], ans:2, points:10},
+    {q:'If k is doubled, what happens to y for the same x?', opts:['y halves','y stays same','y doubles','y triples'], ans:2, points:10},
+    {q:'A line has slope 7 and passes through origin. What is k?', opts:['-7','0','7','cannot tell'], ans:2, points:10}
+  ];
+  function renderMQ(){
+    const box=id('mqBox'); box.innerHTML='';
+    mqItems.forEach((o,i)=>{
+      const row=document.createElement('div'); row.className='card p-4';
+      row.innerHTML = `<div class="text-xl">${i+1}. ${o.q}</div>
+        <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+          ${o.opts.map((opt,j)=>`<label class="block"><input type="radio" name="mq${i}" value="${j}"> ${opt}</label>`).join('')}
+        </div>`;
+      box.appendChild(row);
+    });
+    id('mqTotal').textContent = mqItems.length;
+  }
+  renderMQ();
+  let mqPoints=0, mqCorrect=0;
+  id('mqSubmit').addEventListener('click', ()=>{
+    mqPoints=0; mqCorrect=0;
+    mqItems.forEach((o,i)=>{
+      const sel = document.querySelector(`input[name="mq${i}"]:checked`);
+      if (sel && +sel.value===o.ans){ mqCorrect++; mqPoints += o.points; }
+    });
+    id('mqScore').textContent = mqCorrect;
+    id('mqPoints').textContent = mqPoints;
+    id('mqFb').textContent = mqCorrect>=8 ? '🎉 Mastery achieved! (≥80%)' : `You scored ${mqCorrect}/10. Review and try again.`;
+    if (mqCorrect>=8){ gates.mastery = true; updateControls(); try{ confetti(); }catch(_){ } unlockFinal(); }
+  });
 
-    function completeSection(sectionId, points = 0) {
-      lessonState.sections[sectionId].completed = true;
-      lessonState.sections[sectionId].points = points;
-      
-      const statusEl = document.getElementById(`section-${sectionId}-status`);
-      if (statusEl) {
-        statusEl.innerHTML = '<i class="fas fa-check-circle text-green-500"></i> Completed';
-        statusEl.className = 'px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm';
-      }
-      
-      // Unlock next section
-      if (sectionId < lessonState.totalSections) {
-        unlockSection(sectionId + 1);
-        
-        // Auto-scroll to next section
-        setTimeout(() => {
-          document.getElementById(`section-${sectionId + 1}`).scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
-          });
-        }, 1000);
-      }
-      
-      // Check if lesson is complete
-      if (sectionId === 4) { // After quiz
-        completeLessonSummary();
-      }
-      
-      updateProgress();
-      createConfetti();
-    }
+  /* --------- Final slide unlocking & completion --------- */
+  function unlockFinal(){
+    const ok = gates.video && gates.mastery;
+    id('finalSlide').classList.toggle('locked', !ok);
+    id('markComplete').disabled = !ok;
+    id('markComplete').classList.toggle('disabled', !ok);
+    id('outVid').textContent = Math.round(videoPct*100)+'%';
+    id('outMQ').textContent = mqCorrect + '/' + mqItems.length;
+    id('outPts').textContent = mqPoints;
+  }
 
-    // Video Tracking
-    function setupVideoTracking() {
-      const video = document.getElementById('lessonVideo');
-      let watchedSegments = new Set();
-      const segmentDuration = 2; // Track 2-second segments
-      
-      video.addEventListener('timeupdate', () => {
-        const currentSegment = Math.floor(video.currentTime / segmentDuration);
-        watchedSegments.add(currentSegment);
-        
-        const totalSegments = Math.ceil(video.duration / segmentDuration);
-        const watchedPercent = (watchedSegments.size / totalSegments) * 100;
-        
-        document.getElementById('videoProgress').style.width = watchedPercent + '%';
-        document.getElementById('videoTime').textContent = 
-          `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
-        
-        lessonState.videoWatched = watchedPercent;
-        
-        // Complete video section when 90% watched
-        if (watchedPercent >= 90 && !lessonState.sections[1].completed) {
-          completeSection(1, 100);
-          showNotification('Video completed! +100 points', 'success');
-        }
-      });
-      
-      // Prevent skipping ahead
-      let lastTime = 0;
-      video.addEventListener('timeupdate', () => {
-        if (video.currentTime > lastTime + 1.5) {
-          video.currentTime = lastTime;
-          showNotification('Please watch the video without skipping', 'warning');
-        }
-        lastTime = video.currentTime;
-      });
-    }
+  id('markComplete').addEventListener('click', ()=>{
+    // lesson-bridge.js listens for .btn-complete clicks and posts to parent
+    try { window.parent.postMessage({ type:'lesson-progress', complete:true }, '*'); } catch(_) {}
+    id('markComplete').textContent = 'Submitted ✓';
+  });
 
-    // Reading Section
-    function completeReading() {
-      if (!lessonState.sections[2].completed) {
-        completeSection(2, 50);
-        showNotification('Concepts understood! +50 points', 'success');
-      }
-    }
+  /* --------- Export helpers --------- */
+  function download(name, mime, text){
+    const a=document.createElement('a');
+    a.href='data:'+mime+','+encodeURIComponent(text);
+    a.download=name; a.click();
+  }
+  id('exportCSV').addEventListener('click', ()=>{
+    const rows=[['metric','value'],
+      ['video_pct', Math.round(videoPct*100)],
+      ['mq_correct', mqCorrect],
+      ['mq_total', mqItems.length],
+      ['mq_points', mqPoints],
+      ['reflection', (id('reflection').value||'').replaceAll('\\n',' ')]
+    ];
+    const csv = rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\\n');
+    download('g7-u3-proportions-results.csv','text/csv;charset=utf-8',csv);
+  });
+  id('exportJSON').addEventListener('click', ()=>{
+    const data={ video_pct:Math.round(videoPct*100), mq_correct:mqCorrect, mq_total:mqItems.length, mq_points:mqPoints, reflection:id('reflection').value||'' };
+    download('g7-u3-proportions-results.json','application/json;charset=utf-8', JSON.stringify(data,null,2));
+  });
 
-    // Drag and Drop Activity
-    function setupDragAndDrop() {
-      const draggables = document.querySelectorAll('.draggable');
-      const dropZones = document.querySelectorAll('.drop-zone');
-      
-      draggables.forEach(draggable => {
-        draggable.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('text', e.target.dataset.value);
-          e.target.classList.add('dragging');
-        });
-        
-        draggable.addEventListener('dragend', (e) => {
-          e.target.classList.remove('dragging');
-        });
-      });
-      
-      dropZones.forEach(zone => {
-        zone.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          zone.classList.add('drag-over');
-        });
-        
-        zone.addEventListener('dragleave', () => {
-          zone.classList.remove('drag-over');
-        });
-        
-        zone.addEventListener('drop', (e) => {
-          e.preventDefault();
-          const value = e.dataTransfer.getData('text');
-          
-          // Create element in drop zone
-          const element = document.createElement('span');
-          element.className = 'inline-block bg-blue-100 px-3 py-1 rounded-lg font-mono mx-1';
-          element.textContent = value;
-          element.onclick = () => element.remove();
-          
-          if (zone.querySelector('.text-gray-400')) {
-            zone.innerHTML = '';
-          }
-          zone.appendChild(element);
-          zone.classList.remove('drag-over');
-        });
-      });
+  /* --------- Confetti --------- */
+  function confetti(){
+    const num=180; const box=document.body;
+    for(let i=0;i<num;i++){
+      const d=document.createElement('div'); d.className='confetti'; d.textContent='🎉';
+      d.style.left=Math.random()*100+'%'; d.style.top='-10%'; d.style.fontSize=(12+Math.random()*18)+'px';
+      d.style.transition='transform 2.8s cubic-bezier(.17,.67,.25,1.25), opacity 3s';
+      box.appendChild(d);
+      const dx=(Math.random()*2-1)*200; const dy=window.innerHeight+100; const rot=(Math.random()*720-360);
+      requestAnimationFrame(()=>{ d.style.transform=`translate(${dx}px, ${dy}px) rotate(${rot}deg)`; d.style.opacity='0'; });
+      setTimeout(()=>d.remove(), 3200);
     }
+  }
 
-    function checkDragDrop(button, correctAnswer, points) {
-      const dropZone = button.previousElementSibling;
-      const elements = dropZone.querySelectorAll('span');
-      const userAnswer = Array.from(elements).map(el => el.textContent).join('');
-      
-      const activityCard = button.closest('.activity-card');
-      
-      if (userAnswer === correctAnswer) {
-        activityCard.classList.add('correct-answer');
-        button.disabled = true;
-        button.textContent = '✓ Correct!';
-        button.className = 'mt-3 bg-green-600 text-white px-4 py-2 rounded-lg';
-        
-        // Track activity completion
-        const activityId = correctAnswer;
-        if (!lessonState.activities[activityId]) {
-          lessonState.activities[activityId] = true;
-          lessonState.sections[3].points += points;
-          showNotification(`Correct! +${points} points`, 'success');
-        }
-      } else {
-        activityCard.classList.add('incorrect-answer');
-        setTimeout(() => activityCard.classList.remove('incorrect-answer'), 500);
-        showNotification('Not quite right. Try again!', 'error');
-      }
-      
-      // Check if all activities completed
-      checkActivitiesComplete();
-    }
-
-    function checkSolve(correctAnswer, points) {
-      const input = document.getElementById('solveInput');
-      const userAnswer = parseInt(input.value);
-      
-      if (userAnswer === correctAnswer) {
-        input.classList.add('correct-answer');
-        input.disabled = true;
-        
-        if (!lessonState.activities['solve']) {
-          lessonState.activities['solve'] = true;
-          lessonState.sections[3].points += points;
-          showNotification(`Correct! +${points} points`, 'success');
-        }
-      } else {
-        input.classList.add('incorrect-answer');
-        setTimeout(() => input.classList.remove('incorrect-answer'), 500);
-        document.getElementById('solveHint').classList.remove('hidden');
-        showNotification('Try again! Check the hint.', 'error');
-      }
-      
-      checkActivitiesComplete();
-    }
-
-    function checkActivitiesComplete() {
-      const totalActivities = 3;
-      const completedActivities = Object.keys(lessonState.activities).length;
-      
-      if (completedActivities === totalActivities && !lessonState.sections[3].completed) {
-        completeSection(3, lessonState.sections[3].points);
-        document.getElementById('activityFeedback').innerHTML = `
-          <div class="bg-green-100 text-green-800 p-4 rounded-lg">
-            <i class="fas fa-trophy mr-2"></i>
-            All activities completed! Great job!
-          </div>
-        `;
-      }
-    }
-
-    // Quiz Section
-    function submitQuiz() {
-      const answers = {
-        q1: document.querySelector('input[name="q1"]:checked')?.value,
-        q2: document.querySelector('input[name="q2"]:checked')?.value,
-        q3: document.querySelector('input[name="q3"]:checked')?.value,
-        q4: document.querySelector('input[name="q4"]:checked')?.value
-      };
-      
-      const correctAnswers = {
-        q1: 'b', // 2x + 7 is an algebraic expression
-        q2: 'b', // 3(4) - 2 = 10
-        q3: 'b', // 2n - 5
-        q4: 'false' // Variables can be any letter or symbol
-      };
-      
-      let correct = 0;
-      const totalQuestions = 4;
-      const pointsPerQuestion = 50;
-      
-      // Check answers and show feedback
-      Object.keys(answers).forEach(q => {
-        if (answers[q] === correctAnswers[q]) {
-          correct++;
-          document.querySelector(`input[name="${q}"][value="${answers[q]}"]`)
-            .closest('label').classList.add('correct-answer');
-        } else {
-          if (answers[q]) {
-            document.querySelector(`input[name="${q}"][value="${answers[q]}"]`)
-              .closest('label').classList.add('incorrect-answer');
-          }
-          document.querySelector(`input[name="${q}"][value="${correctAnswers[q]}"]`)
-            .closest('label').classList.add('correct-answer');
-        }
-      });
-      
-      const score = (correct / totalQuestions) * 100;
-      const points = correct * pointsPerQuestion;
-      
-      lessonState.quizAttempts++;
-      
-      const resultsDiv = document.getElementById('quizResults');
-      resultsDiv.classList.remove('hidden');
-      
-      if (score >= 70) {
-        resultsDiv.innerHTML = `
-          <div class="bg-green-100 text-green-800 p-4 rounded-lg">
-            <i class="fas fa-check-circle mr-2"></i>
-            <strong>Excellent!</strong> You scored ${score}% (${correct}/${totalQuestions} correct)
-            <br>You earned ${points} points!
-          </div>
-        `;
-        
-        if (!lessonState.sections[4].completed) {
-          lessonState.sections[4].points = points;
-          completeSection(4, points);
-        }
-      } else {
-        resultsDiv.innerHTML = `
-          <div class="bg-amber-100 text-amber-800 p-4 rounded-lg">
-            <i class="fas fa-exclamation-triangle mr-2"></i>
-            You scored ${score}%. You need 70% to pass.
-            <br>Review the correct answers and try again!
-            <button onclick="resetQuiz()" class="ml-4 bg-amber-600 text-white px-3 py-1 rounded">
-              Try Again
-            </button>
-          </div>
-        `;
-      }
-    }
-
-    function resetQuiz() {
-      // Clear all selections and feedback
-      document.querySelectorAll('input[type="radio"]').forEach(input => {
-        input.checked = false;
-        input.closest('label').classList.remove('correct-answer', 'incorrect-answer');
-      });
-      document.getElementById('quizResults').classList.add('hidden');
-    }
-
-    // Lesson Completion
-    function completeLessonSummary() {
-      unlockSection(5);
-      
-      const timeSpent = Math.round((Date.now() - lessonState.startTime) / 60000);
-      const totalPoints = lessonState.totalPoints;
-      const maxPoints = 500;
-      const percentage = Math.round((totalPoints / maxPoints) * 100);
-      
-      let grade = 'F';
-      if (percentage >= 90) grade = 'A+';
-      else if (percentage >= 85) grade = 'A';
-      else if (percentage >= 80) grade = 'B+';
-      else if (percentage >= 75) grade = 'B';
-      else if (percentage >= 70) grade = 'C';
-      
-      document.getElementById('finalScore').textContent = totalPoints;
-      document.getElementById('finalGrade').textContent = grade;
-      document.getElementById('finalTime').textContent = timeSpent + 'm';
-      
-      // Scroll to summary
-      setTimeout(() => {
-        document.getElementById('section-5').scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }, 1000);
-      
-      // Send completion event
-      sendProgressUpdate('lesson-complete', {
-        lessonId: 'algebra-intro',
-        score: totalPoints,
-        grade: grade,
-        timeSpent: timeSpent,
-        attempts: lessonState.quizAttempts
-      });
-      
-      // Big celebration!
-      for (let i = 0; i < 5; i++) {
-        setTimeout(() => createConfetti(), i * 200);
-      }
-    }
-
-    // Utility Functions
-    function formatTime(seconds) {
-      const m = Math.floor(seconds / 60);
-      const s = Math.floor(seconds % 60);
-      return `${m}:${s.toString().padStart(2, '0')}`;
-    }
-
-    function showNotification(message, type = 'info') {
-      const colors = {
-        success: 'bg-green-100 text-green-800 border-green-300',
-        error: 'bg-red-100 text-red-800 border-red-300',
-        warning: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-        info: 'bg-blue-100 text-blue-800 border-blue-300'
-      };
-      
-      const notification = document.createElement('div');
-      notification.className = `fixed top-20 right-4 p-4 rounded-lg border-2 ${colors[type]} z-50 animate-fade-in shadow-lg`;
-      notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} mr-2"></i>
-        ${message}
-      `;
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 300);
-      }, 3000);
-    }
-
-    function createConfetti() {
-      const colors = ['#6C1D45', '#C7A34F', '#10b981', '#3b82f6', '#ef4444'];
-      
-      for (let i = 0; i < 20; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'confetti';
-        confetti.style.left = Math.random() * 100 + '%';
-        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-        confetti.style.animationDelay = Math.random() * 0.5 + 's';
-        confetti.style.animationDuration = (Math.random() * 1 + 2) + 's';
-        document.body.appendChild(confetti);
-        
-        setTimeout(() => confetti.remove(), 3000);
-      }
-    }
-
-    function sendProgressUpdate(type, data) {
-      // Send message to parent window
-      if (window.parent && window.parent !== window) {
-        window.parent.postMessage({
-          type: type,
-          timestamp: Date.now(),
-          ...data
-        }, '*');
-      }
-      
-      // Also send to server via API
-      fetch('/api/interactive/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lessonId: 'algebra-intro',
-          eventType: type,
-          data: data
-        })
-      }).catch(console.error);
-    }
-
-    // Navigation Functions
-    function showExitConfirm() {
-      document.getElementById('exitModal').classList.remove('hidden');
-    }
-
-    function closeExitModal() {
-      document.getElementById('exitModal').classList.add('hidden');
-    }
-
-    function confirmExit() {
-      sendProgressUpdate('lesson-exit', {
-        lessonId: 'algebra-intro',
-        progress: lessonState
-      });
-      window.location.href = '/portal/student';
-    }
-
-    function retryLesson() {
-      location.reload();
-    }
-
-    function nextLesson() {
-      sendProgressUpdate('next-lesson-requested', {
-        currentLesson: 'algebra-intro'
-      });
-      window.location.href = '/portal/student#next-lesson';
-    }
-  </script>
+  /* --------- Init --------- */
+  show(0);
+  updateControls();
+})();
+</script>
 </body>
 </html>

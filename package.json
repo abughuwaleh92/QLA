@@ -1,6 +1,6 @@
 {
   "name": "qla-math-platform",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "QLA Mathematics Platform - Enhanced Interactive Learning System",
   "private": true,
   "engines": {
@@ -13,7 +13,7 @@
     "migrate": "node scripts/run-migrations.js",
     "test": "node scripts/test-platform.js",
     "seed": "node scripts/seed-data.js",
-    "build": "npm run migrate"
+    "build": "echo 'Build phase complete - migrations will run at startup'"
   },
   "dependencies": {
     "compression": "^1.7.4",

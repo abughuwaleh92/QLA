@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>G7 • Unit 3 • Proportional Relationships & Unit Rate — QLA</title>
+
+<!-- Fonts & Tailwind -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- KaTeX (auto-render) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\\\(',right:'\\\\)',display:false}]})"></script>
+
+<style>
+  :root{--maroon:#6C1D45;--gold:#C7A34F;--dark:#2C2C2E;--light:#F5F5F5;--accent:#E8D5B7}
+  html,body{height:100%;background:#2d3748;color:#111;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  #deck{position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;padding:10px}
+  #slides{position:relative;width:100%;max-width:1280px;aspect-ratio:16/9;background:#fff;box-shadow:0 14px 36px rgba(0,0,0,.35);overflow:hidden;border-radius:18px}
+  .slide{position:absolute;inset:0;padding:3.5%;display:flex;flex-direction:column;gap:1rem;opacity:0;transform:translateY(14px) scale(.985);transition:.55s ease;pointer-events:none}
+  .slide.active{opacity:1;transform:none;pointer-events:auto}
+  .bg-maroon{background-color:var(--maroon)} .text-maroon{color:var(--maroon)} .text-gold{color:var(--gold)}
+  .banner{width:100%;height:110px;background:#fff center/contain no-repeat;border-bottom:3px solid var(--gold);border-radius:10px}
+  .card{border:1px solid #e5e7eb;border-radius:14px;background:#fafafa}
+  .chip{display:inline-flex;align-items:center;gap:.5rem;background:#fff;border:1px solid #e5e7eb;padding:.35rem .75rem;border-radius:9999px;cursor:pointer}
+  .chip:hover{outline:2px solid var(--gold)}
+  .btn{padding:.55rem 1rem;border-radius:999px;border:1px solid #e5e7eb;background:#fff;font-weight:700}
+  .btn.maroon{background:var(--maroon);color:#fff;border-color:var(--maroon)}
+  .btn:hover{filter:brightness(0.98)}
+  #controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.75rem;padding:.4rem .6rem;border-radius:999px;z-index:20;backdrop-filter:blur(6px)}
+  #controls button{width:42px;height:42px;border-radius:999px;border:none;background:#fff;cursor:pointer;font-weight:700}
+  #controls button:hover{transform:scale(1.06)}
+  #counter{color:#fff;font-weight:700;min-width:120px;text-align:center}
+  #progress{position:fixed;left:0;bottom:0;height:5px;width:0;background:var(--gold);z-index:30;transition:width .35s ease}
+  .pill{display:inline-block;padding:.2rem .6rem;border-radius:999px;border:1px solid #e5e7eb;background:#fff}
+  .kbd{display:inline-block;border:1px solid #e5e7eb;border-bottom-width:3px;border-radius:6px;padding:.15rem .4rem;background:#fff}
+  .confetti{position:fixed;pointer-events:none;z-index:50}
+  .disabled{opacity:.5;pointer-events:none}
+  .locked::after{content:'🔒';margin-left:.35rem}
+  .scorebox{font-weight:800}
+  .ytwrap{position:relative;width:100%;height:0;padding-bottom:56.25%;border-radius:12px;overflow:hidden}
+  .ytwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+</style>
+</head>
+<body>
+
+<div id="deck" aria-live="polite">
+  <div id="slides" class="relative">
+    <div id="fsHint">Press <strong>F</strong> for fullscreen</div>
+
+    <!-- 0 • Title -->
+    <section class="slide active bg-maroon text-white" id="titleSlide">
+      <div class="w-full h-16 banner mb-6 rounded-md" style="background:url('qla_banner.png') center/contain no-repeat" aria-label="QLA Partner Banner"></div>
+      <div class="flex items-center gap-8">
+        <img src="qla_logo.png" alt="QLA Logo" class="h-20 w-auto" onerror="this.style.display='none'"/>
+        <div class="text-left">
+          <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight">Proportional Relationships & Unit Rate</h1>
+          <p class="text-gold text-2xl md:text-3xl mt-2 font-semibold">When one doubles, the other doubles — the constant of proportionality \(k\).</p>
+          <p class="mt-2 text-lg">Qatar Leadership Academy — Grade 7</p>
+        </div>
+      </div>
+      <div class="mt-auto text-sm text-gray-100">Aligned to AERO 7.RP.1–3.</div>
+    </section>
+
+    <!-- 1 • Objectives -->
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold text-maroon">Lesson Objectives</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card p-5">
+          <h3 class="text-xl font-bold mb-2">You will be able to…</h3>
+          <ul class="list-disc pl-6 space-y-2 text-lg">
+            <li>Decide if two quantities are in a proportional relationship.</li>
+            <li>Compute and interpret the constant of proportionality \(k\) and unit rate.</li>
+            <li>Represent proportional relationships using tables, equations \(y=kx\), and graphs.</li>
+          </ul>
+        </div>
+        <div class="card p-5">
+          <h3 class="text-xl font-bold mb-2">Success Criteria</h3>
+          <ul class="list-disc pl-6 space-y-2 text-lg">
+            <li>Score <span class="font-extrabold">≥ 80%</span> on the Mastery Quiz.</li>
+            <li>Watch <span class="font-extrabold">≥ 80%</span> of the lesson video.</li>
+            <li>Explain what the number \(k\) means in a real context.</li>
+          </ul>
+          <div class="mt-3 text-sm">Progress gates are enforced: you must satisfy the criteria to unlock the final slide.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 • Video (with progress tracking + gate) -->
+    <section class="slide" id="videoSlide">
+      <h2 class="text-3xl font-extrabold text-maroon">Watch: Proportional Relationships</h2>
+      <div class="text-sm text-gray-600">You must watch at least 80% to unlock the next section.</div>
+      <!-- Option A: Local/hosted MP4 -->
+      <video id="lessonVideo" class="w-full rounded-lg border border-gray-200" controls preload="metadata"
+             src="/uploads/videos/proportional_relationships_intro.mp4"
+             onerror="document.getElementById('ytFallback').classList.remove('hidden')"></video>
+      <!-- Option B: YouTube fallback (replace data-youtube-id as needed) -->
+      <div id="ytFallback" class="hidden mt-3">
+        <div class="ytwrap">
+          <iframe id="ytPlayer" data-youtube-id="w8Jp5h8Y-ow"
+                  src="https://www.youtube.com/embed/w8Jp5h8Y-ow?enablejsapi=1&rel=0&modestbranding=1"
+                  title="Proportional Relationships — Lesson Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen></iframe>
+        </div>
+        <p class="text-sm text-gray-600 mt-2">If your platform hosts an MP4 at <code>/uploads/videos/proportional_relationships_intro.mp4</code> it will be used automatically.</p>
+      </div>
+      <div class="mt-2"><span class="pill">Watched: <span id="videoPct" class="font-bold">0%</span></span></div>
+    </section>
+
+    <!-- 3 • Explain & Explore -->
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold text-maroon">What is a proportional relationship?</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card p-5 text-lg leading-7">
+          <p>Two quantities \(x\) and \(y\) are <em>proportional</em> if there exists a constant \(k\) such that \(y=kx\).</p>
+          <p class="mt-2">The number \(k\) is the <strong>constant of proportionality</strong> (unit rate): the amount of \(y\) per \(1\) unit of \(x\).</p>
+          <p class="mt-2">Check proportionality by verifying that the ratio \(\\frac{y}{x}\) is constant across all nonzero \(x\), or that the graph is a straight line through the origin.</p>
+          <div class="mt-3 text-sm text-gray-600">Examples: price per kilogram, speed (km/h), density (g/cm\(^3\)).</div>
+        </div>
+        <div class="card p-5">
+          <h3 class="text-xl font-bold">Mini‑check: Constant \(k\)</h3>
+          <div id="miniCheck" class="space-y-3"></div>
+          <button class="btn maroon" id="miniCheckBtn">Check answers</button>
+          <div id="miniCheckFb" class="mt-2 text-lg font-bold"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 • Quick Check (MCQ) -->
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold text-maroon">Quick Check</h2>
+      <div id="qcBox" class="space-y-4"></div>
+      <div class="flex items-center gap-3 mt-2">
+        <button class="btn maroon" id="qcSubmit">Submit</button>
+        <div class="pill">Score: <span id="qcScore" class="scorebox">0</span> / <span id="qcTotal">0</span></div>
+      </div>
+      <div id="qcFb" class="mt-2 text-lg font-bold"></div>
+    </section>
+
+    <!-- 5 • Practice Generator (free response with autograde) -->
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold text-maroon">Practice Generator</h2>
+      <p class="text-lg">Find the unit rate and write \(y=kx\).</p>
+      <div class="card p-5" id="genBox"></div>
+      <div class="flex items-center gap-3 mt-3">
+        <button class="btn" id="genNew">New item</button>
+        <button class="btn maroon" id="genCheck">Check</button>
+        <div class="pill">Streak: <span id="genStreak" class="scorebox">0</span></div>
+      </div>
+      <div id="genFb" class="mt-2 text-lg font-bold"></div>
+    </section>
+
+    <!-- 6 • Mastery Quiz (gated) -->
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold text-maroon">Mastery Quiz</h2>
+      <p class="text-lg">Earn at least <strong>80%</strong> (8/10) to unlock completion.</p>
+      <div id="mqBox" class="space-y-4"></div>
+      <div class="flex items-center gap-3 mt-2">
+        <button class="btn maroon" id="mqSubmit">Submit</button>
+        <div class="pill">Points: <span id="mqPoints" class="scorebox">0</span></div>
+        <div class="pill">Correct: <span id="mqScore" class="scorebox">0</span> / <span id="mqTotal">0</span></div>
+      </div>
+      <div id="mqFb" class="mt-2 text-lg font-bold"></div>
+    </section>
+
+    <!-- 7 • Reflection + Completion (locked until gates passed) -->
+    <section class="slide locked" id="finalSlide">
+      <h2 class="text-3xl font-extrabold text-maroon">Reflect & Submit</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card p-5">
+          <h3 class="text-xl font-bold">Explain:</h3>
+          <p class="text-lg">In your own words, what does the constant \(k\) mean in a real context from this lesson?</p>
+          <textarea id="reflection" class="w-full h-40 p-3 border border-gray-200 rounded-md" placeholder="Write 4–5 sentences…"></textarea>
+          <div class="mt-2 text-sm text-gray-600">This reflection is shared with your teacher.</div>
+        </div>
+        <div class="card p-5">
+          <h3 class="text-xl font-bold">Your Results</h3>
+          <ul class="text-lg space-y-1">
+            <li>Video watched: <strong id="outVid">0%</strong></li>
+            <li>Mastery quiz: <strong id="outMQ">0/0</strong> (points: <strong id="outPts">0</strong>)</li>
+          </ul>
+          <div class="mt-3 flex flex-wrap items-center gap-3">
+            <button class="btn" id="exportCSV">Export CSV</button>
+            <button class="btn" id="exportJSON">Export JSON</button>
+            <button class="btn maroon btn-complete disabled" id="markComplete" disabled>Mark lesson complete</button>
+          </div>
+          <div class="mt-2 text-sm text-gray-600">Completion will be sent to the QLA platform when unlocked.</div>
+        </div>
+      </div>
+      <div class="mt-auto text-sm text-gray-500">Gates: watch ≥80% and score ≥80% on Mastery Quiz.</div>
+    </section>
+
+  </div>
+</div>
+
+<!-- Controls -->
+<div id="controls">
+  <button id="prevBtn" title="Previous (←)">←</button>
+  <div id="counter" class="text-white"></div>
+  <button id="nextBtn" title="Next (→)">→</button>
+</div>
+<div id="progress"></div>
+
+<script>
+(function(){
+  const $ = (s, r)=> (r||document).querySelector(s);
+  const $$ = (s, r)=> Array.from((r||document).querySelectorAll(s));
+  const id = (s)=> document.getElementById(s);
+  const slides = $$('#slides > section');
+  const total  = slides.length;
+  let cur = 0;
+
+  const gates = {
+    video: false,   // ≥80% watched
+    mastery: false  // ≥80% correct
+  };
+
+  function updateControls(){
+    $('#counter').textContent = (cur+1) + ' / ' + total;
+    $('#progress').style.width = (((cur+1)/total)*100).toFixed(2) + '%';
+    id('prevBtn').classList.toggle('disabled', cur===0);
+    id('nextBtn').classList.toggle('disabled', cur===total-1 || !canGoNext());
+  }
+
+  function canGoNext(){
+    // Enforce gates after their slides
+    if (cur === 2) { return gates.video; }             // leaving video slide (index 2)
+    if (cur === 6) { return gates.mastery; }           // leaving mastery quiz slide
+    return true;
+  }
+
+  function show(n){
+    slides[cur].classList.remove('active');
+    cur = Math.max(0, Math.min(total-1, n));
+    slides[cur].classList.add('active');
+    // Communicate progress to parent (lesson-bridge.js listens)
+    try { window.parent.postMessage({type:'lesson-progress', slide:cur+1, total:total}, '*'); } catch(e){}
+    updateControls();
+  }
+
+  id('prevBtn').addEventListener('click', ()=> show(cur-1));
+  id('nextBtn').addEventListener('click', ()=> { if (canGoNext()) show(cur+1); });
+  document.addEventListener('keydown', (e)=>{
+    if (e.key==='ArrowRight') { if (canGoNext()) show(cur+1); }
+    else if (e.key==='ArrowLeft') show(cur-1);
+    else if (e.key==='f' || e.key==='F') document.documentElement.requestFullscreen?.();
+  });
+
+  /* --------- Video tracking (local MP4 and YouTube fallback) --------- */
+  const vid = id('lessonVideo');
+  const yt = id('ytPlayer');
+  let videoPct = 0;
+  function setVideoPct(p){
+    videoPct = Math.max(videoPct, p); // keep max seen
+    id('videoPct').textContent = Math.round(videoPct*100) + '%';
+    if (videoPct >= 0.8) { gates.video = true; id('videoSlide').classList.remove('locked'); updateControls(); }
+  }
+
+  if (vid){
+    vid.addEventListener('timeupdate', ()=>{
+      if (vid.duration && isFinite(vid.duration)) setVideoPct(vid.currentTime/vid.duration);
+    });
+  }
+  // YouTube API fallback
+  let ytPlayerObj=null;
+  function onYouTubeIframeAPIReady(){
+    ytPlayerObj = new YT.Player('ytPlayer', {
+      events: {
+        onReady: (ev)=>{
+          // Poll percent watched
+          setInterval(()=>{
+            try{
+              const d = ev.target.getDuration();
+              const t = ev.target.getCurrentTime();
+              if (d>0) setVideoPct(t/d);
+            }catch(_){}
+          }, 1000);
+        }
+      }
+    });
+  }
+  if (yt && typeof YT==='undefined'){ // load API only if needed
+    const s=document.createElement('script'); s.src="https://www.youtube.com/iframe_api";
+    document.body.appendChild(s);
+    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+  }
+
+  /* --------- Mini Check --------- */
+  const miniItems = [
+    {q:'Table: x: 2,4,6; y: 10,20,30. Is y proportional to x? What is k?', a:'Yes, k=5'},
+    {q:'Equation: y = 0.75 x. What is the unit rate?', a:'0.75'},
+    {q:'Graph passes through (0,0) and (3,12). What is k?', a:'4'}
+  ];
+  function renderMini(){
+    const box = id('miniCheck'); box.innerHTML='';
+    miniItems.forEach((o,i)=>{
+      const row=document.createElement('div'); row.className='card p-4';
+      row.innerHTML = `<div class="font-semibold mb-1">Q${i+1}. ${o.q}</div>
+        <input class="w-full p-2 border border-gray-200 rounded-md" data-i="${i}" placeholder="Your answer">`;
+      box.appendChild(row);
+    });
+  }
+  renderMini();
+  id('miniCheckBtn').addEventListener('click', ()=>{
+    let ok=0;
+    $$('#miniCheck input').forEach((inp,i)=>{
+      const val=(inp.value||'').trim().toLowerCase();
+      const ans=(miniItems[i].a+'').trim().toLowerCase();
+      if (val.includes(ans)) ok++;
+    });
+    id('miniCheckFb').textContent = ok===miniItems.length ? '✅ Excellent — exactly right.' : `Score: ${ok}/${miniItems.length}. Revisit the definitions if needed.`;
+  });
+
+  /* --------- Quick Check (MCQ) --------- */
+  const qcItems = [
+    {q:'Which equation represents a proportional relationship?', opts:['y=2x+3','y=5x','y=x+0','y=7+x'], ans:1},
+    {q:'A car travels 150 km in 3 h. Unit rate (km/h)?', opts:['45','50','55','60'], ans:1},
+    {q:'Price is proportional to weight with k=12 (QR/kg). Cost for 3.5 kg?', opts:['QR 36','QR 40','QR 42','QR 48'], ans:2},
+    {q:'If y=kx and k>0, which is true?', opts:['Graph crosses y-axis at 3','Line passes through origin','Slope is 0','Relationship is not linear'], ans:1},
+    {q:'Table shows x: 4,8,12 and y: 10,20,30. What is k?', opts:['2.5','5/2','2','2.25'], ans:0}
+  ];
+  function renderQC(){
+    const box=id('qcBox'); box.innerHTML='';
+    qcItems.forEach((o,i)=>{
+      const row=document.createElement('div'); row.className='card p-4';
+      row.innerHTML = `<div class="text-xl">${i+1}. ${o.q}</div>
+        <div class="mt-2 space-y-2">
+          ${o.opts.map((opt,j)=>`<label class="block"><input type="radio" name="qc${i}" value="${j}"> ${opt}</label>`).join('')}
+        </div>`;
+      box.appendChild(row);
+    });
+    id('qcTotal').textContent = qcItems.length;
+  }
+  renderQC();
+  id('qcSubmit').addEventListener('click', ()=>{
+    let ok=0;
+    qcItems.forEach((o,i)=>{
+      const sel = document.querySelector(`input[name="qc${i}"]:checked`);
+      if (sel && +sel.value===o.ans) ok++;
+    });
+    id('qcScore').textContent = ok;
+    id('qcFb').textContent = ok===qcItems.length ? '✅ Great job!' : `You got ${ok}/${qcItems.length}. Aim for full marks.`;
+  });
+
+  /* --------- Practice Generator --------- */
+  const ctxs = [
+    (a,b)=>({text:`A runner covers ${a} km in ${b} h. What is the speed (km/h) and equation y = kx?`, k: a/b, x:'hours', y:'km'}),
+    (a,b)=>({text:`QR ${a*b} for ${b} kg of fruit. What is the unit price (QR/kg) and equation y = kx?`, k:a, x:'kg', y:'QR'}),
+    (a,b)=>({text:`${a} liters fill ${b} bottles equally. Liters per bottle and equation y = kx?`, k: a/b, x:'bottles', y:'L'})
+  ];
+  let curGen=null, streak=0;
+  function newGen(){
+    const a = Math.floor(20+Math.random()*60);
+    const b = Math.floor(2+Math.random()*6);
+    const f = ctxs[Math.floor(Math.random()*ctxs.length)];
+    curGen = f(a,b);
+    id('genBox').innerHTML = `<div class="text-xl">${curGen.text}</div>
+      <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div><label class="text-sm block mb-1">Unit rate k</label><input id="genK" class="w-full p-2 border border-gray-200 rounded-md" placeholder="e.g., 12.5"></div>
+        <div><label class="text-sm block mb-1">Equation</label><input id="genEq" class="w-full p-2 border border-gray-200 rounded-md" placeholder="y=kx"></div>
+        <div class="self-end"><span class="pill">Expected form: y = kx</span></div>
+      </div>`;
+  }
+  newGen();
+  id('genNew').addEventListener('click', newGen);
+  id('genCheck').addEventListener('click', ()=>{
+    const kVal = parseFloat((id('genK').value||'').replace(',','.'));
+    const eq = (id('genEq').value||'').replace(/\s+/g,'').toLowerCase();
+    const goodK = Number.isFinite(kVal) && Math.abs(kVal - curGen.k) < 1e-6;
+    const goodEq = eq === `y=${(curGen.k).toString()}x` || /y=kx/.test(eq) || Math.abs(parseFloat(eq.split('=')[1]) - curGen.k) < 1e-6;
+    if (goodK && goodEq){ streak++; id('genFb').textContent = '✅ Correct!'; }
+    else { streak=0; id('genFb').textContent = `❌ Not quite. Expected k≈${(+curGen.k.toFixed(4))}`; }
+    id('genStreak').textContent = streak;
+  });
+
+  /* --------- Mastery Quiz (points + gate) --------- */
+  const mqItems = [
+    {q:'A recipe uses 9 cups of flour for 6 batches. What is k (cups per batch)?', opts:['1.25','1.5','1.6','1.75'], ans:1, points:10},
+    {q:'The graph of a relationship passes through (0,0) and (5,20). Which equation?', opts:['y=3x','y=4x','y=5x','y=6x'], ans:1, points:10},
+    {q:'y is proportional to x and y=18 when x=12. Find k.', opts:['1.25','1.5','1.6','2'], ans:2, points:10},
+    {q:'Which table could be proportional?', opts:['x:1,2,3 | y:2,5,8','x:2,4,6 | y:3,6,9','x:3,6,9 | y:5,11,17','x:2,3,4 | y:6,8,10'], ans:1, points:10},
+    {q:'If y=kx and k=0.4, what is y when x=35?', opts:['12','14','15','16'], ans:1, points:10},
+    {q:'A biker rides at 24 km/h. Which is true?', opts:['k=24 and equation y=24x','k=24 and equation x=24y','k=1/24 and equation y=24x','Not proportional'], ans:0, points:10},
+    {q:'You pay QR 63 for 4.5 kg. What is k (QR/kg)?', opts:['12','13','13.5','14'], ans:2, points:10},
+    {q:'Which point must lie on every graph of y=kx?', opts:['(0,1)','(1,0)','(0,0)','(1,1)'], ans:2, points:10},
+    {q:'If k is doubled, what happens to y for the same x?', opts:['y halves','y stays same','y doubles','y triples'], ans:2, points:10},
+    {q:'A line has slope 7 and passes through origin. What is k?', opts:['-7','0','7','cannot tell'], ans:2, points:10}
+  ];
+  function renderMQ(){
+    const box=id('mqBox'); box.innerHTML='';
+    mqItems.forEach((o,i)=>{
+      const row=document.createElement('div'); row.className='card p-4';
+      row.innerHTML = `<div class="text-xl">${i+1}. ${o.q}</div>
+        <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+          ${o.opts.map((opt,j)=>`<label class="block"><input type="radio" name="mq${i}" value="${j}"> ${opt}</label>`).join('')}
+        </div>`;
+      box.appendChild(row);
+    });
+    id('mqTotal').textContent = mqItems.length;
+  }
+  renderMQ();
+  let mqPoints=0, mqCorrect=0;
+  id('mqSubmit').addEventListener('click', ()=>{
+    mqPoints=0; mqCorrect=0;
+    mqItems.forEach((o,i)=>{
+      const sel = document.querySelector(`input[name="mq${i}"]:checked`);
+      if (sel && +sel.value===o.ans){ mqCorrect++; mqPoints += o.points; }
+    });
+    id('mqScore').textContent = mqCorrect;
+    id('mqPoints').textContent = mqPoints;
+    id('mqFb').textContent = mqCorrect>=8 ? '🎉 Mastery achieved! (≥80%)' : `You scored ${mqCorrect}/10. Review and try again.`;
+    if (mqCorrect>=8){ gates.mastery = true; updateControls(); try{ confetti(); }catch(_){ } unlockFinal(); }
+  });
+
+  /* --------- Final slide unlocking & completion --------- */
+  function unlockFinal(){
+    const ok = gates.video && gates.mastery;
+    id('finalSlide').classList.toggle('locked', !ok);
+    id('markComplete').disabled = !ok;
+    id('markComplete').classList.toggle('disabled', !ok);
+    id('outVid').textContent = Math.round(videoPct*100)+'%';
+    id('outMQ').textContent = mqCorrect + '/' + mqItems.length;
+    id('outPts').textContent = mqPoints;
+  }
+
+  id('markComplete').addEventListener('click', ()=>{
+    // lesson-bridge.js listens for .btn-complete clicks and posts to parent
+    try { window.parent.postMessage({ type:'lesson-progress', complete:true }, '*'); } catch(_) {}
+    id('markComplete').textContent = 'Submitted ✓';
+  });
+
+  /* --------- Export helpers --------- */
+  function download(name, mime, text){
+    const a=document.createElement('a');
+    a.href='data:'+mime+','+encodeURIComponent(text);
+    a.download=name; a.click();
+  }
+  id('exportCSV').addEventListener('click', ()=>{
+    const rows=[['metric','value'],
+      ['video_pct', Math.round(videoPct*100)],
+      ['mq_correct', mqCorrect],
+      ['mq_total', mqItems.length],
+      ['mq_points', mqPoints],
+      ['reflection', (id('reflection').value||'').replaceAll('\\n',' ')]
+    ];
+    const csv = rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\\n');
+    download('g7-u3-proportions-results.csv','text/csv;charset=utf-8',csv);
+  });
+  id('exportJSON').addEventListener('click', ()=>{
+    const data={ video_pct:Math.round(videoPct*100), mq_correct:mqCorrect, mq_total:mqItems.length, mq_points:mqPoints, reflection:id('reflection').value||'' };
+    download('g7-u3-proportions-results.json','application/json;charset=utf-8', JSON.stringify(data,null,2));
+  });
+
+  /* --------- Confetti --------- */
+  function confetti(){
+    const num=180; const box=document.body;
+    for(let i=0;i<num;i++){
+      const d=document.createElement('div'); d.className='confetti'; d.textContent='🎉';
+      d.style.left=Math.random()*100+'%'; d.style.top='-10%'; d.style.fontSize=(12+Math.random()*18)+'px';
+      d.style.transition='transform 2.8s cubic-bezier(.17,.67,.25,1.25), opacity 3s';
+      box.appendChild(d);
+      const dx=(Math.random()*2-1)*200; const dy=window.innerHeight+100; const rot=(Math.random()*720-360);
+      requestAnimationFrame(()=>{ d.style.transform=`translate(${dx}px, ${dy}px) rotate(${rot}deg)`; d.style.opacity='0'; });
+      setTimeout(()=>d.remove(), 3200);
+    }
+  }
+
+  /* --------- Init --------- */
+  show(0);
+  updateControls();
+})();
+</script>
+</body>
+</html>

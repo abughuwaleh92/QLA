@@ -23,6 +23,49 @@
     .interactive-row:hover{ transform:translateX(4px); box-shadow:0 12px 28px rgba(0,0,0,.08) } .interactive-row:hover::before{ left:0 }
     iframe.lesson-frame{width:100%;height:60vh;border:1px solid var(--line);border-radius:14px}
     textarea.code{ min-height:220px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; border:1px solid var(--line); border-radius:12px; padding:12px }
+    
+    /* Notification Styles */
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideIn 0.3s ease;
+      z-index: 9999;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .notification.success { background: var(--ok); color: white; }
+    .notification.error { background: #dc2626; color: white; }
+    .notification.info { background: var(--blue); color: white; }
+    .notification.warning { background: var(--soon); color: white; }
+    
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -64,34 +107,76 @@
       <div class="card p-6">
         <h3 class="font-bold text-lg mb-4"><i class="fas fa-pen-to-square mr-2 text-[var(--gold)]"></i>Lesson Details</h3>
         <div class="grid gap-3">
-          <label class="text-sm">Title <input id="title" class="rounded-lg border px-3 py-2 w-full"/></label>
+          <label class="text-sm">
+            Title <span class="text-red-500">*</span>
+            <input id="title" class="rounded-lg border px-3 py-2 w-full" placeholder="e.g., Introduction to Fractions" required/>
+          </label>
           <div class="grid grid-cols-3 gap-3">
-            <label class="text-sm">Grade <select id="grade" class="rounded-lg border px-3 py-2 w-full"><option>7</option><option>8</option></select></label>
-            <label class="text-sm">Unit <input id="unit" type="number" min="1" class="rounded-lg border px-3 py-2 w-full" value="1"/></label>
-            <label class="text-sm">Order <input id="order" type="number" min="1" class="rounded-lg border px-3 py-2 w-full" value="1"/></label>
+            <label class="text-sm">
+              Grade <span class="text-red-500">*</span>
+              <select id="grade" class="rounded-lg border px-3 py-2 w-full">
+                <option value="7">7</option>
+                <option value="8">8</option>
+              </select>
+            </label>
+            <label class="text-sm">
+              Unit <span class="text-red-500">*</span>
+              <input id="unit" type="number" min="1" max="20" class="rounded-lg border px-3 py-2 w-full" value="1"/>
+            </label>
+            <label class="text-sm">
+              Order <span class="text-red-500">*</span>
+              <input id="order" type="number" min="1" max="50" class="rounded-lg border px-3 py-2 w-full" value="1"/>
+            </label>
           </div>
-          <label class="text-sm">Description <input id="description" class="rounded-lg border px-3 py-2 w-full"/></label>
+          <label class="text-sm">
+            Description
+            <input id="description" class="rounded-lg border px-3 py-2 w-full" placeholder="Brief description of the lesson"/>
+          </label>
         </div>
       </div>
       <div class="card p-6">
         <h3 class="font-bold text-lg mb-4"><i class="fas fa-video mr-2 text-[var(--gold)]"></i>Video</h3>
         <div class="grid gap-3">
-          <label class="text-sm">Video URL <input id="videoUrl" class="rounded-lg border px-3 py-2 w-full"/></label>
+          <label class="text-sm">
+            Video URL
+            <input id="videoUrl" class="rounded-lg border px-3 py-2 w-full" placeholder="https://youtube.com/watch?v=..."/>
+          </label>
           <div class="text-center text-sm text-slate-600">— or —</div>
-          <label class="text-sm">Upload Video <input id="videoFile" type="file" accept="video/*" class="rounded-lg border px-3 py-2 w-full"/></label>
-          <button class="bg-[var(--maroon)] text-white px-4 py-2 rounded-lg hover:bg-[var(--maroon2)]" onclick="uploadVideo()">Upload</button>
+          <label class="text-sm">
+            Upload Video
+            <input id="videoFile" type="file" accept="video/*" class="rounded-lg border px-3 py-2 w-full"/>
+          </label>
+          <button class="bg-[var(--maroon)] text-white px-4 py-2 rounded-lg hover:bg-[var(--maroon2)]" onclick="uploadVideo()">
+            <i class="fas fa-upload mr-2"></i>Upload
+          </button>
           <div id="videoUploadResult" class="text-sm text-slate-600"></div>
         </div>
       </div>
     </div>
     <div class="card p-6 mt-6">
       <h3 class="font-bold text-lg mb-2"><i class="fas fa-code mr-2 text-[var(--gold)]"></i>Lesson HTML (interactive)</h3>
-      <textarea id="htmlContent" class="code" placeholder="Paste or author your interactive HTML (include inputs, buttons, scripts)."></textarea>
+      <p class="text-sm text-slate-600 mb-3">Paste or write your interactive HTML content. You can include JavaScript for interactivity.</p>
+      <textarea id="htmlContent" class="code w-full" placeholder="Paste or author your interactive HTML (include inputs, buttons, scripts).
+
+Example:
+<h1>Welcome to the lesson!</h1>
+<p>This is an interactive lesson.</p>
+<button onclick='alert(&quot;Hello!&quot;)'>Click me</button>"></textarea>
       <div class="mt-4 flex items-center gap-3">
-        <button class="bg-[var(--ok)] text-white px-6 py-2 rounded-lg hover:opacity-80" onclick="saveLesson()">Save Lesson</button>
-        <button class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700" onclick="previewHTML()">Preview</button>
+        <button id="saveLessonBtn" class="bg-[var(--ok)] text-white px-6 py-2 rounded-lg hover:opacity-80" onclick="saveLesson()">
+          <i class="fas fa-save mr-2"></i>Save Lesson
+        </button>
+        <button id="previewBtn" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700" onclick="previewHTML()">
+          <i class="fas fa-eye mr-2"></i>Preview
+        </button>
+        <button class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700" onclick="clearForm()">
+          <i class="fas fa-eraser mr-2"></i>Clear Form
+        </button>
       </div>
-      <div id="previewWrap" class="mt-4 hidden"><iframe id="previewFrame" class="lesson-frame" srcdoc="<p>Preview</p>"></iframe></div>
+      <div id="previewWrap" class="mt-4 hidden">
+        <h4 class="font-bold mb-2">Preview:</h4>
+        <iframe id="previewFrame" class="lesson-frame" srcdoc="<p>Preview will appear here</p>"></iframe>
+      </div>
     </div>
   </section>
 
@@ -153,43 +238,505 @@
 
 <script>
 const socket = typeof io !== 'undefined' ? io() : null;
-function api(p,opts){ return fetch(p, Object.assign({ headers:{'Content-Type':'application/json'} }, opts||{})).then(r=>r.ok?r.json():r.text().then(t=>Promise.reject(new Error(t||r.statusText)))); }
-function switchTab(tab){ document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab)); document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('hidden', !c.id.startsWith(tab))); }
-document.querySelectorAll('.nav-tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
-async function me(){ const r = await api('/api/auth/me'); document.getElementById('teacherEmail').textContent = r.user?.email || '—'; }
-async function loadLessons(){
-  const r = await api('/api/lessons/catalog?all=1'); const list = document.getElementById('lessonsList'); list.innerHTML='';
-  const sel = document.getElementById('assignLesson'); sel.innerHTML='';
-  (r.units||[]).forEach(u=> (u.lessons||[]).forEach(L=>{
-    const card = document.createElement('div'); card.className='card p-4';
-    card.innerHTML = `<div class="font-semibold mb-1">${L.title}</div>
-      <div class="text-sm text-slate-600">Grade ${L.grade} • Unit ${L.unit} • Order ${L.order}</div>
-      <div class="mt-2 flex items-center gap-2">
-        <a class="bg-[var(--blue)] text-white px-3 py-1 rounded" target="_blank" href="${L.src}">Preview</a>
-        <button class="bg-[var(--maroon)] text-white px-3 py-1 rounded" onclick="editLesson(${L.id})">Edit</button>
-        <button class="bg-red-600 text-white px-3 py-1 rounded" onclick="delLesson(${L.id})">Delete</button>
-      </div>`;
-    list.appendChild(card);
-    const opt = document.createElement('option'); opt.value=L.id; opt.textContent = `${L.title} (G${L.grade} U${L.unit} L${L.order})`; sel.appendChild(opt);
-  }));
+
+// Notification system
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  
+  const icon = {
+    success: 'fa-check-circle',
+    error: 'fa-times-circle',
+    warning: 'fa-exclamation-triangle',
+    info: 'fa-info-circle'
+  }[type] || 'fa-info-circle';
+  
+  notification.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'slideIn 0.3s ease reverse';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
 }
-function preview(src,title){ const w=window.open(src||'#','_blank'); if (!src) alert('No HTML path; DB-rendered lesson will open when students view it.'); }
-async function saveLesson(){
-  const payload = { title:document.getElementById('title').value, grade:parseInt(document.getElementById('grade').value), unit:parseInt(document.getElementById('unit').value), lesson_order:parseInt(document.getElementById('order').value), description:document.getElementById('description').value, video_url:document.getElementById('videoUrl').value||null, html_content:document.getElementById('htmlContent').value };
-  await api('/api/lessons', { method:'POST', body: JSON.stringify(payload) }); alert('Saved'); await loadLessons();
+
+// API helper with better error handling
+async function api(path, opts) {
+  try {
+    const response = await fetch(path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...opts
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
 }
-function previewHTML(){ const html = document.getElementById('htmlContent').value||'<p>No content</p>'; const f=document.getElementById('previewFrame'); document.getElementById('previewWrap').classList.remove('hidden'); f.srcdoc = html + '<script src=\"/js/lesson-bridge.js\"></'+'script>'; }
-async function editLesson(id){ const title = prompt('New title (blank = skip):'); if (!title) return; await api('/api/lessons/'+id, { method:'PUT', body: JSON.stringify({ title }) }); await loadLessons(); }
-async function delLesson(id){ if (!confirm('Delete this lesson?')) return; await api('/api/lessons/'+id, { method:'DELETE' }); await loadLessons(); }
-async function uploadVideo(){ const f = document.getElementById('videoFile').files[0]; if (!f) return alert('Choose a file'); const fd=new FormData(); fd.append('video',f); const r=await fetch('/api/uploads/video',{ method:'POST', body:fd }); const j=await r.json(); document.getElementById('videoUploadResult').textContent='Uploaded: '+j.url; document.getElementById('videoUrl').value=j.url; }
-async function createAssignment(){ const payload={ lesson_id: document.getElementById('assignLesson').value, class_code: document.getElementById('classCode').value, pass_pct: parseInt(document.getElementById('passPct').value)||70, due_at: document.getElementById('dueDate').value||null }; const r=await api('/api/assignments',{ method:'POST', body: JSON.stringify(payload) }); document.getElementById('assignResult').textContent=`Assigned to ${r.class_code} (pass ${r.pass_pct}%)`; await loadAssignments(); }
-async function loadAssignments(){ const r=await api('/api/assignments'); const list=document.getElementById('assignmentsList'); list.innerHTML=''; r.forEach(a=>{ const div=document.createElement('div'); div.className='interactive-row'; div.innerHTML=`<div><div class="font-semibold">Lesson ${a.lesson_id} → ${a.class_code}</div><div class="text-sm text-slate-600">Due: ${a.due_at||'—'} • Pass: ${a.pass_pct}%</div></div><span class="status">Active</span>`; list.appendChild(div); }); }
-async function loadMyClasses(){ const r = await api('/api/classes'); const list=document.getElementById('myClasses'); list.innerHTML=''; r.forEach(c=>{ const div=document.createElement('div'); div.className='interactive-row'; div.innerHTML=`<div><div class="font-semibold">${c.name}</div><div class="text-xs text-slate-600">${c.code} • Grade ${c.grade||'-'} • ${c.students||0} student(s)</div></div><button class="status open">Add Student</button>`; div.querySelector('button').onclick = async ()=>{ const email = prompt('Student email to enroll:'); if (!email) return; await api('/api/classes/'+c.id+'/enroll',{ method:'POST', body: JSON.stringify({ student_email: email }) }); alert('Enrolled'); await loadMyClasses(); }; list.appendChild(div); }); }
-async function createClass(){ const payload={ code: document.getElementById('ccode').value, name: document.getElementById('cname').value, grade: parseInt(document.getElementById('cgrade').value)||null }; await api('/api/classes',{ method:'POST', body: JSON.stringify(payload) }); await loadMyClasses(); }
-function startBroadcast(){ const code=document.getElementById('liveCode').value; socket.emit('class:start',{ code }); document.getElementById('liveLog').innerHTML += `<div>• Started ${code}</div>`; }
-function sendGoto(){ const code=document.getElementById('liveCode').value; const grade=parseInt(document.getElementById('liveGrade').value); const lessonId=document.getElementById('liveLessonId').value; socket.emit('class:event',{ code, action:'gotoLesson', grade, lessonId, title:'Live lesson', ts:Date.now() }); document.getElementById('liveLog').innerHTML += `<div>• Goto ${lessonId}</div>`; }
-async function logout(){ await fetch('/auth/logout', { method:'POST' }); location.href='/login'; }
-async function init(){ await me(); await loadLessons(); await loadAssignments(); await loadMyClasses(); }
+
+// Tab switching
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('hidden', !c.id.startsWith(tab)));
+}
+
+document.querySelectorAll('.nav-tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+// Load user info
+async function me() {
+  try {
+    const r = await api('/api/auth/me');
+    document.getElementById('teacherEmail').textContent = r.user?.email || '—';
+  } catch (error) {
+    console.error('Failed to load user info:', error);
+  }
+}
+
+// Load lessons
+async function loadLessons() {
+  try {
+    const r = await api('/api/lessons/catalog?all=1');
+    const list = document.getElementById('lessonsList');
+    const sel = document.getElementById('assignLesson');
+    
+    list.innerHTML = '';
+    sel.innerHTML = '<option value="">-- Select a lesson --</option>';
+    
+    (r.units || []).forEach(u => (u.lessons || []).forEach(L => {
+      const card = document.createElement('div');
+      card.className = 'card p-4';
+      card.innerHTML = `
+        <div class="font-semibold mb-1">${L.title}</div>
+        <div class="text-sm text-slate-600">Grade ${L.grade} • Unit ${L.unit} • Order ${L.order}</div>
+        <div class="mt-2 flex items-center gap-2">
+          <a class="bg-[var(--blue)] text-white px-3 py-1 rounded" target="_blank" href="${L.src}">
+            <i class="fas fa-external-link-alt mr-1"></i>Preview
+          </a>
+          <button class="bg-[var(--maroon)] text-white px-3 py-1 rounded" onclick="editLesson(${L.id})">
+            <i class="fas fa-edit mr-1"></i>Edit
+          </button>
+          <button class="bg-red-600 text-white px-3 py-1 rounded" onclick="deleteLesson(${L.id})">
+            <i class="fas fa-trash mr-1"></i>Delete
+          </button>
+        </div>
+      `;
+      list.appendChild(card);
+      
+      const opt = document.createElement('option');
+      opt.value = L.id;
+      opt.textContent = `${L.title} (G${L.grade} U${L.unit} L${L.order})`;
+      sel.appendChild(opt);
+    }));
+  } catch (error) {
+    showNotification('Failed to load lessons', 'error');
+  }
+}
+
+// Save lesson with better feedback
+async function saveLesson() {
+  const btn = document.getElementById('saveLessonBtn');
+  const originalContent = btn.innerHTML;
+  
+  try {
+    // Validate required fields
+    const title = document.getElementById('title').value.trim();
+    const grade = parseInt(document.getElementById('grade').value);
+    const unit = parseInt(document.getElementById('unit').value);
+    const order = parseInt(document.getElementById('order').value);
+    
+    if (!title) {
+      showNotification('Please enter a lesson title', 'warning');
+      document.getElementById('title').focus();
+      return;
+    }
+    
+    if (!unit || unit < 1 || unit > 20) {
+      showNotification('Unit must be between 1 and 20', 'warning');
+      document.getElementById('unit').focus();
+      return;
+    }
+    
+    if (!order || order < 1 || order > 50) {
+      showNotification('Order must be between 1 and 50', 'warning');
+      document.getElementById('order').focus();
+      return;
+    }
+    
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving...';
+    
+    const payload = {
+      title: title,
+      grade: grade,
+      unit: unit,
+      lesson_order: order,
+      description: document.getElementById('description').value.trim() || null,
+      video_url: document.getElementById('videoUrl').value.trim() || null,
+      html_content: document.getElementById('htmlContent').value.trim() || null
+    };
+    
+    console.log('Saving lesson:', payload);
+    
+    const result = await api('/api/lessons', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    console.log('Lesson saved:', result);
+    
+    showNotification(`Lesson "${title}" saved successfully!`, 'success');
+    
+    // Clear form after successful save
+    clearForm();
+    
+    // Reload lessons list
+    await loadLessons();
+    
+    // Switch to lessons tab to show the new lesson
+    switchTab('lessons');
+    
+  } catch (error) {
+    console.error('Save error:', error);
+    showNotification(`Failed to save lesson: ${error.message}`, 'error');
+  } finally {
+    // Restore button state
+    btn.disabled = false;
+    btn.innerHTML = originalContent;
+  }
+}
+
+// Preview HTML with better handling
+function previewHTML() {
+  const html = document.getElementById('htmlContent').value;
+  
+  if (!html.trim()) {
+    showNotification('Please enter some HTML content to preview', 'warning');
+    return;
+  }
+  
+  const frame = document.getElementById('previewFrame');
+  const wrap = document.getElementById('previewWrap');
+  
+  // Show preview section
+  wrap.classList.remove('hidden');
+  
+  // Set iframe content with lesson bridge script
+  frame.srcdoc = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Preview</title>
+      <script src="https://cdn.tailwindcss.com"><\/script>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    </head>
+    <body style="padding: 20px;">
+      ${html}
+      <script src="/js/lesson-bridge.js"><\/script>
+    </body>
+    </html>
+  `;
+  
+  // Scroll to preview
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  
+  showNotification('Preview updated', 'info');
+}
+
+// Clear form
+function clearForm() {
+  document.getElementById('title').value = '';
+  document.getElementById('grade').value = '7';
+  document.getElementById('unit').value = '1';
+  document.getElementById('order').value = '1';
+  document.getElementById('description').value = '';
+  document.getElementById('videoUrl').value = '';
+  document.getElementById('htmlContent').value = '';
+  document.getElementById('videoFile').value = '';
+  document.getElementById('previewWrap').classList.add('hidden');
+  showNotification('Form cleared', 'info');
+}
+
+// Edit lesson
+async function editLesson(id) {
+  const title = prompt('Enter new title (leave blank to cancel):');
+  if (!title || !title.trim()) return;
+  
+  try {
+    await api('/api/lessons/' + id, {
+      method: 'PUT',
+      body: JSON.stringify({ title: title.trim() })
+    });
+    
+    showNotification('Lesson updated successfully', 'success');
+    await loadLessons();
+  } catch (error) {
+    showNotification('Failed to update lesson', 'error');
+  }
+}
+
+// Delete lesson
+async function deleteLesson(id) {
+  if (!confirm('Are you sure you want to delete this lesson? This action cannot be undone.')) return;
+  
+  try {
+    await api('/api/lessons/' + id, { method: 'DELETE' });
+    showNotification('Lesson deleted successfully', 'success');
+    await loadLessons();
+  } catch (error) {
+    showNotification('Failed to delete lesson', 'error');
+  }
+}
+
+// Upload video
+async function uploadVideo() {
+  const file = document.getElementById('videoFile').files[0];
+  if (!file) {
+    showNotification('Please select a video file', 'warning');
+    return;
+  }
+  
+  try {
+    const formData = new FormData();
+    formData.append('video', file);
+    
+    const response = await fetch('/api/uploads/video', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) throw new Error('Upload failed');
+    
+    const result = await response.json();
+    document.getElementById('videoUrl').value = result.url;
+    document.getElementById('videoUploadResult').textContent = 'Uploaded: ' + result.url;
+    showNotification('Video uploaded successfully', 'success');
+  } catch (error) {
+    showNotification('Failed to upload video', 'error');
+  }
+}
+
+// Create assignment
+async function createAssignment() {
+  try {
+    const payload = {
+      lesson_id: document.getElementById('assignLesson').value,
+      class_code: document.getElementById('classCode').value,
+      pass_pct: parseInt(document.getElementById('passPct').value) || 70,
+      due_at: document.getElementById('dueDate').value || null
+    };
+    
+    if (!payload.lesson_id) {
+      showNotification('Please select a lesson', 'warning');
+      return;
+    }
+    
+    if (!payload.class_code) {
+      showNotification('Please enter a class code', 'warning');
+      return;
+    }
+    
+    const result = await api('/api/assignments', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    document.getElementById('assignResult').textContent = `Assigned to ${result.class_code} (pass ${result.pass_pct}%)`;
+    showNotification('Assignment created successfully', 'success');
+    await loadAssignments();
+  } catch (error) {
+    showNotification('Failed to create assignment', 'error');
+  }
+}
+
+// Load assignments
+async function loadAssignments() {
+  try {
+    const assignments = await api('/api/assignments');
+    const list = document.getElementById('assignmentsList');
+    list.innerHTML = '';
+    
+    assignments.forEach(a => {
+      const div = document.createElement('div');
+      div.className = 'interactive-row';
+      div.innerHTML = `
+        <div>
+          <div class="font-semibold">Lesson ${a.lesson_id} → ${a.class_code}</div>
+          <div class="text-sm text-slate-600">Due: ${a.due_at || '—'} • Pass: ${a.pass_pct}%</div>
+        </div>
+        <span class="status">Active</span>
+      `;
+      list.appendChild(div);
+    });
+  } catch (error) {
+    showNotification('Failed to load assignments', 'error');
+  }
+}
+
+// Load classes
+async function loadMyClasses() {
+  try {
+    const classes = await api('/api/classes');
+    const list = document.getElementById('myClasses');
+    list.innerHTML = '';
+    
+    classes.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'interactive-row';
+      div.innerHTML = `
+        <div>
+          <div class="font-semibold">${c.name}</div>
+          <div class="text-xs text-slate-600">${c.code} • Grade ${c.grade || '-'} • ${c.students || 0} student(s)</div>
+        </div>
+        <button class="status open" onclick="enrollStudent(${c.id})">Add Student</button>
+      `;
+      list.appendChild(div);
+    });
+  } catch (error) {
+    showNotification('Failed to load classes', 'error');
+  }
+}
+
+// Enroll student
+async function enrollStudent(classId) {
+  const email = prompt('Enter student email to enroll:');
+  if (!email) return;
+  
+  try {
+    await api('/api/classes/' + classId + '/enroll', {
+      method: 'POST',
+      body: JSON.stringify({ student_email: email })
+    });
+    
+    showNotification('Student enrolled successfully', 'success');
+    await loadMyClasses();
+  } catch (error) {
+    showNotification('Failed to enroll student', 'error');
+  }
+}
+
+// Create class
+async function createClass() {
+  try {
+    const payload = {
+      code: document.getElementById('ccode').value,
+      name: document.getElementById('cname').value,
+      grade: parseInt(document.getElementById('cgrade').value) || null
+    };
+    
+    if (!payload.code || !payload.name) {
+      showNotification('Please enter class code and name', 'warning');
+      return;
+    }
+    
+    await api('/api/classes', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    showNotification('Class created successfully', 'success');
+    await loadMyClasses();
+    
+    // Clear inputs
+    document.getElementById('ccode').value = '';
+    document.getElementById('cname').value = '';
+  } catch (error) {
+    showNotification('Failed to create class', 'error');
+  }
+}
+
+// Classroom mode functions
+function startBroadcast() {
+  const code = document.getElementById('liveCode').value;
+  if (!code) {
+    showNotification('Please enter a class code', 'warning');
+    return;
+  }
+  
+  if (socket) {
+    socket.emit('class:start', { code });
+    document.getElementById('liveLog').innerHTML += `<div>• Started broadcast for ${code}</div>`;
+    showNotification('Broadcast started', 'success');
+  } else {
+    showNotification('WebSocket not connected', 'error');
+  }
+}
+
+function sendGoto() {
+  const code = document.getElementById('liveCode').value;
+  const grade = parseInt(document.getElementById('liveGrade').value);
+  const lessonId = document.getElementById('liveLessonId').value;
+  
+  if (!code || !lessonId) {
+    showNotification('Please enter class code and lesson ID', 'warning');
+    return;
+  }
+  
+  if (socket) {
+    socket.emit('class:event', {
+      code,
+      action: 'gotoLesson',
+      grade,
+      lessonId,
+      title: 'Live lesson',
+      ts: Date.now()
+    });
+    
+    document.getElementById('liveLog').innerHTML += `<div>• Sent students to lesson ${lessonId}</div>`;
+    showNotification('Command sent to students', 'success');
+  } else {
+    showNotification('WebSocket not connected', 'error');
+  }
+}
+
+// Logout
+async function logout() {
+  try {
+    await fetch('/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  } catch (error) {
+    console.error('Logout error:', error);
+    window.location.href = '/login';
+  }
+}
+
+// Initialize on load
+async function init() {
+  try {
+    await me();
+    await loadLessons();
+    await loadAssignments();
+    await loadMyClasses();
+    showNotification('Portal loaded successfully', 'success');
+  } catch (error) {
+    console.error('Initialization error:', error);
+    showNotification('Some features may not be available', 'warning');
+  }
+}
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  // Ctrl+S to save lesson
+  if (e.ctrlKey && e.key === 's' && !document.getElementById('create-tab').classList.contains('hidden')) {
+    e.preventDefault();
+    saveLesson();
+  }
+  // Ctrl+P to preview
+  if (e.ctrlKey && e.key === 'p' && !document.getElementById('create-tab').classList.contains('hidden')) {
+    e.preventDefault();
+    previewHTML();
+  }
+});
+
 document.addEventListener('DOMContentLoaded', init);
 </script>
-</body></html>
+</body>
+</html>

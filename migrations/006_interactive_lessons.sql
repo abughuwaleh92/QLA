@@ -1,5 +1,5 @@
 -- migrations/006_interactive_lessons.sql
--- Interactive Lessons System Tables
+-- Fixed Interactive Lessons System Tables
 
 -- Main interactive lessons table
 CREATE TABLE IF NOT EXISTS interactive_lessons (
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS interactive_lessons (
 CREATE TABLE IF NOT EXISTS lesson_components (
   id SERIAL PRIMARY KEY,
   lesson_id INT NOT NULL REFERENCES interactive_lessons(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL, -- video, content, checkpoint, practice, interactive, assessment
+  type VARCHAR(50) NOT NULL,
   order_index INT NOT NULL,
   title TEXT,
   data JSONB,
@@ -56,16 +56,16 @@ CREATE TABLE IF NOT EXISTS lesson_videos (
   uploaded_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Video progress tracking
+-- Video progress tracking (fixed column names)
 CREATE TABLE IF NOT EXISTS video_progress (
   lesson_id INT NOT NULL,
   component_id INT NOT NULL,
   user_email TEXT NOT NULL,
-  current_time FLOAT DEFAULT 0,
-  duration FLOAT,
+  watch_time FLOAT DEFAULT 0,
+  total_duration FLOAT,
   percent_watched FLOAT DEFAULT 0,
   completed BOOLEAN DEFAULT FALSE,
-  watched_segments JSONB, -- Track which parts were watched
+  watched_segments JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (lesson_id, component_id, user_email)
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS component_progress (
   user_email TEXT NOT NULL,
   completed BOOLEAN DEFAULT FALSE,
   score FLOAT,
-  data JSONB, -- Component-specific data
+  data JSONB,
   started_at TIMESTAMPTZ DEFAULT NOW(),
   completed_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS student_notes (
   user_email TEXT NOT NULL,
   component_id INT,
   note_text TEXT,
-  timestamp_seconds FLOAT, -- For video timestamps
+  timestamp_seconds FLOAT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -237,86 +237,3 @@ SELECT
 FROM lesson_progress lp
 LEFT JOIN learning_streaks ls ON ls.user_email = lp.user_email
 GROUP BY lp.user_email, ls.current_streak, ls.longest_streak;
-
--- Create function to update learning streaks
-CREATE OR REPLACE FUNCTION update_learning_streak()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.completed = TRUE AND OLD.completed = FALSE THEN
-    INSERT INTO learning_streaks (
-      user_email, 
-      current_streak, 
-      longest_streak, 
-      last_activity_date,
-      total_lessons_completed
-    ) VALUES (
-      NEW.user_email,
-      1,
-      1,
-      CURRENT_DATE,
-      1
-    ) ON CONFLICT (user_email) DO UPDATE SET
-      current_streak = CASE 
-        WHEN learning_streaks.last_activity_date = CURRENT_DATE - INTERVAL '1 day' 
-        THEN learning_streaks.current_streak + 1
-        WHEN learning_streaks.last_activity_date < CURRENT_DATE - INTERVAL '1 day'
-        THEN 1
-        ELSE learning_streaks.current_streak
-      END,
-      longest_streak = GREATEST(
-        learning_streaks.longest_streak,
-        CASE 
-          WHEN learning_streaks.last_activity_date = CURRENT_DATE - INTERVAL '1 day' 
-          THEN learning_streaks.current_streak + 1
-          ELSE 1
-        END
-      ),
-      last_activity_date = CURRENT_DATE,
-      total_lessons_completed = learning_streaks.total_lessons_completed + 1,
-      updated_at = NOW();
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create trigger for streak updates
-CREATE TRIGGER update_streak_on_completion
-AFTER UPDATE ON lesson_progress
-FOR EACH ROW
-EXECUTE FUNCTION update_learning_streak();
-
--- Create function to calculate component completion percentage
-CREATE OR REPLACE FUNCTION get_lesson_completion_percentage(p_lesson_id INT, p_user_email TEXT)
-RETURNS FLOAT AS $$
-DECLARE
-  total_components INT;
-  completed_components INT;
-BEGIN
-  SELECT COUNT(*) INTO total_components
-  FROM lesson_components
-  WHERE lesson_id = p_lesson_id;
-  
-  SELECT COUNT(*) INTO completed_components
-  FROM component_progress
-  WHERE lesson_id = p_lesson_id 
-    AND user_email = p_user_email 
-    AND completed = TRUE;
-  
-  IF total_components = 0 THEN
-    RETURN 0;
-  END IF;
-  
-  RETURN (completed_components::FLOAT / total_components::FLOAT) * 100;
-END;
-$$ LANGUAGE plpgsql;
-
--- Sample data for testing
-INSERT INTO interactive_lessons (title, grade, unit, objectives, duration_minutes, difficulty)
-VALUES 
-  ('Introduction to Algebraic Expressions', 7, 2, 
-   'Students will learn to identify variables, coefficients, and constants in algebraic expressions', 
-   45, 'beginner'),
-  ('Solving Linear Equations', 8, 1, 
-   'Students will master techniques for solving single-variable linear equations', 
-   60, 'intermediate')
-ON CONFLICT DO NOTHING;

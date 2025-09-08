@@ -1,4 +1,4 @@
-// server.js — QLA Mathematics Platform v3.0.1 (Railway-Ready)
+// server.js — QLA Mathematics Platform v3.0.1 (Railway-Ready with YouTube Fix)
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
@@ -70,31 +70,74 @@ pool.on('error', (err, client) => {
   console.error('Unexpected database error on idle client', err);
 });
 
-// Middleware setup
+// Enhanced Security Configuration with YouTube Support
 app.use(helmet({ 
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "'unsafe-eval'", 
         "https://cdn.jsdelivr.net", 
         "https://cdn.tailwindcss.com", 
         "https://cdnjs.cloudflare.com",
         "https://www.youtube.com",
-        "https://player.vimeo.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", 
+        "https://www.youtube-nocookie.com",
+        "https://s.ytimg.com",
+        "https://apis.google.com"
+      ],
+      styleSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
         "https://cdn.jsdelivr.net", 
         "https://fonts.googleapis.com", 
-        "https://cdnjs.cloudflare.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"],
+        "https://cdnjs.cloudflare.com"
+      ],
+      fontSrc: [
+        "'self'", 
+        "https://fonts.gstatic.com", 
+        "https://cdnjs.cloudflare.com"
+      ],
+      imgSrc: [
+        "'self'", 
+        "data:", 
+        "https:", 
+        "blob:",
+        "https://i.ytimg.com",
+        "https://yt3.ggpht.com",
+        "https://img.youtube.com"
+      ],
       mediaSrc: ["'self'", "https:", "blob:"],
-      connectSrc: ["'self'", "ws:", "wss:", "https:"],
-      frameSrc: ["'self'", "https://www.youtube.com", "https://player.vimeo.com"]
+      connectSrc: [
+        "'self'", 
+        "ws:", 
+        "wss:", 
+        "https:",
+        "https://www.youtube.com",
+        "https://www.youtube-nocookie.com",
+        "https://apis.google.com"
+      ],
+      frameSrc: [
+        "'self'", 
+        "https://www.youtube.com", 
+        "https://www.youtube-nocookie.com",
+        "https://player.vimeo.com"
+      ],
+      childSrc: [
+        "'self'",
+        "https://www.youtube.com",
+        "https://www.youtube-nocookie.com"
+      ],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"]
     }
   },
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
+// Additional middleware
 app.use(compression());
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : true,
@@ -212,13 +255,14 @@ app.get('/api/health', async (req, res) => {
     environment: config.ENV,
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    database: 'unknown'
+    database: 'unknown',
+    version: '3.0.1'
   };
 
   try {
     const result = await pool.query('SELECT NOW() as time, version() as version');
     health.database = 'connected';
-    health.dbVersion = result.rows[0].version;
+    health.dbVersion = result.rows[0].version.split(' ')[0];
     health.dbTime = result.rows[0].time;
     res.json(health);
   } catch (error) {
@@ -726,7 +770,7 @@ process.on('unhandledRejection', (reason, promise) => {
 async function initialize() {
   console.log('\n╔════════════════════════════════════════════════════════════╗');
   console.log('║     🚀 QLA Mathematics Platform v3.0.1                    ║');
-  console.log('║     Railway-Ready Enhanced Learning System                 ║');
+  console.log('║     Railway-Ready with YouTube Support                    ║');
   console.log('╚════════════════════════════════════════════════════════════╝\n');
   
   try {
@@ -759,7 +803,8 @@ async function initialize() {
       console.log(`║     🔗 Local:        http://localhost:${config.PORT.toString().padEnd(20)}║`);
       console.log('║                                                            ║');
       console.log('║     📚 Features:                                          ║');
-      console.log('║     • Interactive Video Lessons                           ║');
+      console.log('║     • Interactive Video Lessons with YouTube Support      ║');
+      console.log('║     • Fixed Content Security Policy                       ║');
       console.log('║     • Mandatory Checkpoints                               ║');
       console.log('║     • Real-time Progress Tracking                         ║');
       console.log('║     • Live Classroom Mode                                 ║');
@@ -784,7 +829,8 @@ async function initialize() {
         console.log('📝 Development mode - verbose logging enabled');
       }
       
-      console.log('🚀 Platform ready for use!\n');
+      console.log('🚀 Platform ready for use with YouTube support!');
+      console.log('🎥 YouTube videos should now work properly in lessons\n');
     });
     
   } catch (error) {

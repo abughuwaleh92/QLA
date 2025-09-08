@@ -5,11 +5,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Poppins:wght@600;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<link rel="icon" type="image/png" href="/assets/logo/qla-favicon.png"/>
 <script src="/socket.io/socket.io.js"></script>
 <style>
 :root{ --maroon:#6C1D45; --maroon2:#8B2450; --gold:#C7A34F; --gold2:#E4D4A8; --ink:#0F172A; --slate:#5b6572; --line:#e9eef2; --bg:#F7FAFC; --ok:#136f3a; --soon:#8a3d00; --purple:#7C3AED; --blue:#1D4ED8; }
 *{box-sizing:border-box} html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5}
-.hero{position:relative;color:#fff;background:linear-gradient(135deg,rgba(108,29,69,.88),rgba(139,36,80,.84))} .logo-tile{background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px 10px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(0,0,0,.08)}
+.hero{position:relative;color:#fff;background:linear-gradient(135deg,rgba(108,29,69,.88),rgba(139,36,80,.84))} 
+.logo-tile{background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px 10px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(0,0,0,.08)}
 .nav-tabs{ display:flex; gap:8px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:6px; flex-wrap:wrap }
 .nav-tab{ flex:1; min-width:120px; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.35); color:#fff; background:transparent; cursor:pointer; font-weight:600; text-align:center; transition:all .3s ease }
 .nav-tab.active{ background:linear-gradient(135deg,var(--gold),var(--gold2)); color:var(--maroon); transform:scale(1.02) }
@@ -23,15 +25,34 @@
 .modal.show{ opacity:1; pointer-events:auto } .modal-content{ background:#fff; border-radius:20px; max-width:90vw; max-height:90vh; overflow:auto; box-shadow:0 25px 50px rgba(0,0,0,.25) }
 .progress-bar{ height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden } .progress-fill{ height:100%; background:linear-gradient(90deg,var(--gold),var(--maroon)); transition:width .5s ease }
 iframe.lesson-frame{width:100%;height:65vh;border:1px solid var(--line);border-radius:14px}
+.logo-header { display: flex; align-items: center; gap: 16px; }
+.school-logo { height: 64px; width: auto; filter: brightness(0) invert(1); }
+.school-logo-fallback { background: white; border-radius: 12px; padding: 12px; }
 </style>
 </head>
 <body>
 <header class="hero shadow-2xl">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between py-6">
-      <div class="flex items-center gap-4"><span class="logo-tile"><div class="w-16 h-16 bg-[var(--maroon)] rounded-lg flex items-center justify-center text-white font-bold text-xl">QLA</div></span>
-        <div><h1 class="text-3xl lg:text-5xl font-extrabold" style="font-family:Poppins,Inter,sans-serif">Mathematics Portal</h1><p class="text-sm opacity-90 mt-1">Student Portal</p></div></div>
-      <div id="userBadge" class="hidden lg:flex items-center gap-4"><div class="bg-white/10 backdrop-blur rounded-full p-2"><i class="fas fa-user-circle text-2xl"></i></div><div class="text-right"><div class="font-semibold">Student</div><div class="text-xs opacity-80">Welcome</div></div></div>
+      <div class="logo-header">
+        <!-- School Logo -->
+        <img src="/assets/logo/qla-logo.png" alt="Qatar Leadership Academy" class="school-logo"
+             onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
+        <span id="logo-fallback" class="logo-tile" style="display:none;">
+          <div class="w-16 h-16 bg-[var(--maroon)] rounded-lg flex items-center justify-center text-white font-bold text-xl">QLA</div>
+        </span>
+        <div>
+          <h1 class="text-3xl lg:text-5xl font-extrabold" style="font-family:Poppins,Inter,sans-serif">Mathematics Portal</h1>
+          <p class="text-sm opacity-90 mt-1">Qatar Leadership Academy • Student Portal</p>
+        </div>
+      </div>
+      <div id="userBadge" class="hidden lg:flex items-center gap-4">
+        <div class="bg-white/10 backdrop-blur rounded-full p-2"><i class="fas fa-user-circle text-2xl"></i></div>
+        <div class="text-right">
+          <div class="font-semibold">Student</div>
+          <div class="text-xs opacity-80">Welcome</div>
+        </div>
+      </div>
     </div>
     <div class="pb-6 flex flex-col gap-4">
       <div class="nav-tabs" role="tablist">
@@ -91,7 +112,14 @@ iframe.lesson-frame{width:100%;height:65vh;border:1px solid var(--line);border-r
         <div id="progressChart" class="h-64 bg-gray-50 rounded-lg flex items-center justify-center"><p class="text-gray-500">Progress visualization will appear here</p></div></div>
     </div>
   </section>
-  <footer class="mt-12 mb-8 text-center text-sm text-slate-500">© <span id="year"></span> Qatar Leadership Academy — Member of Qatar Foundation</footer>
+  <footer class="mt-12 mb-8 text-center">
+    <!-- Footer with Logo -->
+    <div class="flex items-center justify-center gap-3 mb-4">
+      <img src="/assets/logo/qla-logo.png" alt="QLA" class="h-8 w-auto opacity-50"
+           onerror="this.style.display='none'">
+      <p class="text-sm text-slate-500">© <span id="year"></span> Qatar Leadership Academy — Member of Qatar Foundation</p>
+    </div>
+  </footer>
 </main>
 
 <div id="lessonModal" class="modal"><div class="modal-content w-full max-w-5xl mx-4"><div class="p-6">

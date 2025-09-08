@@ -15,7 +15,7 @@ const pool = new Pool({
 const videoStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const dir = path.join(process.cwd(), 'uploads', 'lesson-videos');
-    await fs.mkdir(dir, { recursive: true });
+    await fs.mkdir(dir, { recursive: true }).catch(() => {});
     cb(null, dir);
   },
   filename: (req, file, cb) => {
@@ -105,6 +105,21 @@ router.post('/create', express.json({ limit: '10mb' }), async (req, res) => {
       }
     }
     
+    // Create notification for new lesson
+    await client.query(
+      `INSERT INTO notifications 
+       (user_email, type, title, message, data) 
+       SELECT student_email, 'new_lesson', $1, $2, $3
+       FROM enrollments 
+       WHERE class_id IN (SELECT id FROM classes WHERE grade = $4)`,
+      [
+        'New Interactive Lesson Available',
+        `${title} is now available for Grade ${grade}`,
+        JSON.stringify({ lessonId, grade, unit }),
+        grade
+      ]
+    );
+    
     await client.query('COMMIT');
     
     res.json({ 
@@ -191,15 +206,41 @@ router.get('/lesson/:id', async (req, res) => {
     const progressResult = await pool.query(
       `SELECT * FROM lesson_progress 
        WHERE lesson_id = $1 AND user_email = $2 
-       ORDER BY created_at DESC 
+       ORDER BY started_at DESC 
        LIMIT 1`,
       [lessonId, studentEmail]
+    );
+    
+    // Get component progress
+    const componentProgressResult = await pool.query(
+      `SELECT * FROM component_progress 
+       WHERE lesson_id = $1 AND user_email = $2`,
+      [lessonId, studentEmail]
+    );
+    
+    // Track lesson access
+    await pool.query(
+      `INSERT INTO lesson_progress 
+       (lesson_id, user_email, started_at, last_accessed) 
+       VALUES ($1, $2, NOW(), NOW())
+       ON CONFLICT (lesson_id, user_email) 
+       DO UPDATE SET last_accessed = NOW()`,
+      [lessonId, studentEmail]
+    );
+    
+    // Log activity
+    await pool.query(
+      `INSERT INTO activity_logs 
+       (user_email, action, entity_type, entity_id, metadata) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [studentEmail, 'view_lesson', 'interactive_lesson', lessonId, JSON.stringify({ timestamp: Date.now() })]
     );
     
     res.json({
       lesson,
       components: componentsResult.rows,
-      progress: progressResult.rows[0] || null
+      progress: progressResult.rows[0] || null,
+      componentProgress: componentProgressResult.rows
     });
     
   } catch (error) {
@@ -208,30 +249,42 @@ router.get('/lesson/:id', async (req, res) => {
   }
 });
 
-// Track video progress
+// Track video progress (fixed column names)
 router.post('/video-progress', express.json(), async (req, res) => {
   try {
     const {
       lessonId,
       componentId,
-      currentTime,
+      watchTime,
       duration,
       percentWatched,
-      completed
+      completed,
+      segments
     } = req.body;
     
     await pool.query(
       `INSERT INTO video_progress 
-       (lesson_id, component_id, user_email, current_time, duration, percent_watched, completed) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       (lesson_id, component_id, user_email, watch_time, total_duration, percent_watched, completed, watched_segments) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (lesson_id, component_id, user_email) 
        DO UPDATE SET 
-         current_time = GREATEST(video_progress.current_time, EXCLUDED.current_time),
+         watch_time = GREATEST(video_progress.watch_time, EXCLUDED.watch_time),
          percent_watched = GREATEST(video_progress.percent_watched, EXCLUDED.percent_watched),
          completed = video_progress.completed OR EXCLUDED.completed,
+         watched_segments = COALESCE(video_progress.watched_segments, '[]'::jsonb) || COALESCE(EXCLUDED.watched_segments, '[]'::jsonb),
          updated_at = NOW()`,
-      [lessonId, componentId, req.user?.email, currentTime, duration, percentWatched, completed]
+      [lessonId, componentId, req.user?.email, watchTime, duration, percentWatched, completed, JSON.stringify(segments || [])]
     );
+    
+    // Check if video watching requirement is met
+    if (percentWatched >= 90 && !completed) {
+      await pool.query(
+        `UPDATE component_progress 
+         SET completed = true, completed_at = NOW() 
+         WHERE lesson_id = $1 AND component_id = $2 AND user_email = $3`,
+        [lessonId, componentId, req.user?.email]
+      );
+    }
     
     res.json({ success: true });
     
@@ -266,6 +319,7 @@ router.post('/checkpoint', express.json(), async (req, res) => {
     
     const feedback = questions.map((q, index) => {
       const userAnswer = answers[index];
+      const correctAnswer = JSON.parse(q.correct_answer);
       const correct = JSON.stringify(userAnswer) === q.correct_answer;
       
       totalPoints += q.points;
@@ -278,7 +332,7 @@ router.post('/checkpoint', express.json(), async (req, res) => {
         questionId: q.id,
         correct,
         userAnswer,
-        correctAnswer: JSON.parse(q.correct_answer),
+        correctAnswer,
         explanation: q.explanation
       };
     });
@@ -298,12 +352,18 @@ router.post('/checkpoint', express.json(), async (req, res) => {
     if (passed) {
       await pool.query(
         `INSERT INTO component_progress 
-         (lesson_id, component_id, user_email, completed, score) 
-         VALUES ($1, $2, $3, true, $4)
+         (lesson_id, component_id, user_email, completed, score, completed_at) 
+         VALUES ($1, $2, $3, true, $4, NOW())
          ON CONFLICT (lesson_id, component_id, user_email) 
-         DO UPDATE SET completed = true, score = EXCLUDED.score`,
+         DO UPDATE SET 
+           completed = true, 
+           score = EXCLUDED.score,
+           completed_at = NOW()`,
         [lessonId, componentId, req.user?.email, score]
       );
+      
+      // Check for achievement
+      await checkAchievements(req.user?.email, 'checkpoint_perfect', { lessonId, componentId });
     }
     
     res.json({
@@ -322,7 +382,11 @@ router.post('/checkpoint', express.json(), async (req, res) => {
 
 // Complete component
 router.post('/complete-component', express.json(), async (req, res) => {
+  const client = await pool.connect();
+  
   try {
+    await client.query('BEGIN');
+    
     const {
       lessonId,
       componentId,
@@ -330,20 +394,22 @@ router.post('/complete-component', express.json(), async (req, res) => {
       data
     } = req.body;
     
-    await pool.query(
+    // Mark component as complete
+    await client.query(
       `INSERT INTO component_progress 
-       (lesson_id, component_id, user_email, completed, data) 
-       VALUES ($1, $2, $3, true, $4)
+       (lesson_id, component_id, user_email, completed, data, completed_at) 
+       VALUES ($1, $2, $3, true, $4, NOW())
        ON CONFLICT (lesson_id, component_id, user_email) 
        DO UPDATE SET 
          completed = true,
          data = EXCLUDED.data,
+         completed_at = NOW(),
          updated_at = NOW()`,
       [lessonId, componentId, req.user?.email, JSON.stringify(data || {})]
     );
     
     // Check if all components are complete
-    const progressResult = await pool.query(
+    const progressResult = await client.query(
       `SELECT 
          (SELECT COUNT(*) FROM lesson_components WHERE lesson_id = $1) as total,
          (SELECT COUNT(*) FROM component_progress WHERE lesson_id = $1 AND user_email = $2 AND completed = true) as completed`,
@@ -354,18 +420,48 @@ router.post('/complete-component', express.json(), async (req, res) => {
     const lessonComplete = completed >= total;
     
     if (lessonComplete) {
-      // Mark lesson as complete
-      await pool.query(
-        `INSERT INTO lesson_progress 
-         (lesson_id, user_email, completed, completion_date) 
-         VALUES ($1, $2, true, NOW())
-         ON CONFLICT (lesson_id, user_email) 
-         DO UPDATE SET 
-           completed = true,
-           completion_date = NOW()`,
+      // Calculate final score
+      const scoreResult = await client.query(
+        `SELECT AVG(score) as avg_score 
+         FROM component_progress 
+         WHERE lesson_id = $1 AND user_email = $2 AND score IS NOT NULL`,
         [lessonId, req.user?.email]
       );
+      
+      const finalScore = scoreResult.rows[0].avg_score || 0;
+      
+      // Mark lesson as complete
+      await client.query(
+        `UPDATE lesson_progress 
+         SET completed = true, 
+             completion_date = NOW(), 
+             score = $3
+         WHERE lesson_id = $1 AND user_email = $2`,
+        [lessonId, req.user?.email, finalScore]
+      );
+      
+      // Update learning streak
+      await updateLearningStreak(req.user?.email);
+      
+      // Check for achievements
+      await checkAchievements(req.user?.email, 'lesson_complete', { lessonId, score: finalScore });
+      
+      // Create completion notification
+      await client.query(
+        `INSERT INTO notifications 
+         (user_email, type, title, message, data) 
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          req.user?.email,
+          'lesson_complete',
+          'Lesson Completed!',
+          `Congratulations! You've completed the lesson with a score of ${Math.round(finalScore)}%`,
+          JSON.stringify({ lessonId, score: finalScore })
+        ]
+      );
     }
+    
+    await client.query('COMMIT');
     
     res.json({
       success: true,
@@ -378,8 +474,11 @@ router.post('/complete-component', express.json(), async (req, res) => {
     });
     
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error completing component:', error);
     res.status(500).json({ error: 'Failed to complete component' });
+  } finally {
+    client.release();
   }
 });
 
@@ -399,7 +498,7 @@ router.get('/analytics/:lessonId', async (req, res) => {
          COUNT(DISTINCT user_email) as total_students,
          COUNT(DISTINCT CASE WHEN completed THEN user_email END) as completed_students,
          AVG(CASE WHEN completed THEN 
-           EXTRACT(EPOCH FROM (completion_date - created_at))/60 
+           EXTRACT(EPOCH FROM (completion_date - started_at))/60 
          END) as avg_completion_time_minutes
        FROM lesson_progress 
        WHERE lesson_id = $1`,
@@ -437,9 +536,8 @@ router.get('/analytics/:lessonId', async (req, res) => {
          COUNT(DISTINCT ca.user_email) as attempts,
          AVG(
            CASE 
-             WHEN ca.answers::jsonb->>(cq.id::text - 
-               (SELECT MIN(id) FROM component_questions WHERE lesson_id = $1)::text
-             ) = cq.correct_answer::text 
+             WHEN (ca.answers::jsonb->>((cq.id - 
+               (SELECT MIN(id) FROM component_questions WHERE lesson_id = $1))::text))::jsonb = cq.correct_answer::jsonb
              THEN 100 ELSE 0 
            END
          ) as success_rate
@@ -451,11 +549,30 @@ router.get('/analytics/:lessonId', async (req, res) => {
       [lessonId]
     );
     
+    // Get student performance distribution
+    const distributionResult = await pool.query(
+      `SELECT 
+         CASE 
+           WHEN score >= 90 THEN 'A'
+           WHEN score >= 80 THEN 'B'
+           WHEN score >= 70 THEN 'C'
+           WHEN score >= 60 THEN 'D'
+           ELSE 'F'
+         END as grade,
+         COUNT(*) as count
+       FROM lesson_progress
+       WHERE lesson_id = $1 AND completed = true
+       GROUP BY grade
+       ORDER BY grade`,
+      [lessonId]
+    );
+    
     res.json({
       completion: completionResult.rows[0],
       checkpoint: checkpointResult.rows[0],
       video: videoResult.rows[0],
-      questions: questionResult.rows
+      questions: questionResult.rows,
+      gradeDistribution: distributionResult.rows
     });
     
   } catch (error) {
@@ -468,25 +585,30 @@ router.get('/analytics/:lessonId', async (req, res) => {
 router.get('/catalog', async (req, res) => {
   try {
     const grade = req.query.grade ? parseInt(req.query.grade) : null;
+    const studentEmail = req.user?.email;
     
     let query = `
       SELECT 
         il.*,
         COUNT(DISTINCT lp.user_email) as student_count,
-        AVG(CASE WHEN lp.completed THEN 100 ELSE 0 END) as completion_rate
+        AVG(CASE WHEN lp.completed THEN 100 ELSE 0 END) as completion_rate,
+        (SELECT completed FROM lesson_progress WHERE lesson_id = il.id AND user_email = $2) as user_completed,
+        (SELECT score FROM lesson_progress WHERE lesson_id = il.id AND user_email = $2) as user_score
       FROM interactive_lessons il
       LEFT JOIN lesson_progress lp ON lp.lesson_id = il.id
     `;
     
-    const params = [];
+    const params = [grade, studentEmail];
     if (grade) {
       query += ' WHERE il.grade = $1';
-      params.push(grade);
+    } else {
+      params.shift(); // Remove grade from params
+      query = query.replace('$2', '$1'); // Adjust parameter placeholder
     }
     
     query += ' GROUP BY il.id ORDER BY il.grade, il.unit, il.created_at';
     
-    const result = await pool.query(query, params);
+    const result = await pool.query(query, params.filter(p => p !== null));
     
     res.json(result.rows);
     
@@ -495,5 +617,132 @@ router.get('/catalog', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch catalog' });
   }
 });
+
+// Get student's learning dashboard
+router.get('/dashboard', async (req, res) => {
+  try {
+    const studentEmail = req.user?.email;
+    
+    // Get overall stats
+    const statsResult = await pool.query(
+      `SELECT 
+         COUNT(DISTINCT lesson_id) as lessons_started,
+         COUNT(DISTINCT CASE WHEN completed THEN lesson_id END) as lessons_completed,
+         AVG(CASE WHEN completed THEN score END) as avg_score,
+         SUM(total_time_seconds) / 60 as total_time_minutes
+       FROM lesson_progress 
+       WHERE user_email = $1`,
+      [studentEmail]
+    );
+    
+    // Get recent activity
+    const recentResult = await pool.query(
+      `SELECT 
+         il.title,
+         il.id,
+         lp.last_accessed,
+         lp.completed,
+         lp.score
+       FROM lesson_progress lp
+       JOIN interactive_lessons il ON il.id = lp.lesson_id
+       WHERE lp.user_email = $1
+       ORDER BY lp.last_accessed DESC
+       LIMIT 5`,
+      [studentEmail]
+    );
+    
+    // Get learning streak
+    const streakResult = await pool.query(
+      `SELECT * FROM learning_streaks WHERE user_email = $1`,
+      [studentEmail]
+    );
+    
+    // Get achievements
+    const achievements = streakResult.rows[0]?.achievements || [];
+    
+    res.json({
+      stats: statsResult.rows[0],
+      recentActivity: recentResult.rows,
+      streak: streakResult.rows[0] || { current_streak: 0, longest_streak: 0 },
+      achievements
+    });
+    
+  } catch (error) {
+    console.error('Error fetching dashboard:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard' });
+  }
+});
+
+// Helper function to update learning streak
+async function updateLearningStreak(userEmail) {
+  try {
+    await pool.query(
+      `INSERT INTO learning_streaks 
+       (user_email, current_streak, longest_streak, last_activity_date, total_lessons_completed) 
+       VALUES ($1, 1, 1, CURRENT_DATE, 1)
+       ON CONFLICT (user_email) 
+       DO UPDATE SET
+         current_streak = CASE 
+           WHEN learning_streaks.last_activity_date = CURRENT_DATE - INTERVAL '1 day' 
+           THEN learning_streaks.current_streak + 1
+           WHEN learning_streaks.last_activity_date < CURRENT_DATE - INTERVAL '1 day'
+           THEN 1
+           ELSE learning_streaks.current_streak
+         END,
+         longest_streak = GREATEST(
+           learning_streaks.longest_streak,
+           CASE 
+             WHEN learning_streaks.last_activity_date = CURRENT_DATE - INTERVAL '1 day' 
+             THEN learning_streaks.current_streak + 1
+             ELSE 1
+           END
+         ),
+         last_activity_date = CURRENT_DATE,
+         total_lessons_completed = learning_streaks.total_lessons_completed + 1,
+         updated_at = NOW()`,
+      [userEmail]
+    );
+  } catch (error) {
+    console.error('Error updating streak:', error);
+  }
+}
+
+// Helper function to check achievements
+async function checkAchievements(userEmail, type, data) {
+  try {
+    const achievements = [];
+    
+    if (type === 'checkpoint_perfect') {
+      achievements.push({
+        id: 'perfect_checkpoint',
+        name: 'Perfect Checkpoint',
+        description: 'Scored 100% on a checkpoint',
+        icon: '🎯',
+        earnedAt: new Date()
+      });
+    }
+    
+    if (type === 'lesson_complete' && data.score >= 90) {
+      achievements.push({
+        id: 'excellence',
+        name: 'Excellence',
+        description: 'Completed a lesson with 90% or higher',
+        icon: '⭐',
+        earnedAt: new Date()
+      });
+    }
+    
+    if (achievements.length > 0) {
+      await pool.query(
+        `UPDATE learning_streaks 
+         SET achievements = achievements || $2::jsonb 
+         WHERE user_email = $1`,
+        [userEmail, JSON.stringify(achievements)]
+      );
+    }
+  } catch (error) {
+    console.error('Error checking achievements:', error);
+  }
+}
 
 module.exports = router;

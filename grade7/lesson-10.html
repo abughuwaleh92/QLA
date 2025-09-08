@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Interactive Lesson Viewer - QLA Mathematics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+  <style>
+    :root {
+      --maroon: #6C1D45;
+      --gold: #C7A34F;
+      --success: #10b981;
+      --error: #ef4444;
+    }
+    
+    .lesson-section {
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .lesson-section.locked {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    
+    .lesson-section.locked::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(0,0,0,0.05) 10px,
+        rgba(0,0,0,0.05) 20px
+      );
+      border-radius: 12px;
+    }
+    
+    .video-wrapper {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      overflow: hidden;
+    }
+    
+    .video-wrapper iframe,
+    .video-wrapper video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+    }
+    
+    .checkpoint-gate {
+      background: linear-gradient(135deg, var(--gold), var(--maroon));
+      padding: 2px;
+      border-radius: 16px;
+      margin: 2rem 0;
+    }
+    
+    .checkpoint-content {
+      background: white;
+      border-radius: 14px;
+      padding: 2rem;
+    }
+    
+    .progress-segment {
+      height: 6px;
+      background: #e5e7eb;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .progress-segment.completed {
+      background: var(--success);
+    }
+    
+    .progress-segment.current {
+      background: var(--gold);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
+    .interactive-question {
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+    }
+    
+    .interactive-question.correct {
+      border-color: var(--success);
+      background: #f0fdf4;
+    }
+    
+    .interactive-question.incorrect {
+      border-color: var(--error);
+      background: #fef2f2;
+    }
+    
+    .lock-icon {
+      animation: shake 2s infinite;
+    }
+    
+    @keyframes shake {
+      0%, 90%, 100% { transform: translateX(0); }
+      92%, 96% { transform: translateX(-5px); }
+      94%, 98% { transform: translateX(5px); }
+    }
+    
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: var(--gold);
+      animation: confetti-fall 3s ease-out forwards;
+      z-index: 1000;
+    }
+    
+    @keyframes confetti-fall {
+      to {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Header with Progress -->
+  <header class="bg-gradient-to-r from-[var(--maroon)] to-[var(--gold)] text-white p-4 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <button onclick="exitLesson()" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <div>
+            <h1 class="text-xl font-bold" id="lessonTitle">Loading Lesson...</h1>
+            <p class="text-sm opacity-90">Grade <span id="gradeLevel">7</span> • Unit <span id="unitNumber">1</span></p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-right">
+            <div class="text-sm opacity-90">Progress</div>
+            <div class="text-2xl font-bold"><span id="progressPercent">0</span>%</div>
+          </div>
+          <button onclick="toggleHelp()" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg">
+            <i class="fas fa-question-circle"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Section Progress Bar -->
+      <div class="flex gap-1" id="progressBar">
+        <!-- Progress segments will be added here dynamically -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto p-4 pb-20">
+    <!-- Section 1: Video Introduction -->
+    <section class="lesson-section mb-8" id="section-1" data-type="video">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-[var(--maroon)]">
+            <i class="fas fa-play-circle mr-2"></i>Video Introduction
+          </h2>
+          <span class="badge" id="video-badge">
+            <i class="fas fa-lock text-gray-400"></i>
+          </span>
+        </div>
+        
+        <div class="video-wrapper mb-4">
+          <video id="mainVideo" controls controlsList="nodownload" class="rounded-lg">
+            <source src="" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        </div>
+        
+        <div class="bg-blue-50 p-4 rounded-lg">
+          <p class="text-sm text-blue-800">
+            <i class="fas fa-info-circle mr-2"></i>
+            Watch the entire video to unlock the next section. The video will track your progress automatically.
+          </p>
+        </div>
+        
+        <div class="mt-4">
+          <div class="flex items-center justify-between text-sm mb-2">
+            <span>Video Progress</span>
+            <span id="videoTime">0:00 / 0:00</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-[var(--gold)] h-2 rounded-full transition-all duration-300" id="videoProgress" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Interactive Content -->
+    <section class="lesson-section locked mb-8" id="section-2" data-type="content">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-[var(--maroon)]">
+            <i class="fas fa-book-open mr-2"></i>Learn & Explore
+          </h2>
+          <span class="badge" id="content-badge">
+            <i class="fas fa-lock text-gray-400 lock-icon"></i>
+          </span>
+        </div>
+        
+        <div id="interactiveContent">
+          <!-- Dynamic content will be loaded here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Checkpoint Questions -->
+    <section class="lesson-section locked mb-8" id="section-3" data-type="checkpoint">
+      <div class="checkpoint-gate">
+        <div class="checkpoint-content">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-2xl font-bold text-[var(--maroon)]">
+              <i class="fas fa-tasks mr-2"></i>Checkpoint Questions
+            </h2>
+            <span class="badge" id="checkpoint-badge">
+              <i class="fas fa-lock text-gray-400 lock-icon"></i>
+            </span>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg mb-6">
+            <p class="text-sm text-yellow-800">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              You must answer all questions correctly to proceed to the next section.
+            </p>
+          </div>
+          
+          <div id="checkpointQuestions" class="space-y-4">
+            <!-- Questions will be loaded here -->
+          </div>
+          
+          <button onclick="checkAnswers()" class="mt-6 bg-[var(--maroon)] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50" id="checkButton" disabled>
+            <i class="fas fa-check-circle mr-2"></i>Check Answers
+          </button>
+          
+          <div id="feedbackMessage" class="mt-4 hidden"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Practice Problems -->
+    <section class="lesson-section locked mb-8" id="section-4" data-type="practice">
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-[var(--maroon)]">
+            <i class="fas fa-pencil-alt mr-2"></i>Practice Problems
+          </h2>
+          <span class="badge" id="practice-badge">
+            <i class="fas fa-lock text-gray-400 lock-icon"></i>
+          </span>
+        </div>
+        
+        <div id="practiceProblems" class="space-y-4">
+          <!-- Practice problems will be loaded here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Summary & Next Steps -->
+    <section class="lesson-section locked mb-8" id="section-5" data-type="summary">
+      <div class="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-[var(--maroon)]">
+            <i class="fas fa-trophy mr-2"></i>Lesson Complete!
+          </h2>
+          <span class="badge" id="summary-badge">
+            <i class="fas fa-lock text-gray-400 lock-icon"></i>
+          </span>
+        </div>
+        
+        <div class="text-center py-8">
+          <div class="text-6xl mb-4">🎉</div>
+          <h3 class="text-2xl font-bold mb-2">Congratulations!</h3>
+          <p class="text-gray-600 mb-6">You've completed this lesson successfully.</p>
+          
+          <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-white rounded-lg p-4">
+              <div class="text-3xl font-bold text-[var(--gold)]" id="scoreDisplay">0%</div>
+              <div class="text-sm text-gray-600">Score</div>
+            </div>
+            <div class="bg-white rounded-lg p-4">
+              <div class="text-3xl font-bold text-[var(--success)]" id="timeDisplay">0m</div>
+              <div class="text-sm text-gray-600">Time</div>
+            </div>
+            <div class="bg-white rounded-lg p-4">
+              <div class="text-3xl font-bold text-[var(--maroon)]" id="streakDisplay">0</div>
+              <div class="text-sm text-gray-600">Streak</div>
+            </div>
+          </div>
+          
+          <div class="flex gap-4 justify-center">
+            <button onclick="reviewLesson()" class="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700">
+              <i class="fas fa-redo mr-2"></i>Review Lesson
+            </button>
+            <button onclick="nextLesson()" class="bg-[var(--maroon)] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90">
+              <i class="fas fa-arrow-right mr-2"></i>Next Lesson
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Help Modal -->
+  <div id="helpModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 max-w-md mx-4">
+      <h3 class="text-xl font-bold mb-4">How This Lesson Works</h3>
+      <ul class="space-y-2 text-sm">
+        <li><i class="fas fa-check text-green-500 mr-2"></i>Watch the video completely to unlock content</li>
+        <li><i class="fas fa-check text-green-500 mr-2"></i>Complete checkpoint questions to progress</li>
+        <li><i class="fas fa-check text-green-500 mr-2"></i>Practice problems help reinforce learning</li>
+        <li><i class="fas fa-check text-green-500 mr-2"></i>Track your progress with the top bar</li>
+      </ul>
+      <button onclick="toggleHelp()" class="mt-4 bg-[var(--maroon)] text-white px-4 py-2 rounded-lg w-full">
+        Got it!
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Lesson State Management
+    const lessonState = {
+      currentSection: 1,
+      totalSections: 5,
+      sectionProgress: {
+        1: { completed: false, score: 0 },
+        2: { completed: false, score: 0 },
+        3: { completed: false, score: 0 },
+        4: { completed: false, score: 0 },
+        5: { completed: false, score: 0 }
+      },
+      startTime: Date.now(),
+      videoWatched: 0,
+      checkpointAttempts: 0,
+      currentStreak: 0
+    };
+
+    // Initialize lesson
+    function initLesson() {
+      loadLessonData();
+      setupVideoTracking();
+      renderProgressBar();
+      loadCheckpointQuestions();
+      loadPracticeProblems();
+      loadInteractiveContent();
+    }
+
+    // Load lesson data
+    function loadLessonData() {
+      // This would normally fetch from API
+      const lessonData = {
+        title: "Introduction to Algebraic Expressions",
+        grade: 7,
+        unit: 2,
+        videoUrl: "/lessons/videos/algebra-intro.mp4",
+        duration: 300 // 5 minutes
+      };
+      
+      document.getElementById('lessonTitle').textContent = lessonData.title;
+      document.getElementById('gradeLevel').textContent = lessonData.grade;
+      document.getElementById('unitNumber').textContent = lessonData.unit;
+      
+      // Set video source
+      const video = document.getElementById('mainVideo');
+      video.src = lessonData.videoUrl || 'https://www.w3schools.com/html/mov_bbb.mp4'; // Fallback for demo
+    }
+
+    // Video tracking
+    function setupVideoTracking() {
+      const video = document.getElementById('mainVideo');
+      let watchedSegments = new Set();
+      const segmentDuration = 5; // Track 5-second segments
+      
+      video.addEventListener('timeupdate', () => {
+        const currentSegment = Math.floor(video.currentTime / segmentDuration);
+        watchedSegments.add(currentSegment);
+        
+        const totalSegments = Math.ceil(video.duration / segmentDuration);
+        const watchedPercent = (watchedSegments.size / totalSegments) * 100;
+        
+        document.getElementById('videoProgress').style.width = watchedPercent + '%';
+        document.getElementById('videoTime').textContent = 
+          `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+        
+        lessonState.videoWatched = watchedPercent;
+        
+        // Unlock next section when video is 90% watched
+        if (watchedPercent >= 90 && !lessonState.sectionProgress[1].completed) {
+          completeSection(1);
+        }
+      });
+      
+      // Prevent skipping
+      let lastTime = 0;
+      video.addEventListener('timeupdate', () => {
+        if (video.currentTime > lastTime + 1.5) {
+          video.currentTime = lastTime;
+          showNotification('Please watch the video without skipping', 'warning');
+        }
+        lastTime = video.currentTime;
+      });
+    }
+
+    // Load checkpoint questions
+    function loadCheckpointQuestions() {
+      const questions = [
+        {
+          id: 1,
+          question: "What is 3x + 5 when x = 2?",
+          options: ["11", "8", "10", "13"],
+          correct: 0
+        },
+        {
+          id: 2,
+          question: "Which expression represents 'five more than twice a number'?",
+          options: ["5 + 2", "2x + 5", "5x + 2", "2 + 5x"],
+          correct: 1
+        },
+        {
+          id: 3,
+          question: "Simplify: 4x + 2x - x",
+          options: ["7x", "6x", "5x", "4x"],
+          correct: 2
+        }
+      ];
+      
+      const container = document.getElementById('checkpointQuestions');
+      questions.forEach(q => {
+        const questionDiv = document.createElement('div');
+        questionDiv.className = 'interactive-question p-4 rounded-lg border-2';
+        questionDiv.innerHTML = `
+          <p class="font-semibold mb-3">${q.id}. ${q.question}</p>
+          <div class="space-y-2">
+            ${q.options.map((opt, i) => `
+              <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                <input type="radio" name="q${q.id}" value="${i}" class="checkpoint-answer" data-question="${q.id}" data-correct="${q.correct}">
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        `;
+        container.appendChild(questionDiv);
+      });
+      
+      // Enable check button when all questions answered
+      document.querySelectorAll('.checkpoint-answer').forEach(input => {
+        input.addEventListener('change', () => {
+          const answered = document.querySelectorAll('.checkpoint-answer:checked').length;
+          const total = questions.length;
+          document.getElementById('checkButton').disabled = answered < total;
+        });
+      });
+    }
+
+    // Check checkpoint answers
+    function checkAnswers() {
+      const answers = document.querySelectorAll('.checkpoint-answer:checked');
+      let correct = 0;
+      let total = 0;
+      
+      answers.forEach(input => {
+        total++;
+        const questionDiv = input.closest('.interactive-question');
+        if (input.value === input.dataset.correct) {
+          correct++;
+          questionDiv.classList.add('correct');
+          questionDiv.classList.remove('incorrect');
+        } else {
+          questionDiv.classList.add('incorrect');
+          questionDiv.classList.remove('correct');
+        }
+      });
+      
+      const score = (correct / total) * 100;
+      const feedback = document.getElementById('feedbackMessage');
+      feedback.classList.remove('hidden');
+      
+      if (score === 100) {
+        feedback.className = 'mt-4 p-4 bg-green-100 text-green-800 rounded-lg';
+        feedback.innerHTML = `
+          <i class="fas fa-check-circle mr-2"></i>
+          Perfect! All answers are correct. You can proceed to the next section.
+        `;
+        completeSection(3);
+        createConfetti();
+      } else {
+        feedback.className = 'mt-4 p-4 bg-red-100 text-red-800 rounded-lg';
+        feedback.innerHTML = `
+          <i class="fas fa-times-circle mr-2"></i>
+          You got ${correct} out of ${total} correct. Please review and try again.
+        `;
+        lessonState.checkpointAttempts++;
+      }
+    }
+
+    // Load interactive content
+    function loadInteractiveContent() {
+      const content = document.getElementById('interactiveContent');
+      content.innerHTML = `
+        <div class="prose max-w-none">
+          <h3 class="text-xl font-semibold mb-3">Key Concepts</h3>
+          <div class="grid md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <h4 class="font-semibold mb-2">Variables</h4>
+              <p class="text-sm">Letters that represent unknown numbers</p>
+              <div class="mt-2 p-2 bg-white rounded">
+                <code>x, y, z, a, b</code>
+              </div>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg">
+              <h4 class="font-semibold mb-2">Coefficients</h4>
+              <p class="text-sm">Numbers multiplied by variables</p>
+              <div class="mt-2 p-2 bg-white rounded">
+                <code>3x → 3 is the coefficient</code>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-4 rounded-lg mb-4">
+            <h4 class="font-semibold mb-2">Try It Yourself!</h4>
+            <p class="text-sm mb-3">Drag the terms to create: 2x + 5</p>
+            <div class="flex gap-2 mb-3">
+              <div class="drag-term bg-white p-2 rounded cursor-move" draggable="true">2x</div>
+              <div class="drag-term bg-white p-2 rounded cursor-move" draggable="true">+</div>
+              <div class="drag-term bg-white p-2 rounded cursor-move" draggable="true">5</div>
+              <div class="drag-term bg-white p-2 rounded cursor-move" draggable="true">3x</div>
+              <div class="drag-term bg-white p-2 rounded cursor-move" draggable="true">-</div>
+            </div>
+            <div class="drop-zone border-2 border-dashed border-gray-300 p-4 rounded min-h-[60px]">
+              Drop terms here
+            </div>
+          </div>
+          
+          <button onclick="completeSection(2)" class="bg-[var(--gold)] text-white px-4 py-2 rounded-lg">
+            Mark as Complete
+          </button>
+        </div>
+      `;
+      
+      setupDragAndDrop();
+    }
+
+    // Load practice problems
+    function loadPracticeProblems() {
+      const problems = [
+        { question: "Evaluate: 2x + 3 when x = 4", answer: "11" },
+        { question: "Simplify: 3x + 2x", answer: "5x" },
+        { question: "Write an expression for: 7 less than a number", answer: "x - 7" }
+      ];
+      
+      const container = document.getElementById('practiceProblems');
+      problems.forEach((p, i) => {
+        const problemDiv = document.createElement('div');
+        problemDiv.className = 'bg-gray-50 p-4 rounded-lg';
+        problemDiv.innerHTML = `
+          <p class="font-semibold mb-2">${i + 1}. ${p.question}</p>
+          <input type="text" class="w-full p-2 border rounded practice-input" placeholder="Your answer" data-answer="${p.answer}">
+          <div class="feedback-text text-sm mt-2"></div>
+        `;
+        container.appendChild(problemDiv);
+      });
+      
+      // Add check button
+      const checkBtn = document.createElement('button');
+      checkBtn.className = 'mt-4 bg-[var(--maroon)] text-white px-6 py-3 rounded-lg font-semibold';
+      checkBtn.textContent = 'Check Practice Answers';
+      checkBtn.onclick = checkPracticeAnswers;
+      container.appendChild(checkBtn);
+    }
+
+    // Check practice answers
+    function checkPracticeAnswers() {
+      const inputs = document.querySelectorAll('.practice-input');
+      let correct = 0;
+      
+      inputs.forEach(input => {
+        const userAnswer = input.value.trim().toLowerCase();
+        const correctAnswer = input.dataset.answer.toLowerCase();
+        const feedback = input.nextElementSibling;
+        
+        if (userAnswer === correctAnswer) {
+          correct++;
+          input.classList.add('border-green-500');
+          feedback.textContent = '✓ Correct!';
+          feedback.className = 'feedback-text text-sm mt-2 text-green-600';
+        } else {
+          input.classList.add('border-red-500');
+          feedback.textContent = `✗ Incorrect. The answer is: ${input.dataset.answer}`;
+          feedback.className = 'feedback-text text-sm mt-2 text-red-600';
+        }
+      });
+      
+      if (correct === inputs.length) {
+        completeSection(4);
+      }
+    }
+
+    // Complete a section
+    function completeSection(sectionId) {
+      lessonState.sectionProgress[sectionId].completed = true;
+      lessonState.sectionProgress[sectionId].score = 100;
+      
+      // Update UI
+      const section = document.getElementById(`section-${sectionId}`);
+      const badge = section.querySelector('.badge i');
+      badge.className = 'fas fa-check-circle text-green-500';
+      
+      // Unlock next section
+      if (sectionId < lessonState.totalSections) {
+        const nextSection = document.getElementById(`section-${sectionId + 1}`);
+        nextSection.classList.remove('locked');
+        const nextBadge = nextSection.querySelector('.badge i');
+        nextBadge.className = 'fas fa-unlock text-yellow-500';
+        
+        // Scroll to next section
+        setTimeout(() => {
+          nextSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 500);
+      }
+      
+      // Update progress
+      updateProgress();
+      
+      // Check if lesson is complete
+      if (sectionId === lessonState.totalSections - 1) {
+        completeLessonSummary();
+      }
+      
+      // Send progress to parent
+      window.parent.postMessage({
+        type: 'section-complete',
+        sectionId: sectionId,
+        progress: calculateProgress()
+      }, '*');
+    }
+
+    // Update overall progress
+    function updateProgress() {
+      const completed = Object.values(lessonState.sectionProgress).filter(s => s.completed).length;
+      const progress = (completed / lessonState.totalSections) * 100;
+      document.getElementById('progressPercent').textContent = Math.round(progress);
+      renderProgressBar();
+    }
+
+    // Render progress bar
+    function renderProgressBar() {
+      const bar = document.getElementById('progressBar');
+      bar.innerHTML = '';
+      
+      for (let i = 1; i <= lessonState.totalSections; i++) {
+        const segment = document.createElement('div');
+        segment.className = 'progress-segment flex-1 rounded';
+        
+        if (lessonState.sectionProgress[i].completed) {
+          segment.classList.add('completed');
+        } else if (i === lessonState.currentSection) {
+          segment.classList.add('current');
+        }
+        
+        bar.appendChild(segment);
+      }
+    }
+
+    // Complete lesson summary
+    function completeLessonSummary() {
+      const timeSpent = Math.round((Date.now() - lessonState.startTime) / 60000);
+      const score = calculateScore();
+      
+      document.getElementById('scoreDisplay').textContent = score + '%';
+      document.getElementById('timeDisplay').textContent = timeSpent + 'm';
+      document.getElementById('streakDisplay').textContent = lessonState.currentStreak;
+      
+      // Unlock summary section
+      const summarySection = document.getElementById('section-5');
+      summarySection.classList.remove('locked');
+      const summaryBadge = summarySection.querySelector('.badge i');
+      summaryBadge.className = 'fas fa-trophy text-yellow-500';
+      
+      createConfetti();
+      
+      // Send completion message
+      window.parent.postMessage({
+        type: 'lesson-complete',
+        score: score,
+        timeSpent: timeSpent,
+        attempts: lessonState.checkpointAttempts
+      }, '*');
+    }
+
+    // Calculate score
+    function calculateScore() {
+      const sections = Object.values(lessonState.sectionProgress);
+      const totalScore = sections.reduce((sum, s) => sum + s.score, 0);
+      return Math.round(totalScore / sections.length);
+    }
+
+    // Calculate progress
+    function calculateProgress() {
+      const completed = Object.values(lessonState.sectionProgress).filter(s => s.completed).length;
+      return Math.round((completed / lessonState.totalSections) * 100);
+    }
+
+    // Utility functions
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function showNotification(message, type = 'info') {
+      const colors = {
+        info: 'bg-blue-100 text-blue-800',
+        warning: 'bg-yellow-100 text-yellow-800',
+        success: 'bg-green-100 text-green-800',
+        error: 'bg-red-100 text-red-800'
+      };
+      
+      const notification = document.createElement('div');
+      notification.className = `fixed top-20 right-4 p-4 rounded-lg shadow-lg ${colors[type]} z-50`;
+      notification.innerHTML = `
+        <i class="fas fa-info-circle mr-2"></i>${message}
+      `;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => notification.remove(), 3000);
+    }
+
+    function createConfetti() {
+      for (let i = 0; i < 50; i++) {
+        setTimeout(() => {
+          const confetti = document.createElement('div');
+          confetti.className = 'confetti';
+          confetti.style.left = Math.random() * 100 + '%';
+          confetti.style.background = ['var(--gold)', 'var(--maroon)', '#10b981', '#3b82f6'][Math.floor(Math.random() * 4)];
+          confetti.style.animationDelay = Math.random() * 0.5 + 's';
+          document.body.appendChild(confetti);
+          setTimeout(() => confetti.remove(), 3000);
+        }, i * 30);
+      }
+    }
+
+    function setupDragAndDrop() {
+      const terms = document.querySelectorAll('.drag-term');
+      const dropZone = document.querySelector('.drop-zone');
+      
+      terms.forEach(term => {
+        term.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text', e.target.textContent);
+          e.target.classList.add('opacity-50');
+        });
+        
+        term.addEventListener('dragend', (e) => {
+          e.target.classList.remove('opacity-50');
+        });
+      });
+      
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('bg-gray-100');
+      });
+      
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('bg-gray-100');
+      });
+      
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const text = e.dataTransfer.getData('text');
+        const span = document.createElement('span');
+        span.className = 'inline-block bg-white p-2 rounded m-1';
+        span.textContent = text;
+        dropZone.appendChild(span);
+        dropZone.classList.remove('bg-gray-100');
+      });
+    }
+
+    function toggleHelp() {
+      document.getElementById('helpModal').classList.toggle('hidden');
+    }
+
+    function exitLesson() {
+      if (confirm('Are you sure you want to exit? Your progress will be saved.')) {
+        window.parent.postMessage({ type: 'exit-lesson' }, '*');
+        window.location.href = '/portal/student';
+      }
+    }
+
+    function reviewLesson() {
+      window.location.reload();
+    }
+
+    function nextLesson() {
+      window.parent.postMessage({ type: 'next-lesson' }, '*');
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', initLesson);
+  </script>
+</body>
+</html>

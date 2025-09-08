@@ -9,8 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Poppins:wght@600;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
-  <script src="/socket.io/socket.io.js"></script>
   <style>
     :root{ --maroon:#6C1D45; --maroon2:#8B2450; --gold:#C7A34F; --gold2:#E4D4A8; --ink:#0F172A; --slate:#5b6572; --line:#e9eef2; --bg:#F7FAFC; --ok:#136f3a; --soon:#8a3d00; --purple:#7C3AED; --blue:#1D4ED8; }
     *{box-sizing:border-box} html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5}
@@ -23,7 +21,7 @@
     .interactive-row::before{ content:""; position:absolute; left:-100%; top:0; bottom:0; width:4px; background:linear-gradient(135deg,var(--gold),var(--maroon)); transition:left .3s ease }
     .interactive-row:hover{ transform:translateX(4px); box-shadow:0 12px 28px rgba(0,0,0,.08) } .interactive-row:hover::before{ left:0 }
     iframe.lesson-frame{width:100%;height:60vh;border:1px solid var(--line);border-radius:14px}
-    textarea.code{ min-height:120px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; border:1px solid var(--line); border-radius:12px; padding:12px }
+    textarea.code{ min-height:220px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; border:1px solid var(--line); border-radius:12px; padding:12px }
     
     /* Notification Styles */
     .notification {
@@ -39,6 +37,7 @@
       gap: 12px;
       animation: slideIn 0.3s ease;
       z-index: 9999;
+      max-width: 400px;
     }
     @keyframes slideIn {
       from { transform: translateX(400px); opacity: 0; }
@@ -68,18 +67,14 @@
       cursor: not-allowed;
     }
     
-    /* Lesson Builder Styles */
+    /* Component card styles */
     .component-card {
       background: white;
-      border: 1px solid var(--line);
+      border: 2px solid var(--line);
       border-radius: 12px;
       padding: 16px;
       margin-bottom: 12px;
       position: relative;
-    }
-    
-    .component-card.dragging {
-      opacity: 0.5;
     }
     
     .component-header {
@@ -87,8 +82,6 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--line);
     }
     
     .component-type {
@@ -101,11 +94,6 @@
       border-radius: 999px;
       font-size: 12px;
       font-weight: 600;
-    }
-    
-    .drag-handle {
-      cursor: move;
-      color: #999;
     }
     
     .add-component-btn {
@@ -123,13 +111,6 @@
       background: #fff;
     }
     
-    .component-options {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
-      margin-top: 16px;
-    }
-    
     .component-option {
       padding: 16px;
       border: 2px solid var(--line);
@@ -144,23 +125,6 @@
       border-color: var(--gold);
       transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    }
-    
-    .component-option i {
-      font-size: 24px;
-      color: var(--maroon);
-      margin-bottom: 8px;
-    }
-    
-    .quiz-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    
-    .quiz-option input[type="text"] {
-      flex: 1;
     }
     
     .modal {
@@ -186,14 +150,6 @@
       overflow-y: auto;
       padding: 24px;
     }
-    
-    .lesson-preview {
-      background: white;
-      border: 2px solid var(--line);
-      border-radius: 16px;
-      padding: 24px;
-      min-height: 400px;
-    }
   </style>
 </head>
 <body>
@@ -204,18 +160,19 @@
         <div class="w-16 h-16 bg-[var(--maroon)] rounded-lg flex items-center justify-center text-white font-bold text-xl">QLA</div>
         <div><h1 class="text-3xl lg:text-5xl font-extrabold" style="font-family:Poppins,Inter,sans-serif">Teacher Portal</h1><p class="text-sm opacity-90 mt-1">Qatar Leadership Academy</p></div>
       </div>
-      <div class="hidden lg:flex items-center gap-4"><div class="bg-white/10 backdrop-blur rounded-full p-2"><i class="fas fa-user-tie text-2xl"></i></div>
-        <div class="text-right"><div class="font-semibold">Teacher</div><div class="text-xs opacity-80" id="teacherEmail">—</div></div></div>
+      <div class="hidden lg:flex items-center gap-4">
+        <div class="bg-white/10 backdrop-blur rounded-full p-2"><i class="fas fa-user-tie text-2xl"></i></div>
+        <div class="text-right"><div class="font-semibold">Teacher</div><div class="text-xs opacity-80" id="teacherEmail">Loading...</div></div>
+      </div>
     </div>
-    <div class="pb-6 nav" role="tablist">
+    <div class="pb-6 nav-tabs" role="tablist">
       <button class="nav-tab active" data-tab="lessons"><i class="fas fa-book mr-2"></i>Lessons</button>
       <button class="nav-tab" data-tab="create"><i class="fas fa-plus mr-2"></i>Create Lesson</button>
       <button class="nav-tab" data-tab="builder"><i class="fas fa-hammer mr-2"></i>Lesson Builder</button>
       <button class="nav-tab" data-tab="assign"><i class="fas fa-tasks mr-2"></i>Assignments</button>
       <button class="nav-tab" data-tab="classes"><i class="fas fa-users mr-2"></i>Classes</button>
-      <button class="nav-tab" data-tab="live"><i class="fas fa-chalkboard-teacher mr-2"></i>Classroom Mode</button>
       <button class="nav-tab" data-tab="analytics"><i class="fas fa-chart-simple mr-2"></i>Analytics</button>
-      <a class="nav-tab" href="#" onclick="logout()"><i class="fas fa-sign-out-alt mr-2"></i>Sign out</a>
+      <button class="nav-tab" id="logoutBtn"><i class="fas fa-sign-out-alt mr-2"></i>Sign out</button>
     </div>
   </div>
 </header>
@@ -227,8 +184,8 @@
       <div class="flex items-center justify-between">
         <div class="font-bold"><i class="fas fa-book mr-2 text-[var(--maroon)]"></i>My Lessons</div>
         <div class="flex items-center gap-3">
-          <input id="searchLessons" class="rounded-lg border px-3 py-2" placeholder="Search by title" onkeyup="filterLessons()"/>
-          <button onclick="switchTab('builder')" class="bg-[var(--gold)] text-white px-4 py-2 rounded-lg">
+          <input id="searchLessons" class="rounded-lg border px-3 py-2" placeholder="Search by title"/>
+          <button id="newLessonBtn" class="bg-[var(--gold)] text-white px-4 py-2 rounded-lg hover:opacity-90">
             <i class="fas fa-plus mr-2"></i>New Lesson
           </button>
         </div>
@@ -237,10 +194,10 @@
     <div id="lessonsList" class="grid gap-4 md:grid-cols-2"></div>
   </section>
 
-  <!-- Simple Create Tab (HTML) -->
+  <!-- Create Tab (Simple HTML) -->
   <section id="create-tab" class="tab-content hidden">
     <div class="mb-4">
-      <button onclick="switchTab('builder')" class="bg-[var(--gold)] text-white px-4 py-2 rounded-lg">
+      <button id="useBuilderBtn" class="bg-[var(--gold)] text-white px-4 py-2 rounded-lg hover:opacity-90">
         <i class="fas fa-magic mr-2"></i>Use Interactive Builder Instead
       </button>
     </div>
@@ -250,7 +207,7 @@
         <div class="grid gap-3">
           <label class="text-sm">
             Title <span class="text-red-500">*</span>
-            <input id="title" class="rounded-lg border px-3 py-2 w-full" placeholder="e.g., Introduction to Fractions" required/>
+            <input id="title" class="rounded-lg border px-3 py-2 w-full" placeholder="e.g., Introduction to Fractions"/>
           </label>
           <div class="grid grid-cols-3 gap-3">
             <label class="text-sm">
@@ -271,7 +228,7 @@
           </div>
           <label class="text-sm">
             Description
-            <input id="description" class="rounded-lg border px-3 py-2 w-full" placeholder="Brief description of the lesson"/>
+            <input id="description" class="rounded-lg border px-3 py-2 w-full" placeholder="Brief description"/>
           </label>
         </div>
       </div>
@@ -287,7 +244,7 @@
             Upload Video
             <input id="videoFile" type="file" accept="video/*" class="rounded-lg border px-3 py-2 w-full"/>
           </label>
-          <button class="bg-[var(--maroon)] text-white px-4 py-2 rounded-lg hover:bg-[var(--maroon2)]" onclick="uploadVideo()">
+          <button id="uploadVideoBtn" class="bg-[var(--maroon)] text-white px-4 py-2 rounded-lg hover:bg-[var(--maroon2)]">
             <i class="fas fa-upload mr-2"></i>Upload
           </button>
           <div id="videoUploadResult" class="text-sm text-slate-600"></div>
@@ -295,29 +252,26 @@
       </div>
     </div>
     <div class="card p-6 mt-6">
-      <h3 class="font-bold text-lg mb-2"><i class="fas fa-code mr-2 text-[var(--gold)]"></i>Lesson HTML (advanced)</h3>
-      <p class="text-sm text-slate-600 mb-3">For advanced users: Write custom HTML content.</p>
+      <h3 class="font-bold text-lg mb-2"><i class="fas fa-code mr-2 text-[var(--gold)]"></i>Lesson HTML</h3>
       <textarea id="htmlContent" class="code w-full" placeholder="Enter HTML content..."></textarea>
       <div class="mt-4 flex items-center gap-3">
-        <button id="saveLessonBtn" class="bg-[var(--ok)] text-white px-6 py-2 rounded-lg hover:opacity-80" onclick="saveSimpleLesson()">
+        <button id="saveLessonBtn" class="bg-[var(--ok)] text-white px-6 py-2 rounded-lg hover:opacity-80">
           <i class="fas fa-save mr-2"></i>Save Lesson
         </button>
-        <button class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700" onclick="previewHTML()">
+        <button id="previewHTMLBtn" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700">
           <i class="fas fa-eye mr-2"></i>Preview
         </button>
       </div>
       <div id="previewWrap" class="mt-4 hidden">
-        <iframe id="previewFrame" class="lesson-frame" srcdoc="<p>Preview will appear here</p>"></iframe>
+        <iframe id="previewFrame" class="lesson-frame"></iframe>
       </div>
     </div>
   </section>
 
-  <!-- Interactive Lesson Builder Tab -->
+  <!-- Lesson Builder Tab -->
   <section id="builder-tab" class="tab-content hidden">
     <div class="card p-6 mb-6">
       <h2 class="text-2xl font-bold mb-4"><i class="fas fa-hammer mr-2 text-[var(--gold)]"></i>Interactive Lesson Builder</h2>
-      
-      <!-- Lesson Basic Info -->
       <div class="grid md:grid-cols-4 gap-4 mb-6">
         <div>
           <label class="text-sm font-semibold">Title <span class="text-red-500">*</span></label>
@@ -339,82 +293,48 @@
           <input id="builder-order" type="number" min="1" max="50" value="1" class="w-full rounded-lg border px-3 py-2"/>
         </div>
       </div>
-      
-      <!-- Learning Objectives -->
       <div class="mb-6">
         <label class="text-sm font-semibold">Learning Objectives</label>
-        <textarea id="builder-objectives" class="w-full rounded-lg border px-3 py-2" rows="2" placeholder="What will students learn from this lesson?"></textarea>
+        <textarea id="builder-objectives" class="w-full rounded-lg border px-3 py-2" rows="2" placeholder="What will students learn?"></textarea>
       </div>
     </div>
 
-    <!-- Lesson Components -->
     <div class="card p-6 mb-6">
       <h3 class="text-xl font-bold mb-4">Lesson Components</h3>
-      <p class="text-sm text-gray-600 mb-4">Build your lesson by adding components. Drag to reorder.</p>
+      <div id="lesson-components" class="mb-4"></div>
       
-      <div id="lesson-components" class="mb-4">
-        <!-- Components will be added here -->
-      </div>
-      
-      <!-- Add Component Button -->
-      <div class="add-component-btn" onclick="showComponentOptions()">
+      <div id="addComponentBox" class="add-component-btn">
         <i class="fas fa-plus-circle text-3xl text-[var(--gold)] mb-2"></i>
         <p class="font-semibold">Add Component</p>
-        <p class="text-sm text-gray-600">Video, Text, Quiz, Activity, and more</p>
       </div>
       
-      <!-- Component Options (hidden by default) -->
-      <div id="component-options" class="component-options hidden">
-        <div class="component-option" onclick="addComponent('video')">
-          <i class="fas fa-video"></i>
+      <div id="component-options" class="hidden grid grid-cols-3 gap-4 mt-4">
+        <div class="component-option" data-type="video">
+          <i class="fas fa-video text-2xl text-[var(--maroon)] mb-2"></i>
           <p class="font-semibold">Video</p>
-          <p class="text-xs text-gray-600">YouTube or Upload</p>
         </div>
-        <div class="component-option" onclick="addComponent('text')">
-          <i class="fas fa-paragraph"></i>
+        <div class="component-option" data-type="text">
+          <i class="fas fa-paragraph text-2xl text-[var(--maroon)] mb-2"></i>
           <p class="font-semibold">Text Content</p>
-          <p class="text-xs text-gray-600">Explanation</p>
         </div>
-        <div class="component-option" onclick="addComponent('quiz')">
-          <i class="fas fa-question-circle"></i>
+        <div class="component-option" data-type="quiz">
+          <i class="fas fa-question-circle text-2xl text-[var(--maroon)] mb-2"></i>
           <p class="font-semibold">Quiz</p>
-          <p class="text-xs text-gray-600">Multiple Choice</p>
-        </div>
-        <div class="component-option" onclick="addComponent('activity')">
-          <i class="fas fa-gamepad"></i>
-          <p class="font-semibold">Activity</p>
-          <p class="text-xs text-gray-600">Interactive</p>
-        </div>
-        <div class="component-option" onclick="addComponent('checkpoint')">
-          <i class="fas fa-flag-checkered"></i>
-          <p class="font-semibold">Checkpoint</p>
-          <p class="text-xs text-gray-600">Required Quiz</p>
-        </div>
-        <div class="component-option" onclick="addComponent('code')">
-          <i class="fas fa-code"></i>
-          <p class="font-semibold">Code Editor</p>
-          <p class="text-xs text-gray-600">Practice Coding</p>
         </div>
       </div>
     </div>
 
-    <!-- Actions -->
     <div class="card p-6">
-      <div class="flex items-center justify-between">
+      <div class="flex justify-between">
+        <button id="previewLessonBtn" class="bg-gray-600 text-white px-6 py-2 rounded-lg">
+          <i class="fas fa-eye mr-2"></i>Preview
+        </button>
         <div class="flex gap-3">
-          <button onclick="previewLesson()" class="bg-gray-600 text-white px-6 py-2 rounded-lg">
-            <i class="fas fa-eye mr-2"></i>Preview
-          </button>
-          <button onclick="exportLessonHTML()" class="bg-blue-600 text-white px-6 py-2 rounded-lg">
-            <i class="fas fa-download mr-2"></i>Export HTML
-          </button>
-        </div>
-        <div class="flex gap-3">
-          <button onclick="saveDraft()" class="bg-gray-500 text-white px-6 py-2 rounded-lg">
+          <button id="saveDraftBtn" class="bg-gray-500 text-white px-6 py-2 rounded-lg">
             <i class="fas fa-save mr-2"></i>Save Draft
           </button>
-          <button onclick="publishLesson()" class="bg-[var(--ok)] text-white px-6 py-2 rounded-lg">
-            <i class="fas fa-rocket mr-2"></i>Publish Lesson
+          <button id="publishLessonBtn" class="bg-[var(--ok)] text-white px-6 py-2 rounded-lg">
+            <i class="fas fa-rocket mr-2"></i>Publish
           </button>
         </div>
       </div>
@@ -424,17 +344,17 @@
   <!-- Assignments Tab -->
   <section id="assign-tab" class="tab-content hidden">
     <div class="card p-6">
-      <h3 class="font-bold text-lg mb-4"><i class="fas fa-list-check mr-2 text-[var(--gold)]"></i>Create Assignment</h3>
+      <h3 class="font-bold text-lg mb-4">Create Assignment</h3>
       <div class="grid gap-3 md:grid-cols-2">
-        <label class="text-sm">Select Lesson <select id="assignLesson" class="rounded-lg border px-3 py-2 w-full"></select></label>
-        <label class="text-sm">Class Code <input id="classCode" class="rounded-lg border px-3 py-2 w-full" placeholder="e.g., MATH7A"/></label>
-        <label class="text-sm">Pass % <input id="passPct" type="number" min="0" max="100" value="70" class="rounded-lg border px-3 py-2 w-full"/></label>
-        <label class="text-sm">Due Date <input id="dueDate" type="date" class="rounded-lg border px-3 py-2 w-full"/></label>
+        <label>Select Lesson <select id="assignLesson" class="rounded-lg border px-3 py-2 w-full"></select></label>
+        <label>Class Code <input id="classCode" class="rounded-lg border px-3 py-2 w-full" placeholder="MATH7A"/></label>
+        <label>Pass % <input id="passPct" type="number" value="70" class="rounded-lg border px-3 py-2 w-full"/></label>
+        <label>Due Date <input id="dueDate" type="date" class="rounded-lg border px-3 py-2 w-full"/></label>
       </div>
-      <div class="mt-4"><button class="bg-[var(--maroon)] text-white px-6 py-2 rounded-lg hover:bg-[var(--maroon2)]" onclick="createAssignment()">Assign</button></div>
+      <button id="createAssignBtn" class="mt-4 bg-[var(--maroon)] text-white px-6 py-2 rounded-lg">Create Assignment</button>
     </div>
     <div class="card p-6 mt-6">
-      <h3 class="font-bold text-lg mb-4"><i class="fas fa-table mr-2 text-[var(--gold)]"></i>Assignments</h3>
+      <h3 class="font-bold text-lg mb-4">Assignments</h3>
       <div id="assignmentsList" class="space-y-2"></div>
     </div>
   </section>
@@ -442,12 +362,12 @@
   <!-- Classes Tab -->
   <section id="classes-tab" class="tab-content hidden">
     <div class="card p-6 mb-6">
-      <h3 class="font-bold text-lg mb-3"><i class="fas fa-users mr-2 text-[var(--gold)]"></i>Create Class</h3>
+      <h3 class="font-bold text-lg mb-3">Create Class</h3>
       <div class="grid md:grid-cols-4 gap-3">
-        <input id="ccode" placeholder="Code (e.g., MATH7A)" class="rounded border px-3 py-2"/>
-        <input id="cname" placeholder="Name (e.g., Grade 7 A)" class="rounded border px-3 py-2"/>
-        <input id="cgrade" type="number" min="1" max="12" value="7" class="rounded border px-3 py-2"/>
-        <button class="bg-[var(--maroon)] text-white px-4 py-2 rounded" onclick="createClass()">Create</button>
+        <input id="ccode" placeholder="Code (MATH7A)" class="rounded border px-3 py-2"/>
+        <input id="cname" placeholder="Name (Grade 7 A)" class="rounded border px-3 py-2"/>
+        <input id="cgrade" type="number" value="7" class="rounded border px-3 py-2"/>
+        <button id="createClassBtn" class="bg-[var(--maroon)] text-white px-4 py-2 rounded">Create</button>
       </div>
     </div>
     <div class="card p-6">
@@ -456,34 +376,20 @@
     </div>
   </section>
 
-  <!-- Classroom Mode Tab -->
-  <section id="live-tab" class="tab-content hidden">
-    <div class="card p-6">
-      <h3 class="font-bold text-lg mb-4"><i class="fas fa-broadcast-tower mr-2 text-[var(--gold)]"></i>Live Classroom</h3>
-      <div class="grid gap-3 md:grid-cols-2">
-        <label class="text-sm">Class Code <input id="liveCode" class="rounded-lg border px-3 py-2 w-full" value="MATH7A"/></label>
-        <label class="text-sm">Grade <select id="liveGrade" class="rounded-lg border px-3 py-2 w-full"><option>7</option><option>8</option></select></label>
-      </div>
-      <div class="mt-4 flex items-center gap-3">
-        <button class="bg-[var(--blue)] text-white px-6 py-2 rounded-lg" onclick="startBroadcast()">Start Session</button>
-      </div>
-      <div id="liveLog" class="mt-4 text-sm text-slate-600"></div>
-    </div>
-  </section>
-
   <!-- Analytics Tab -->
   <section id="analytics-tab" class="tab-content hidden">
     <div class="card p-6">
-      <h3 class="font-bold text-lg mb-2"><i class="fas fa-chart-simple mr-2 text-[var(--gold)]"></i>Analytics</h3>
-      <p class="text-slate-600">Student progress and performance data.</p>
+      <h3 class="font-bold text-lg mb-2">Analytics</h3>
+      <p class="text-slate-600">Student progress and performance data will appear here.</p>
     </div>
   </section>
 </main>
 
-<!-- Edit Lesson Modal -->
+<!-- Edit Modal -->
 <div id="editModal" class="modal">
   <div class="modal-content">
     <h3 class="text-xl font-bold mb-4">Edit Lesson</h3>
+    <input type="hidden" id="edit-id"/>
     <div class="space-y-4">
       <div>
         <label class="text-sm font-semibold">Title</label>
@@ -512,46 +418,36 @@
       </div>
     </div>
     <div class="flex justify-end gap-3 mt-6">
-      <button onclick="closeEditModal()" class="bg-gray-500 text-white px-4 py-2 rounded-lg">Cancel</button>
-      <button onclick="updateLesson()" class="bg-[var(--ok)] text-white px-4 py-2 rounded-lg">Save Changes</button>
-    </div>
-  </div>
-</div>
-
-<!-- Preview Modal -->
-<div id="previewModal" class="modal">
-  <div class="modal-content" style="max-width: 900px;">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-xl font-bold">Lesson Preview</h3>
-      <button onclick="closePreviewModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="lesson-preview" id="lesson-preview-content">
-      <!-- Preview content will be rendered here -->
+      <button id="cancelEditBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg">Cancel</button>
+      <button id="saveEditBtn" class="bg-[var(--ok)] text-white px-4 py-2 rounded-lg">Save Changes</button>
     </div>
   </div>
 </div>
 
 <script>
-const socket = typeof io !== 'undefined' ? io() : null;
-let currentEditId = null;
+// Global variables
 let lessonComponents = [];
-let componentIdCounter = 0;
+let componentCounter = 0;
+let allLessons = [];
 
 // Notification system
 function showNotification(message, type = 'info') {
+  console.log(`Notification [${type}]: ${message}`);
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   
-  const icon = {
+  const icons = {
     success: 'fa-check-circle',
     error: 'fa-times-circle',
     warning: 'fa-exclamation-triangle',
     info: 'fa-info-circle'
-  }[type] || 'fa-info-circle';
+  };
   
-  notification.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+  notification.innerHTML = `
+    <i class="fas ${icons[type] || icons.info}"></i>
+    <span>${message}</span>
+  `;
+  
   document.body.appendChild(notification);
   
   setTimeout(() => {
@@ -560,15 +456,20 @@ function showNotification(message, type = 'info') {
   }, 3000);
 }
 
-// API helper
-async function api(path, opts = {}) {
+// API helper function
+async function apiCall(url, options = {}) {
+  console.log(`API Call: ${options.method || 'GET'} ${url}`);
   try {
-    const response = await fetch(path, {
-      headers: { 'Content-Type': 'application/json' },
-      ...opts
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
     });
     
     const text = await response.text();
+    console.log(`Response status: ${response.status}`);
     
     if (!response.ok) {
       throw new Error(text || `HTTP ${response.status}`);
@@ -586,127 +487,136 @@ async function api(path, opts = {}) {
 }
 
 // Tab switching
-function switchTab(tab) {
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('hidden', !c.id.startsWith(tab)));
-}
-
-document.querySelectorAll('.nav-tab').forEach(b => {
-  b.addEventListener('click', function(e) {
-    e.preventDefault();
-    if (this.dataset.tab) {
-      switchTab(this.dataset.tab);
+function switchTab(tabName) {
+  console.log('Switching to tab:', tabName);
+  
+  // Update nav tabs
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    if (tab.dataset.tab === tabName) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
     }
   });
-});
-
-// Load user info
-async function me() {
-  try {
-    const r = await api('/api/auth/me');
-    document.getElementById('teacherEmail').textContent = r.user?.email || '—';
-  } catch (error) {
-    console.error('Failed to load user info:', error);
-  }
+  
+  // Update content sections
+  document.querySelectorAll('.tab-content').forEach(content => {
+    if (content.id === `${tabName}-tab`) {
+      content.classList.remove('hidden');
+    } else {
+      content.classList.add('hidden');
+    }
+  });
 }
 
-// Filter lessons
-function filterLessons() {
-  const query = document.getElementById('searchLessons').value.toLowerCase();
-  document.querySelectorAll('#lessonsList .card').forEach(card => {
-    const title = card.querySelector('.font-semibold').textContent.toLowerCase();
-    card.style.display = title.includes(query) ? '' : 'none';
-  });
+// Load user info
+async function loadUserInfo() {
+  try {
+    const data = await apiCall('/api/auth/me');
+    document.getElementById('teacherEmail').textContent = data.user?.email || 'Teacher';
+  } catch (error) {
+    console.error('Failed to load user info:', error);
+    document.getElementById('teacherEmail').textContent = 'Teacher';
+  }
 }
 
 // Load lessons
 async function loadLessons() {
+  console.log('Loading lessons...');
   try {
-    const r = await api('/api/lessons/catalog?all=1');
-    const list = document.getElementById('lessonsList');
-    const sel = document.getElementById('assignLesson');
+    const data = await apiCall('/api/lessons/catalog?all=1');
+    const lessonsList = document.getElementById('lessonsList');
+    const assignSelect = document.getElementById('assignLesson');
     
-    list.innerHTML = '';
-    sel.innerHTML = '<option value="">-- Select a lesson --</option>';
+    lessonsList.innerHTML = '';
+    assignSelect.innerHTML = '<option value="">-- Select a lesson --</option>';
+    allLessons = [];
     
-    let lessonCount = 0;
+    (data.units || []).forEach(unit => {
+      (unit.lessons || []).forEach(lesson => {
+        allLessons.push(lesson);
+        
+        // Create lesson card
+        const card = document.createElement('div');
+        card.className = 'card p-4 lesson-card';
+        card.dataset.lessonId = lesson.id;
+        card.innerHTML = `
+          <div class="font-semibold mb-1">${lesson.title}</div>
+          <div class="text-sm text-slate-600 mb-3">Grade ${lesson.grade} • Unit ${lesson.unit} • Order ${lesson.order}</div>
+          <div class="flex flex-wrap gap-2">
+            <button class="preview-btn bg-[var(--blue)] text-white px-3 py-1 rounded text-sm" data-id="${lesson.id}" data-src="${lesson.src}">
+              <i class="fas fa-eye mr-1"></i>Preview
+            </button>
+            <button class="edit-btn bg-[var(--gold)] text-white px-3 py-1 rounded text-sm" data-id="${lesson.id}">
+              <i class="fas fa-edit mr-1"></i>Edit
+            </button>
+            <button class="delete-btn bg-red-600 text-white px-3 py-1 rounded text-sm" data-id="${lesson.id}" data-title="${lesson.title}">
+              <i class="fas fa-trash mr-1"></i>Delete
+            </button>
+          </div>
+        `;
+        lessonsList.appendChild(card);
+        
+        // Add to assignment dropdown
+        const option = document.createElement('option');
+        option.value = lesson.id;
+        option.textContent = `${lesson.title} (G${lesson.grade} U${lesson.unit})`;
+        assignSelect.appendChild(option);
+      });
+    });
     
-    (r.units || []).forEach(u => (u.lessons || []).forEach(L => {
-      lessonCount++;
-      const card = document.createElement('div');
-      card.className = 'card p-4';
-      card.innerHTML = `
-        <div class="font-semibold mb-1">${L.title}</div>
-        <div class="text-sm text-slate-600 mb-3">Grade ${L.grade} • Unit ${L.unit} • Order ${L.order}</div>
-        <div class="flex flex-wrap gap-2">
-          <a class="bg-[var(--blue)] text-white px-3 py-1 rounded text-sm" target="_blank" href="${L.src}">
-            <i class="fas fa-external-link-alt mr-1"></i>Preview
-          </a>
-          <button class="bg-[var(--gold)] text-white px-3 py-1 rounded text-sm" onclick="openEditModal(${L.id})">
-            <i class="fas fa-edit mr-1"></i>Edit
-          </button>
-          <button class="bg-red-600 text-white px-3 py-1 rounded text-sm" onclick="confirmDelete(${L.id}, '${L.title.replace(/'/g, "\\'")}')">
-            <i class="fas fa-trash mr-1"></i>Delete
-          </button>
-        </div>
-      `;
-      list.appendChild(card);
-      
-      const opt = document.createElement('option');
-      opt.value = L.id;
-      opt.textContent = `${L.title} (G${L.grade} U${L.unit} L${L.order})`;
-      sel.appendChild(opt);
-    }));
-    
-    if (lessonCount === 0) {
-      list.innerHTML = '<div class="text-center text-gray-500 py-8">No lessons yet. Create your first lesson!</div>';
+    if (allLessons.length === 0) {
+      lessonsList.innerHTML = '<div class="text-center text-gray-500 py-8">No lessons yet. Create your first lesson!</div>';
     }
+    
+    console.log(`Loaded ${allLessons.length} lessons`);
   } catch (error) {
+    console.error('Failed to load lessons:', error);
     showNotification('Failed to load lessons', 'error');
   }
 }
 
-// Save simple lesson (HTML method)
-async function saveSimpleLesson() {
-  const btn = document.getElementById('saveLessonBtn');
-  const originalContent = btn.innerHTML;
+// Save lesson (simple HTML method)
+async function saveLesson() {
+  console.log('Saving lesson...');
+  const title = document.getElementById('title').value.trim();
+  const grade = parseInt(document.getElementById('grade').value);
+  const unit = parseInt(document.getElementById('unit').value);
+  const order = parseInt(document.getElementById('order').value);
+  const description = document.getElementById('description').value.trim();
+  const videoUrl = document.getElementById('videoUrl').value.trim();
+  const htmlContent = document.getElementById('htmlContent').value.trim();
+  
+  // Validation
+  if (!title) {
+    showNotification('Please enter a lesson title', 'warning');
+    return;
+  }
+  
+  if (!unit || unit < 1 || unit > 20) {
+    showNotification('Unit must be between 1 and 20', 'warning');
+    return;
+  }
+  
+  if (!order || order < 1 || order > 50) {
+    showNotification('Order must be between 1 and 50', 'warning');
+    return;
+  }
   
   try {
-    const title = document.getElementById('title').value.trim();
-    const grade = parseInt(document.getElementById('grade').value);
-    const unit = parseInt(document.getElementById('unit').value);
-    const order = parseInt(document.getElementById('order').value);
-    
-    if (!title) {
-      showNotification('Please enter a lesson title', 'warning');
-      document.getElementById('title').focus();
-      return;
-    }
-    
-    if (!unit || unit < 1 || unit > 20) {
-      showNotification('Unit must be between 1 and 20', 'warning');
-      return;
-    }
-    
-    if (!order || order < 1 || order > 50) {
-      showNotification('Order must be between 1 and 50', 'warning');
-      return;
-    }
-    
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Saving...';
-    
     const payload = {
-      title: title,
-      grade: grade,
-      unit: unit,
+      title,
+      grade,
+      unit,
       lesson_order: order,
-      description: document.getElementById('description').value.trim() || null,
-      video_url: document.getElementById('videoUrl').value.trim() || null,
-      html_content: document.getElementById('htmlContent').value.trim() || null
+      description: description || null,
+      video_url: videoUrl || null,
+      html_content: htmlContent || null
     };
     
-    await api('/api/lessons', {
+    console.log('Payload:', payload);
+    
+    await apiCall('/api/lessons', {
       method: 'POST',
       body: JSON.stringify(payload)
     });
@@ -718,56 +628,39 @@ async function saveSimpleLesson() {
     document.getElementById('description').value = '';
     document.getElementById('videoUrl').value = '';
     document.getElementById('htmlContent').value = '';
+    document.getElementById('unit').value = '1';
+    document.getElementById('order').value = '1';
     
+    // Reload lessons and switch to lessons tab
     await loadLessons();
     switchTab('lessons');
     
   } catch (error) {
-    showNotification(`Failed to save: ${error.message}`, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalContent;
+    showNotification(`Failed to save lesson: ${error.message}`, 'error');
   }
 }
 
-// Open edit modal
-async function openEditModal(id) {
-  currentEditId = id;
+// Edit lesson
+async function editLesson(id) {
+  console.log('Opening edit modal for lesson:', id);
+  const lesson = allLessons.find(l => l.id === parseInt(id));
   
-  try {
-    // Fetch lesson details
-    const r = await api('/api/lessons/catalog?all=1');
-    let lesson = null;
+  if (lesson) {
+    document.getElementById('edit-id').value = id;
+    document.getElementById('edit-title').value = lesson.title || '';
+    document.getElementById('edit-description').value = lesson.description || '';
+    document.getElementById('edit-grade').value = lesson.grade || 7;
+    document.getElementById('edit-unit').value = lesson.unit || 1;
+    document.getElementById('edit-order').value = lesson.order || 1;
     
-    (r.units || []).forEach(u => {
-      (u.lessons || []).forEach(L => {
-        if (L.id === id) lesson = L;
-      });
-    });
-    
-    if (lesson) {
-      document.getElementById('edit-title').value = lesson.title || '';
-      document.getElementById('edit-description').value = lesson.description || '';
-      document.getElementById('edit-grade').value = lesson.grade || 7;
-      document.getElementById('edit-unit').value = lesson.unit || 1;
-      document.getElementById('edit-order').value = lesson.order || 1;
-      
-      document.getElementById('editModal').classList.add('show');
-    }
-  } catch (error) {
-    showNotification('Failed to load lesson details', 'error');
+    document.getElementById('editModal').classList.add('show');
   }
 }
 
-// Close edit modal
-function closeEditModal() {
-  document.getElementById('editModal').classList.remove('show');
-  currentEditId = null;
-}
-
-// Update lesson
-async function updateLesson() {
-  if (!currentEditId) return;
+// Save edit
+async function saveEdit() {
+  const id = document.getElementById('edit-id').value;
+  console.log('Saving edit for lesson:', id);
   
   try {
     const payload = {
@@ -778,715 +671,35 @@ async function updateLesson() {
       lesson_order: parseInt(document.getElementById('edit-order').value)
     };
     
-    await api(`/api/lessons/${currentEditId}`, {
+    await apiCall(`/api/lessons/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload)
     });
     
     showNotification('Lesson updated successfully', 'success');
-    closeEditModal();
+    document.getElementById('editModal').classList.remove('show');
     await loadLessons();
   } catch (error) {
     showNotification('Failed to update lesson', 'error');
   }
 }
 
-// Confirm delete
-function confirmDelete(id, title) {
-  if (confirm(`Are you sure you want to delete "${title}"?\n\nThis action cannot be undone.`)) {
-    deleteLesson(id);
-  }
-}
-
 // Delete lesson
-async function deleteLesson(id) {
-  try {
-    await api(`/api/lessons/${id}`, { method: 'DELETE' });
-    showNotification('Lesson deleted successfully', 'success');
-    await loadLessons();
-  } catch (error) {
-    showNotification('Failed to delete lesson', 'error');
-  }
-}
-
-// LESSON BUILDER FUNCTIONS
-
-// Show component options
-function showComponentOptions() {
-  const options = document.getElementById('component-options');
-  options.classList.toggle('hidden');
-}
-
-// Add component
-function addComponent(type) {
-  const id = ++componentIdCounter;
-  const component = {
-    id: id,
-    type: type,
-    data: {}
-  };
-  
-  // Initialize component data based on type
-  switch(type) {
-    case 'video':
-      component.data = { url: '', title: 'Video Lesson' };
-      break;
-    case 'text':
-      component.data = { content: '', title: 'Text Content' };
-      break;
-    case 'quiz':
-      component.data = { 
-        title: 'Quick Quiz',
-        questions: [{
-          question: '',
-          options: ['', '', '', ''],
-          correct: 0
-        }]
-      };
-      break;
-    case 'checkpoint':
-      component.data = {
-        title: 'Checkpoint',
-        passPercent: 100,
-        questions: [{
-          question: '',
-          options: ['', '', '', ''],
-          correct: 0
-        }]
-      };
-      break;
-    case 'activity':
-      component.data = { title: 'Interactive Activity', type: 'drag-drop' };
-      break;
-    case 'code':
-      component.data = { title: 'Code Practice', language: 'javascript', starter: '' };
-      break;
-  }
-  
-  lessonComponents.push(component);
-  renderComponents();
-  document.getElementById('component-options').classList.add('hidden');
-  showNotification(`Added ${type} component`, 'success');
-}
-
-// Render components
-function renderComponents() {
-  const container = document.getElementById('lesson-components');
-  container.innerHTML = '';
-  
-  lessonComponents.forEach((comp, index) => {
-    const div = document.createElement('div');
-    div.className = 'component-card';
-    div.draggable = true;
-    div.dataset.index = index;
-    
-    let icon = '';
-    let typeName = '';
-    
-    switch(comp.type) {
-      case 'video': icon = 'fa-video'; typeName = 'Video'; break;
-      case 'text': icon = 'fa-paragraph'; typeName = 'Text'; break;
-      case 'quiz': icon = 'fa-question-circle'; typeName = 'Quiz'; break;
-      case 'checkpoint': icon = 'fa-flag-checkered'; typeName = 'Checkpoint'; break;
-      case 'activity': icon = 'fa-gamepad'; typeName = 'Activity'; break;
-      case 'code': icon = 'fa-code'; typeName = 'Code'; break;
-    }
-    
-    div.innerHTML = `
-      <div class="component-header">
-        <div class="flex items-center gap-3">
-          <span class="drag-handle"><i class="fas fa-grip-vertical"></i></span>
-          <span class="component-type"><i class="fas ${icon}"></i> ${typeName}</span>
-          <input class="flex-1 rounded border px-2 py-1" placeholder="Component title" 
-                 value="${comp.data.title || ''}" 
-                 onchange="updateComponentTitle(${index}, this.value)">
-        </div>
-        <button onclick="removeComponent(${index})" class="text-red-500 hover:text-red-700">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-      <div class="component-content">
-        ${renderComponentContent(comp, index)}
-      </div>
-    `;
-    
-    container.appendChild(div);
-  });
-  
-  // Setup drag and drop
-  setupDragAndDrop();
-}
-
-// Render component content based on type
-function renderComponentContent(comp, index) {
-  switch(comp.type) {
-    case 'video':
-      return `
-        <input class="w-full rounded border px-3 py-2" placeholder="YouTube URL or video file path"
-               value="${comp.data.url || ''}"
-               onchange="lessonComponents[${index}].data.url = this.value">
-      `;
-    
-    case 'text':
-      return `
-        <textarea class="w-full rounded border px-3 py-2" rows="4" 
-                  placeholder="Enter text content, explanations, or instructions..."
-                  onchange="lessonComponents[${index}].data.content = this.value">${comp.data.content || ''}</textarea>
-      `;
-    
-    case 'quiz':
-    case 'checkpoint':
-      let html = '<div class="space-y-4">';
-      (comp.data.questions || []).forEach((q, qIndex) => {
-        html += `
-          <div class="border rounded p-3">
-            <input class="w-full rounded border px-2 py-1 mb-2" placeholder="Question"
-                   value="${q.question}" 
-                   onchange="updateQuizQuestion(${index}, ${qIndex}, 'question', this.value)">
-            <div class="space-y-1">
-        `;
-        q.options.forEach((opt, optIndex) => {
-          html += `
-            <div class="quiz-option">
-              <input type="radio" name="correct-${index}-${qIndex}" 
-                     ${q.correct === optIndex ? 'checked' : ''}
-                     onchange="updateQuizQuestion(${index}, ${qIndex}, 'correct', ${optIndex})">
-              <input type="text" class="rounded border px-2 py-1" 
-                     placeholder="Option ${optIndex + 1}"
-                     value="${opt}"
-                     onchange="updateQuizOption(${index}, ${qIndex}, ${optIndex}, this.value)">
-            </div>
-          `;
-        });
-        html += '</div></div>';
+async function deleteLesson(id, title) {
+  console.log('Deleting lesson:', id, title);
+  if (confirm(`Are you sure you want to delete "${title}"?\n\nThis action cannot be undone.`)) {
+    try {
+      await apiCall(`/api/lessons/${id}`, {
+        method: 'DELETE'
       });
-      html += `
-        <button onclick="addQuizQuestion(${index})" class="text-sm text-[var(--maroon)]">
-          <i class="fas fa-plus"></i> Add Question
-        </button>
-      `;
-      if (comp.type === 'checkpoint') {
-        html += `
-          <div class="mt-2">
-            <label class="text-sm">Pass Percentage: 
-              <input type="number" class="rounded border px-2 py-1 w-20" value="${comp.data.passPercent}"
-                     onchange="lessonComponents[${index}].data.passPercent = this.value">%
-            </label>
-          </div>
-        `;
-      }
-      html += '</div>';
-      return html;
-    
-    case 'activity':
-      return `
-        <select class="w-full rounded border px-3 py-2" onchange="lessonComponents[${index}].data.type = this.value">
-          <option value="drag-drop">Drag and Drop</option>
-          <option value="matching">Matching</option>
-          <option value="fill-blank">Fill in the Blanks</option>
-          <option value="sorting">Sorting</option>
-        </select>
-      `;
-    
-    case 'code':
-      return `
-        <select class="w-full rounded border px-3 py-2 mb-2" onchange="lessonComponents[${index}].data.language = this.value">
-          <option value="javascript">JavaScript</option>
-          <option value="python">Python</option>
-          <option value="html">HTML/CSS</option>
-        </select>
-        <textarea class="w-full rounded border px-3 py-2 font-mono text-sm" rows="4"
-                  placeholder="Starter code..."
-                  onchange="lessonComponents[${index}].data.starter = this.value">${comp.data.starter || ''}</textarea>
-      `;
-    
-    default:
-      return '';
-  }
-}
-
-// Component update functions
-function updateComponentTitle(index, value) {
-  lessonComponents[index].data.title = value;
-}
-
-function updateQuizQuestion(compIndex, qIndex, field, value) {
-  lessonComponents[compIndex].data.questions[qIndex][field] = value;
-}
-
-function updateQuizOption(compIndex, qIndex, optIndex, value) {
-  lessonComponents[compIndex].data.questions[qIndex].options[optIndex] = value;
-}
-
-function addQuizQuestion(compIndex) {
-  lessonComponents[compIndex].data.questions.push({
-    question: '',
-    options: ['', '', '', ''],
-    correct: 0
-  });
-  renderComponents();
-}
-
-function removeComponent(index) {
-  if (confirm('Remove this component?')) {
-    lessonComponents.splice(index, 1);
-    renderComponents();
-    showNotification('Component removed', 'info');
-  }
-}
-
-// Drag and drop
-function setupDragAndDrop() {
-  const cards = document.querySelectorAll('.component-card');
-  let draggedElement = null;
-  
-  cards.forEach(card => {
-    card.addEventListener('dragstart', (e) => {
-      draggedElement = card;
-      card.classList.add('dragging');
-    });
-    
-    card.addEventListener('dragend', () => {
-      card.classList.remove('dragging');
-    });
-    
-    card.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      const afterElement = getDragAfterElement(document.getElementById('lesson-components'), e.clientY);
-      if (afterElement == null) {
-        document.getElementById('lesson-components').appendChild(draggedElement);
-      } else {
-        document.getElementById('lesson-components').insertBefore(draggedElement, afterElement);
-      }
-    });
-  });
-}
-
-function getDragAfterElement(container, y) {
-  const draggableElements = [...container.querySelectorAll('.component-card:not(.dragging)')];
-  
-  return draggableElements.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-    
-    if (offset < 0 && offset > closest.offset) {
-      return { offset: offset, element: child };
-    } else {
-      return closest;
-    }
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-// Preview lesson
-function previewLesson() {
-  const preview = document.getElementById('lesson-preview-content');
-  const title = document.getElementById('builder-title').value || 'Untitled Lesson';
-  
-  let html = `<h1 class="text-2xl font-bold mb-4">${title}</h1>`;
-  
-  lessonComponents.forEach(comp => {
-    html += `<div class="mb-6">`;
-    html += `<h3 class="text-lg font-semibold mb-2">${comp.data.title || comp.type}</h3>`;
-    
-    switch(comp.type) {
-      case 'video':
-        html += `<div class="bg-gray-100 p-4 rounded">Video: ${comp.data.url || 'No URL set'}</div>`;
-        break;
-      case 'text':
-        html += `<p>${comp.data.content || 'No content'}</p>`;
-        break;
-      case 'quiz':
-      case 'checkpoint':
-        html += '<div class="space-y-2">';
-        (comp.data.questions || []).forEach((q, i) => {
-          html += `<div class="border rounded p-3">
-            <p class="font-semibold">${i+1}. ${q.question || 'No question'}</p>
-            <ul class="ml-4 mt-2">`;
-          q.options.forEach((opt, j) => {
-            html += `<li>${j === q.correct ? '✓' : '○'} ${opt || 'Empty option'}</li>`;
-          });
-          html += '</ul></div>';
-        });
-        html += '</div>';
-        break;
-    }
-    html += '</div>';
-  });
-  
-  preview.innerHTML = html;
-  document.getElementById('previewModal').classList.add('show');
-}
-
-function closePreviewModal() {
-  document.getElementById('previewModal').classList.remove('show');
-}
-
-// Generate HTML from components
-function generateLessonHTML() {
-  const title = document.getElementById('builder-title').value || 'Untitled Lesson';
-  const objectives = document.getElementById('builder-objectives').value || '';
-  
-  let html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title}</title>
-  <script src="https://cdn.tailwindcss.com"><\/script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <style>
-    .component { margin-bottom: 2rem; padding: 1.5rem; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .checkpoint-gate { background: linear-gradient(135deg, #C7A34F, #6C1D45); padding: 2px; border-radius: 16px; }
-    .checkpoint-content { background: white; border-radius: 14px; padding: 2rem; }
-  </style>
-</head>
-<body class="bg-gray-50 p-6">
-  <div class="max-w-4xl mx-auto">
-    <h1 class="text-3xl font-bold mb-4">${title}</h1>
-    ${objectives ? `<div class="bg-blue-50 p-4 rounded-lg mb-6"><p class="text-blue-800">${objectives}</p></div>` : ''}
-    
-    <div id="lesson-content">`;
-  
-  lessonComponents.forEach((comp, index) => {
-    html += `\n      <div class="component" data-component="${index}">`;
-    html += `\n        <h2 class="text-xl font-semibold mb-3">${comp.data.title || comp.type}</h2>`;
-    
-    switch(comp.type) {
-      case 'video':
-        if (comp.data.url) {
-          if (comp.data.url.includes('youtube.com') || comp.data.url.includes('youtu.be')) {
-            const videoId = comp.data.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1];
-            html += `\n        <iframe width="100%" height="400" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
-          } else {
-            html += `\n        <video controls width="100%"><source src="${comp.data.url}" type="video/mp4"></video>`;
-          }
-        }
-        break;
       
-      case 'text':
-        html += `\n        <div class="prose">${comp.data.content || ''}</div>`;
-        break;
-      
-      case 'quiz':
-        html += `\n        <div class="quiz-container">`;
-        (comp.data.questions || []).forEach((q, qIndex) => {
-          html += `\n          <div class="mb-4 p-4 border rounded">
-            <p class="font-semibold mb-2">${qIndex + 1}. ${q.question}</p>
-            <div class="space-y-2">`;
-          q.options.forEach((opt, optIndex) => {
-            html += `\n              <label class="block">
-                <input type="radio" name="q${index}-${qIndex}" value="${optIndex}" data-correct="${q.correct === optIndex}">
-                <span class="ml-2">${opt}</span>
-              </label>`;
-          });
-          html += `\n            </div>
-          </div>`;
-        });
-        html += `\n          <button onclick="checkQuiz(${index})" class="bg-blue-600 text-white px-4 py-2 rounded">Check Answers</button>`;
-        html += `\n        </div>`;
-        break;
-      
-      case 'checkpoint':
-        html += `\n        <div class="checkpoint-gate">
-          <div class="checkpoint-content">
-            <p class="text-red-600 mb-4">⚠️ You must pass this checkpoint to continue (${comp.data.passPercent}% required)</p>`;
-        (comp.data.questions || []).forEach((q, qIndex) => {
-          html += `\n            <div class="mb-4">
-              <p class="font-semibold">${q.question}</p>`;
-          q.options.forEach((opt, optIndex) => {
-            html += `\n              <label class="block mt-2">
-                <input type="radio" name="cp${index}-${qIndex}" value="${optIndex}" data-correct="${q.correct === optIndex}">
-                <span class="ml-2">${opt}</span>
-              </label>`;
-          });
-          html += `\n            </div>`;
-        });
-        html += `\n            <button onclick="checkCheckpoint(${index}, ${comp.data.passPercent})" class="bg-green-600 text-white px-4 py-2 rounded">Submit Checkpoint</button>
-          </div>
-        </div>`;
-        break;
-    }
-    
-    html += `\n      </div>`;
-  });
-  
-  html += `\n    </div>
-  </div>
-  
-  <script>
-    function checkQuiz(quizId) {
-      // Quiz checking logic
-      alert('Quiz checked!');
-    }
-    
-    function checkCheckpoint(cpId, passPercent) {
-      // Checkpoint checking logic
-      alert('Checkpoint checked! Pass percentage: ' + passPercent + '%');
-    }
-    
-    // Track progress
-    window.parent.postMessage({ type: 'lesson-progress', complete: false }, '*');
-  <\/script>
-</body>
-</html>`;
-  
-  return html;
-}
-
-// Export lesson HTML
-function exportLessonHTML() {
-  const html = generateLessonHTML();
-  const blob = new Blob([html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'lesson.html';
-  a.click();
-  URL.revokeObjectURL(url);
-  showNotification('Lesson exported as HTML', 'success');
-}
-
-// Save draft
-function saveDraft() {
-  const lessonData = {
-    title: document.getElementById('builder-title').value,
-    grade: document.getElementById('builder-grade').value,
-    unit: document.getElementById('builder-unit').value,
-    order: document.getElementById('builder-order').value,
-    objectives: document.getElementById('builder-objectives').value,
-    components: lessonComponents
-  };
-  
-  localStorage.setItem('lesson-draft', JSON.stringify(lessonData));
-  showNotification('Draft saved locally', 'success');
-}
-
-// Load draft
-function loadDraft() {
-  const draft = localStorage.getItem('lesson-draft');
-  if (draft) {
-    const data = JSON.parse(draft);
-    document.getElementById('builder-title').value = data.title || '';
-    document.getElementById('builder-grade').value = data.grade || '7';
-    document.getElementById('builder-unit').value = data.unit || '1';
-    document.getElementById('builder-order').value = data.order || '1';
-    document.getElementById('builder-objectives').value = data.objectives || '';
-    lessonComponents = data.components || [];
-    renderComponents();
-    showNotification('Draft loaded', 'info');
-  }
-}
-
-// Publish lesson
-async function publishLesson() {
-  const title = document.getElementById('builder-title').value.trim();
-  const grade = parseInt(document.getElementById('builder-grade').value);
-  const unit = parseInt(document.getElementById('builder-unit').value);
-  const order = parseInt(document.getElementById('builder-order').value);
-  
-  if (!title) {
-    showNotification('Please enter a lesson title', 'warning');
-    return;
-  }
-  
-  if (lessonComponents.length === 0) {
-    showNotification('Please add at least one component', 'warning');
-    return;
-  }
-  
-  try {
-    const html = generateLessonHTML();
-    
-    const payload = {
-      title: title,
-      grade: grade,
-      unit: unit,
-      lesson_order: order,
-      description: document.getElementById('builder-objectives').value.trim() || null,
-      html_content: html
-    };
-    
-    await api('/api/lessons', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    
-    showNotification(`Lesson "${title}" published successfully!`, 'success');
-    
-    // Clear builder
-    document.getElementById('builder-title').value = '';
-    document.getElementById('builder-objectives').value = '';
-    lessonComponents = [];
-    renderComponents();
-    
-    // Clear draft
-    localStorage.removeItem('lesson-draft');
-    
-    await loadLessons();
-    switchTab('lessons');
-    
-  } catch (error) {
-    showNotification(`Failed to publish: ${error.message}`, 'error');
-  }
-}
-
-// Other functions (assignments, classes, etc.)
-async function createAssignment() {
-  try {
-    const payload = {
-      lesson_id: document.getElementById('assignLesson').value,
-      class_code: document.getElementById('classCode').value,
-      pass_pct: parseInt(document.getElementById('passPct').value) || 70,
-      due_at: document.getElementById('dueDate').value || null
-    };
-    
-    if (!payload.lesson_id || !payload.class_code) {
-      showNotification('Please select a lesson and enter class code', 'warning');
-      return;
-    }
-    
-    await api('/api/assignments', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    
-    showNotification('Assignment created successfully', 'success');
-    await loadAssignments();
-  } catch (error) {
-    showNotification('Failed to create assignment', 'error');
-  }
-}
-
-async function loadAssignments() {
-  try {
-    const assignments = await api('/api/assignments');
-    const list = document.getElementById('assignmentsList');
-    list.innerHTML = '';
-    
-    assignments.forEach(a => {
-      const div = document.createElement('div');
-      div.className = 'interactive-row';
-      div.innerHTML = `
-        <div>
-          <div class="font-semibold">Lesson ${a.lesson_id} → ${a.class_code}</div>
-          <div class="text-sm text-slate-600">Due: ${a.due_at || '—'} • Pass: ${a.pass_pct}%</div>
-        </div>
-      `;
-      list.appendChild(div);
-    });
-  } catch (error) {
-    console.error('Failed to load assignments');
-  }
-}
-
-async function createClass() {
-  try {
-    const payload = {
-      code: document.getElementById('ccode').value,
-      name: document.getElementById('cname').value,
-      grade: parseInt(document.getElementById('cgrade').value) || null
-    };
-    
-    if (!payload.code || !payload.name) {
-      showNotification('Please enter class code and name', 'warning');
-      return;
-    }
-    
-    await api('/api/classes', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    
-    showNotification('Class created successfully', 'success');
-    document.getElementById('ccode').value = '';
-    document.getElementById('cname').value = '';
-    await loadMyClasses();
-  } catch (error) {
-    showNotification('Failed to create class', 'error');
-  }
-}
-
-async function loadMyClasses() {
-  try {
-    const classes = await api('/api/classes');
-    const list = document.getElementById('myClasses');
-    list.innerHTML = '';
-    
-    classes.forEach(c => {
-      const div = document.createElement('div');
-      div.className = 'interactive-row';
-      div.innerHTML = `
-        <div>
-          <div class="font-semibold">${c.name}</div>
-          <div class="text-xs text-slate-600">${c.code} • Grade ${c.grade || '-'} • ${c.students || 0} student(s)</div>
-        </div>
-        <button class="text-sm bg-[var(--maroon)] text-white px-3 py-1 rounded" onclick="enrollStudent(${c.id})">Add Student</button>
-      `;
-      list.appendChild(div);
-    });
-  } catch (error) {
-    console.error('Failed to load classes');
-  }
-}
-
-async function enrollStudent(classId) {
-  const email = prompt('Enter student email to enroll:');
-  if (!email) return;
-  
-  try {
-    await api('/api/classes/' + classId + '/enroll', {
-      method: 'POST',
-      body: JSON.stringify({ student_email: email })
-    });
-    
-    showNotification('Student enrolled successfully', 'success');
-    await loadMyClasses();
-  } catch (error) {
-    showNotification('Failed to enroll student', 'error');
-  }
-}
-
-function startBroadcast() {
-  const code = document.getElementById('liveCode').value;
-  if (socket) {
-    socket.emit('class:start', { code });
-    document.getElementById('liveLog').innerHTML += `<div>• Started session for ${code}</div>`;
-    showNotification('Session started', 'success');
-  }
-}
-
-async function logout() {
-  await fetch('/auth/logout', { method: 'POST' });
-  window.location.href = '/login';
-}
-
-// Initialize
-async function init() {
-  try {
-    await me();
-    await loadLessons();
-    await loadAssignments();
-    await loadMyClasses();
-    loadDraft(); // Try to load any saved draft
-    showNotification('Portal loaded successfully', 'success');
-  } catch (error) {
-    console.error('Initialization error:', error);
-    showNotification('Some features may not be available', 'warning');
-  }
-}
-
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.key === 's') {
-    e.preventDefault();
-    const activeTab = document.querySelector('.nav-tab.active').dataset.tab;
-    if (activeTab === 'create') {
-      saveSimpleLesson();
-    } else if (activeTab === 'builder') {
-      saveDraft();
+      showNotification('Lesson deleted successfully', 'success');
+      await loadLessons();
+    } catch (error) {
+      showNotification('Failed to delete lesson', 'error');
     }
   }
-});
+}
 
 // Preview HTML
 function previewHTML() {
@@ -1530,7 +743,469 @@ async function uploadVideo() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// LESSON BUILDER FUNCTIONS
+
+// Add component to lesson
+function addComponent(type) {
+  console.log('Adding component:', type);
+  const component = {
+    id: ++componentCounter,
+    type: type,
+    data: {}
+  };
+  
+  // Initialize component data
+  switch(type) {
+    case 'video':
+      component.data = { url: '', title: 'Video Lesson' };
+      break;
+    case 'text':
+      component.data = { content: '', title: 'Text Content' };
+      break;
+    case 'quiz':
+      component.data = { 
+        title: 'Quick Quiz',
+        questions: [{
+          question: '',
+          options: ['', '', '', ''],
+          correct: 0
+        }]
+      };
+      break;
+  }
+  
+  lessonComponents.push(component);
+  renderComponents();
+  showNotification(`Added ${type} component`, 'success');
+}
+
+// Render lesson components
+function renderComponents() {
+  const container = document.getElementById('lesson-components');
+  container.innerHTML = '';
+  
+  lessonComponents.forEach((comp, index) => {
+    const div = document.createElement('div');
+    div.className = 'component-card';
+    
+    let icon = '';
+    switch(comp.type) {
+      case 'video': icon = 'fa-video'; break;
+      case 'text': icon = 'fa-paragraph'; break;
+      case 'quiz': icon = 'fa-question-circle'; break;
+    }
+    
+    div.innerHTML = `
+      <div class="component-header">
+        <div class="flex items-center gap-3">
+          <span class="component-type"><i class="fas ${icon}"></i> ${comp.type}</span>
+          <input class="flex-1 rounded border px-2 py-1 comp-title" data-index="${index}" 
+                 placeholder="Component title" value="${comp.data.title || ''}">
+        </div>
+        <button class="remove-comp text-red-500 hover:text-red-700" data-index="${index}">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+      <div class="mt-3">
+        ${renderComponentContent(comp, index)}
+      </div>
+    `;
+    
+    container.appendChild(div);
+  });
+  
+  // Add event listeners to component inputs
+  document.querySelectorAll('.comp-title').forEach(input => {
+    input.addEventListener('change', (e) => {
+      const index = parseInt(e.target.dataset.index);
+      lessonComponents[index].data.title = e.target.value;
+    });
+  });
+  
+  document.querySelectorAll('.remove-comp').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt(e.target.dataset.index);
+      if (confirm('Remove this component?')) {
+        lessonComponents.splice(index, 1);
+        renderComponents();
+      }
+    });
+  });
+}
+
+// Render component content
+function renderComponentContent(comp, index) {
+  switch(comp.type) {
+    case 'video':
+      return `<input class="w-full rounded border px-3 py-2 comp-video-url" data-index="${index}" 
+                     placeholder="YouTube URL or video file path" value="${comp.data.url || ''}">`;
+    
+    case 'text':
+      return `<textarea class="w-full rounded border px-3 py-2 comp-text-content" data-index="${index}" 
+                        rows="4" placeholder="Enter text content...">${comp.data.content || ''}</textarea>`;
+    
+    case 'quiz':
+      return `<div class="text-sm text-gray-600">Quiz questions configuration...</div>`;
+    
+    default:
+      return '';
+  }
+}
+
+// Preview lesson
+function previewLesson() {
+  const title = document.getElementById('builder-title').value || 'Untitled Lesson';
+  
+  let html = `<h1 class="text-2xl font-bold mb-4">${title}</h1>`;
+  
+  lessonComponents.forEach(comp => {
+    html += `<div class="mb-6">`;
+    html += `<h3 class="text-lg font-semibold mb-2">${comp.data.title || comp.type}</h3>`;
+    
+    switch(comp.type) {
+      case 'video':
+        html += `<div class="bg-gray-100 p-4 rounded">Video: ${comp.data.url || 'No URL set'}</div>`;
+        break;
+      case 'text':
+        html += `<p>${comp.data.content || 'No content'}</p>`;
+        break;
+      case 'quiz':
+        html += '<div class="text-gray-600">Quiz component</div>';
+        break;
+    }
+    html += '</div>';
+  });
+  
+  alert('Preview:\n\n' + html.replace(/<[^>]*>/g, ''));
+}
+
+// Save draft
+function saveDraft() {
+  const lessonData = {
+    title: document.getElementById('builder-title').value,
+    grade: document.getElementById('builder-grade').value,
+    unit: document.getElementById('builder-unit').value,
+    order: document.getElementById('builder-order').value,
+    objectives: document.getElementById('builder-objectives').value,
+    components: lessonComponents
+  };
+  
+  localStorage.setItem('lesson-draft', JSON.stringify(lessonData));
+  showNotification('Draft saved to browser', 'success');
+}
+
+// Publish lesson
+async function publishLesson() {
+  const title = document.getElementById('builder-title').value.trim();
+  
+  if (!title) {
+    showNotification('Please enter a lesson title', 'warning');
+    return;
+  }
+  
+  if (lessonComponents.length === 0) {
+    showNotification('Please add at least one component', 'warning');
+    return;
+  }
+  
+  try {
+    // Generate HTML from components
+    let html = `<h1>${title}</h1>`;
+    lessonComponents.forEach(comp => {
+      html += `<div><h2>${comp.data.title || comp.type}</h2>`;
+      if (comp.type === 'text') html += `<p>${comp.data.content}</p>`;
+      html += '</div>';
+    });
+    
+    const payload = {
+      title: title,
+      grade: parseInt(document.getElementById('builder-grade').value),
+      unit: parseInt(document.getElementById('builder-unit').value),
+      lesson_order: parseInt(document.getElementById('builder-order').value),
+      description: document.getElementById('builder-objectives').value.trim() || null,
+      html_content: html
+    };
+    
+    await apiCall('/api/lessons', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    showNotification(`Lesson "${title}" published successfully!`, 'success');
+    
+    // Clear builder
+    document.getElementById('builder-title').value = '';
+    document.getElementById('builder-objectives').value = '';
+    lessonComponents = [];
+    renderComponents();
+    
+    await loadLessons();
+    switchTab('lessons');
+    
+  } catch (error) {
+    showNotification(`Failed to publish: ${error.message}`, 'error');
+  }
+}
+
+// Create assignment
+async function createAssignment() {
+  const lessonId = document.getElementById('assignLesson').value;
+  const classCode = document.getElementById('classCode').value.trim();
+  const passPct = parseInt(document.getElementById('passPct').value) || 70;
+  const dueDate = document.getElementById('dueDate').value;
+  
+  if (!lessonId || !classCode) {
+    showNotification('Please select a lesson and enter class code', 'warning');
+    return;
+  }
+  
+  try {
+    await apiCall('/api/assignments', {
+      method: 'POST',
+      body: JSON.stringify({
+        lesson_id: parseInt(lessonId),
+        class_code: classCode,
+        pass_pct: passPct,
+        due_at: dueDate || null
+      })
+    });
+    
+    showNotification('Assignment created successfully', 'success');
+    await loadAssignments();
+  } catch (error) {
+    showNotification('Failed to create assignment', 'error');
+  }
+}
+
+// Load assignments
+async function loadAssignments() {
+  try {
+    const assignments = await apiCall('/api/assignments');
+    const list = document.getElementById('assignmentsList');
+    list.innerHTML = '';
+    
+    assignments.forEach(a => {
+      const div = document.createElement('div');
+      div.className = 'interactive-row';
+      div.innerHTML = `
+        <div>
+          <div class="font-semibold">Lesson ${a.lesson_id} → ${a.class_code}</div>
+          <div class="text-sm text-slate-600">Due: ${a.due_at || '—'} • Pass: ${a.pass_pct}%</div>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+  } catch (error) {
+    console.error('Failed to load assignments');
+  }
+}
+
+// Create class
+async function createClass() {
+  const code = document.getElementById('ccode').value.trim();
+  const name = document.getElementById('cname').value.trim();
+  const grade = parseInt(document.getElementById('cgrade').value) || null;
+  
+  if (!code || !name) {
+    showNotification('Please enter class code and name', 'warning');
+    return;
+  }
+  
+  try {
+    await apiCall('/api/classes', {
+      method: 'POST',
+      body: JSON.stringify({ code, name, grade })
+    });
+    
+    showNotification('Class created successfully', 'success');
+    document.getElementById('ccode').value = '';
+    document.getElementById('cname').value = '';
+    await loadClasses();
+  } catch (error) {
+    showNotification('Failed to create class', 'error');
+  }
+}
+
+// Load classes
+async function loadClasses() {
+  try {
+    const classes = await apiCall('/api/classes');
+    const list = document.getElementById('myClasses');
+    list.innerHTML = '';
+    
+    classes.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'interactive-row';
+      div.innerHTML = `
+        <div>
+          <div class="font-semibold">${c.name}</div>
+          <div class="text-xs text-slate-600">${c.code} • Grade ${c.grade || '-'} • ${c.students || 0} student(s)</div>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+  } catch (error) {
+    console.error('Failed to load classes');
+  }
+}
+
+// Search lessons
+function filterLessons() {
+  const query = document.getElementById('searchLessons').value.toLowerCase();
+  document.querySelectorAll('.lesson-card').forEach(card => {
+    const title = card.querySelector('.font-semibold').textContent.toLowerCase();
+    card.style.display = title.includes(query) ? '' : 'none';
+  });
+}
+
+// Initialize everything when DOM is loaded
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('Initializing Teacher Portal...');
+  
+  // Attach event listeners to nav tabs
+  document.querySelectorAll('.nav-tab[data-tab]').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchTab(tab.dataset.tab);
+    });
+  });
+  
+  // Logout button
+  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await fetch('/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  });
+  
+  // New Lesson button
+  document.getElementById('newLessonBtn').addEventListener('click', () => {
+    switchTab('builder');
+  });
+  
+  // Use Builder button
+  document.getElementById('useBuilderBtn').addEventListener('click', () => {
+    switchTab('builder');
+  });
+  
+  // Save Lesson button
+  document.getElementById('saveLessonBtn').addEventListener('click', saveLesson);
+  
+  // Preview HTML button
+  document.getElementById('previewHTMLBtn').addEventListener('click', previewHTML);
+  
+  // Upload Video button
+  document.getElementById('uploadVideoBtn').addEventListener('click', uploadVideo);
+  
+  // Edit modal buttons
+  document.getElementById('cancelEditBtn').addEventListener('click', () => {
+    document.getElementById('editModal').classList.remove('show');
+  });
+  
+  document.getElementById('saveEditBtn').addEventListener('click', saveEdit);
+  
+  // Search lessons
+  document.getElementById('searchLessons').addEventListener('input', filterLessons);
+  
+  // Lesson Builder buttons
+  document.getElementById('addComponentBox').addEventListener('click', () => {
+    document.getElementById('component-options').classList.toggle('hidden');
+  });
+  
+  document.querySelectorAll('.component-option').forEach(option => {
+    option.addEventListener('click', () => {
+      addComponent(option.dataset.type);
+      document.getElementById('component-options').classList.add('hidden');
+    });
+  });
+  
+  document.getElementById('previewLessonBtn').addEventListener('click', previewLesson);
+  document.getElementById('saveDraftBtn').addEventListener('click', saveDraft);
+  document.getElementById('publishLessonBtn').addEventListener('click', publishLesson);
+  
+  // Assignment button
+  document.getElementById('createAssignBtn').addEventListener('click', createAssignment);
+  
+  // Class button
+  document.getElementById('createClassBtn').addEventListener('click', createClass);
+  
+  // Event delegation for dynamically created buttons
+  document.addEventListener('click', (e) => {
+    // Preview button
+    if (e.target.closest('.preview-btn')) {
+      const btn = e.target.closest('.preview-btn');
+      const src = btn.dataset.src;
+      window.open(src, '_blank');
+    }
+    
+    // Edit button
+    if (e.target.closest('.edit-btn')) {
+      const btn = e.target.closest('.edit-btn');
+      editLesson(btn.dataset.id);
+    }
+    
+    // Delete button
+    if (e.target.closest('.delete-btn')) {
+      const btn = e.target.closest('.delete-btn');
+      deleteLesson(btn.dataset.id, btn.dataset.title);
+    }
+  });
+  
+  // Update component data when inputs change
+  document.addEventListener('change', (e) => {
+    if (e.target.classList.contains('comp-video-url')) {
+      const index = parseInt(e.target.dataset.index);
+      lessonComponents[index].data.url = e.target.value;
+    }
+    
+    if (e.target.classList.contains('comp-text-content')) {
+      const index = parseInt(e.target.dataset.index);
+      lessonComponents[index].data.content = e.target.value;
+    }
+  });
+  
+  // Load initial data
+  try {
+    await loadUserInfo();
+    await loadLessons();
+    await loadAssignments();
+    await loadClasses();
+    
+    // Try to load any saved draft
+    const draft = localStorage.getItem('lesson-draft');
+    if (draft) {
+      const data = JSON.parse(draft);
+      document.getElementById('builder-title').value = data.title || '';
+      document.getElementById('builder-grade').value = data.grade || '7';
+      document.getElementById('builder-unit').value = data.unit || '1';
+      document.getElementById('builder-order').value = data.order || '1';
+      document.getElementById('builder-objectives').value = data.objectives || '';
+      lessonComponents = data.components || [];
+      renderComponents();
+      showNotification('Draft loaded from browser', 'info');
+    }
+    
+    showNotification('Portal loaded successfully', 'success');
+  } catch (error) {
+    console.error('Initialization error:', error);
+    showNotification('Some features may not be available', 'warning');
+  }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  // Ctrl+S to save
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    const activeTab = document.querySelector('.nav-tab.active');
+    if (activeTab && activeTab.dataset.tab === 'create') {
+      saveLesson();
+    } else if (activeTab && activeTab.dataset.tab === 'builder') {
+      saveDraft();
+    }
+  }
+});
+
+console.log('Teacher Portal script loaded successfully');
 </script>
 </body>
 </html>

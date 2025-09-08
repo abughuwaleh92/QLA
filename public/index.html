@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Poppins:wght@600;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+  <link rel="icon" type="image/png" href="/assets/logo/qla-favicon.png"/>
   <style>
     :root { 
       --maroon: #6C1D45; 
@@ -66,6 +67,20 @@
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.2);
     }
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo-image {
+      height: 48px;
+      width: auto;
+      filter: brightness(0) invert(1);
+    }
+    .logo-image-colored {
+      height: 64px;
+      width: auto;
+    }
   </style>
 </head>
 <body>
@@ -73,8 +88,12 @@
   <nav class="absolute top-0 left-0 right-0 z-50 bg-transparent">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-20">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-white rounded-lg shadow-lg flex items-center justify-center">
+        <div class="logo-container">
+          <!-- School Logo - Replace /assets/logo/qla-logo.png with your actual logo path -->
+          <img src="/assets/logo/qla-logo.png" alt="Qatar Leadership Academy" class="logo-image" 
+               onerror="this.style.display='none'; document.getElementById('fallback-logo').style.display='flex';">
+          <!-- Fallback if logo image not found -->
+          <div id="fallback-logo" class="w-12 h-12 bg-white rounded-lg shadow-lg flex items-center justify-center" style="display:none;">
             <div class="w-8 h-8 bg-[var(--maroon)] rounded flex items-center justify-center text-white font-bold">QLA</div>
           </div>
           <div class="text-white">
@@ -104,6 +123,12 @@
           <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur rounded-full px-4 py-2 mb-6">
             <span class="pulse-animation w-2 h-2 bg-green-400 rounded-full"></span>
             <span class="text-sm">Platform Active • 2024-2025 Academic Year</span>
+          </div>
+          
+          <!-- Logo in Hero Section -->
+          <div class="mb-6">
+            <img src="/assets/logo/qla-logo.png" alt="QLA" class="h-24 w-auto opacity-90"
+                 onerror="this.style.display='none'">
           </div>
           
           <h1 class="text-5xl lg:text-6xl font-bold mb-6" style="font-family: 'Poppins', sans-serif;">
@@ -220,94 +245,16 @@
     </div>
   </section>
 
-  <!-- Interactive Demo Section -->
-  <section class="py-20 bg-gray-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid lg:grid-cols-2 gap-12 items-center">
-        <div>
-          <h2 class="text-4xl font-bold mb-6">Experience Interactive Learning</h2>
-          <p class="text-xl text-gray-600 mb-8">
-            Our lessons use cutting-edge technology to make mathematics come alive. 
-            Try the interactive demo to see how engaging math can be!
-          </p>
-          
-          <div class="space-y-4">
-            <div class="flex items-start gap-4">
-              <div class="w-10 h-10 bg-[var(--gold)] rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                <i class="fas fa-check"></i>
-              </div>
-              <div>
-                <h4 class="font-semibold mb-1">Real-time Feedback</h4>
-                <p class="text-gray-600">Get instant feedback on your answers with detailed explanations</p>
-              </div>
-            </div>
-            
-            <div class="flex items-start gap-4">
-              <div class="w-10 h-10 bg-[var(--gold)] rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                <i class="fas fa-check"></i>
-              </div>
-              <div>
-                <h4 class="font-semibold mb-1">Visual Learning</h4>
-                <p class="text-gray-600">Interactive graphs, animations, and visual representations</p>
-              </div>
-            </div>
-            
-            <div class="flex items-start gap-4">
-              <div class="w-10 h-10 bg-[var(--gold)] rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                <i class="fas fa-check"></i>
-              </div>
-              <div>
-                <h4 class="font-semibold mb-1">Adaptive Difficulty</h4>
-                <p class="text-gray-600">Problems adjust to your skill level for optimal learning</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="bg-white rounded-2xl shadow-xl p-8">
-          <div class="bg-gray-100 rounded-lg p-6 mb-4">
-            <h3 class="font-bold mb-3">Try it: Solve for x</h3>
-            <div class="text-2xl font-mono mb-4">2x + 5 = 13</div>
-            <input type="number" id="demoAnswer" class="w-full px-4 py-2 border rounded-lg" placeholder="Enter your answer">
-            <button onclick="checkDemo()" class="w-full bg-[var(--maroon)] text-white px-4 py-2 rounded-lg mt-3 font-semibold hover:bg-[var(--maroon2)] transition-colors">
-              Check Answer
-            </button>
-            <div id="demoFeedback" class="mt-3"></div>
-          </div>
-          
-          <div class="text-center text-sm text-gray-500">
-            This is just a taste of our interactive content!
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CTA Section -->
-  <section class="hero-gradient text-white py-20">
-    <div class="max-w-4xl mx-auto px-4 text-center">
-      <h2 class="text-4xl font-bold mb-6">Ready to Transform Your Math Learning?</h2>
-      <p class="text-xl mb-8 text-white/90">
-        Join thousands of students and teachers already using QLA Mathematics Platform
-      </p>
-      <div class="flex flex-wrap gap-4 justify-center">
-        <a href="/login" class="bg-white text-[var(--maroon)] px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <i class="fas fa-user-plus mr-2"></i>Sign In Now
-        </a>
-        <a href="mailto:support@qla.edu.qa" class="bg-white/10 backdrop-blur text-white px-8 py-4 rounded-xl font-bold text-lg border border-white/20 hover:bg-white/20 transition-all duration-300">
-          <i class="fas fa-envelope mr-2"></i>Contact Support
-        </a>
-      </div>
-    </div>
-  </section>
-
   <!-- Footer -->
   <footer class="bg-gray-900 text-white py-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid md:grid-cols-4 gap-8">
         <div>
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+            <!-- Footer Logo -->
+            <img src="/assets/logo/qla-logo-white.png" alt="QLA" class="h-10 w-auto"
+                 onerror="this.style.display='none'; document.getElementById('footer-fallback-logo').style.display='flex';">
+            <div id="footer-fallback-logo" class="w-10 h-10 bg-white rounded-lg flex items-center justify-center" style="display:none;">
               <div class="w-7 h-7 bg-[var(--maroon)] rounded flex items-center justify-center text-white font-bold text-sm">QLA</div>
             </div>
             <div class="font-bold">QLA Mathematics</div>
@@ -383,7 +330,7 @@
     }
     
     // Add enter key support
-    document.getElementById('demoAnswer').addEventListener('keypress', function(e) {
+    document.getElementById('demoAnswer')?.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') checkDemo();
     });
     

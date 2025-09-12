@@ -1,4 +1,25 @@
 {
+  "name": "qla-math-platform",
+  "version": "3.1.0",
+  "description": "QLA Mathematics Platform - Fixed Version with Enhanced Stability",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "migrate": "node scripts/run-migrations.js",
+    "test": "node scripts/test-platform.js",
+    "seed": "node scripts/seed-data.js",
+    "build": "echo 'Build phase complete - migrations will run at startup'",
+    "fix:sessions": "node scripts/fix-sessions.js",
+    "fix:lessons": "node scripts/fix-lessons.js",
+    "fix:all": "node scripts/fix-all.js",
+    "doctor": "node scripts/fix-all.js",
+    "clean": "node -e \"require('pg').Pool({connectionString:process.env.DATABASE_URL}).query('DELETE FROM session WHERE expire < NOW()').then(r=>console.log('Cleaned',r.rowCount,'expired sessions')).catch(console.error)\""
+  },
   "dependencies": {
     "compression": "^1.7.4",
     "connect-pg-simple": "^9.0.0",
@@ -17,9 +38,24 @@
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.11.0",
     "socket.io": "^4.7.5",
-    "uuid": "^9.0.1",
-
-    /** ✅ add this line **/
-    "docx": "^9.5.1"
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "education",
+    "mathematics",
+    "learning",
+    "interactive",
+    "platform",
+    "qatar",
+    "qla"
+  ],
+  "author": "QLA Development Team",
+  "license": "PROPRIETARY",
+  "repository": {
+    "type": "git",
+    "url": "private"
   }
 }

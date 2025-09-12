@@ -22,6 +22,8 @@ const progressRouter = require('./routes/progress');
 const classesRouter = require('./routes/classes');
 const adminRouter = require('./routes/admin');
 const interactiveLessonsRouter = require('./routes/interactive-lessons');
+const lessonPlanGeneratorRouter = require('./routes/lesson-plan-generator');
+const lessonPlanExportRouter    = require('./routes/lesson-plan-export');
 const { initClassroom } = require('./routes/classroom');
 
 // Enhanced Configuration with fixes
@@ -301,6 +303,9 @@ app.get('/api/health', async (req, res) => {
 initClassroom(io.of('/classroom'));
 
 // Error handling
+
+app.use('/api/lesson-plan-generator', requireAuth, requireTeacher, lessonPlanGeneratorRouter);
+app.use('/api/lesson-plan-export',    requireAuth, requireTeacher, lessonPlanExportRouter);
 app.use((err, req, res, next) => {
   console.error('Application error:', err);
   

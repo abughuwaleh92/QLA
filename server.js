@@ -465,7 +465,11 @@ async function syncLessons() {
   try {
     for (const grade of grades) {
       const dir = path.join(__dirname, `grade${grade}`);
-      
+    const lessonPlanGeneratorRouter = require('./routes/lesson-plan-generator');
+   const lessonPlanExportRouter = require('./routes/lesson-plan-export');
+   
+   app.use('/api/lesson-plan-generator', requireAuth, requireTeacher, lessonPlanGeneratorRouter);
+   app.use('/api/lesson-plan-export', requireAuth, requireTeacher, lessonPlanExportRouter);  
       // Create directory if missing
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });

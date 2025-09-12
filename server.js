@@ -23,6 +23,7 @@ const classesRouter = require('./routes/classes');
 const adminRouter = require('./routes/admin');
 const interactiveLessonsRouter = require('./routes/interactive-lessons');
 const { initClassroom } = require('./routes/classroom');
+const lessonPlannerRouter = require('./routes/lesson-planner');
 
 // Enhanced Configuration with fixes
 const config = {
@@ -266,6 +267,7 @@ app.use('/api/progress', requireAuth, progressRouter);
 app.use('/api/classes', requireAuth, requireTeacher, classesRouter);
 app.use('/api/admin', requireAuth, requireAdmin, adminRouter);
 app.use('/api/interactive', requireAuth, interactiveLessonsRouter);
+app.use('/api/lesson-planner', requireAuth, requireTeacher, lessonPlannerRouter);
 
 // Enhanced health check
 app.get('/api/health', async (req, res) => {

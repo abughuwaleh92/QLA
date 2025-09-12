@@ -1,105 +1,214 @@
 // routes/lesson-plan-export.js
 const express = require('express');
 const router = express.Router();
-const { Document, Packer, Paragraph, HeadingLevel, AlignmentType, TextRun, Table, TableRow, TableCell } = require('docx');
 
-function h2(text) { return new Paragraph({ text, heading: HeadingLevel.HEADING_2 }); }
-function h3(text) { return new Paragraph({ text, heading: HeadingLevel.HEADING_3 }); }
-function h4(text) { return new Paragraph({ text, heading: HeadingLevel.HEADING_4 }); }
-function p(text)  { return new Paragraph({ children: [new TextRun(String(text || ''))] }); }
-function bullet(text) { return new Paragraph({ text: String(text || ''), bullet: { level: 0 } }); }
+/** ---------- helpers (string safety & small DSL) ---------- **/
+const asStr = (v) => (v === undefined || v === null) ? '' : String(v);
 
-function tableKV(pairs) {
-  return new Table({
-    width: { size: 100, type: 'pct' },
-    rows: pairs.map(([k, v]) => new TableRow({
-      children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: String(k), bold: true })] })] }),
-        new TableCell({ children: [p(v)] })
-      ]
-    }))
-  });
-}
+const normList = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(asStr).filter(Boolean);
+  // allow newline/semicolon/bullet-separated strings
+  return String(value)
+    .split(/\r?\n|;|•|-\s(?=\S)/)
+    .map(s => s.replace(/^\s*(\d+\.|\*|\u2022)?\s*/, '').trim())
+    .filter(Boolean);
+};
 
+/** Build a DOCX document out of a canonical plan object */
 async function buildDocx(lessonPlan) {
-  const meta = lessonPlan.meta || {};
+  // Lazy-load docx to prevent boot crash when dependency is missing.
+  let docx;
+  try {
+    docx = require('docx');
+  } catch (err) {
+    const e = new Error(
+      "The 'docx' package is not installed. Add it to dependencies: npm i docx --save"
+    );
+    e.cause = err;
+    e.expose = true;
+    throw e;
+  }
+
+  const {
+    Document,
+    Packer,
+    Paragraph,
+    HeadingLevel,
+    AlignmentType,
+    TextRun,
+    Table,
+    TableRow,
+    TableCell,
+    WidthType,
+    BorderStyle,
+  } = docx;
+
+  // Normalize incoming structure (tolerant to slight schema variations)
+  const lp = lessonPlan || {};
+  const meta = lp.meta || lp.header || {};
+  const topic       = asStr(meta.topic || meta.title || 'Lesson Plan');
+  const subject     = asStr(meta.subject || '');
+  const grade       = asStr(meta.grade || meta.gradeLevel || '');
+  const duration    = asStr(meta.duration || '');
+  const date        = asStr(meta.date || meta.when || '');
+  const teacher     = asStr(meta.teacher || meta.instructor || '');
+  const school      = asStr(meta.school || '');
+  const standards   = normList(lp.standards || lp.alignedStandards);
+  const outcomes    = normList(lp.learningOutcomes || lp.outcomes || lp.objectives);
+  const successCrit = normList(lp.successCriteria || lp.success || lp.criteria);
+  const vocabulary  = normList(lp.vocabulary || lp.keyTerms);
+  const materials   = normList(lp.materials);
+  const assessment  = normList(lp.assessment || lp.checksForUnderstanding);
+  const differentiation = normList(lp.differentiation || lp.supports);
+  const homework    = asStr(lp.homework || '');
+  const notes       = asStr(lp.notes || '');
+  const wellBeing   = normList(lp.safety_and_wellbeing || lp.safety || lp.wellBeing);
+
+  // Sections table (timing, title, student activity, teacher activity)
+  const sections = Array.isArray(lp.sections) ? lp.sections : [];
+  const secRows = sections.map(s => ([
+    asStr(s.timing || s.time || (s.minutes ? `${s.minutes} min` : '')),
+    asStr(s.title || s.block || ''),
+    asStr(s.studentActivity || s.students || ''),
+    asStr(s.teacherActivity || s.teacher || ''),
+  ]));
+
+  // Small node builders
+  const H2 = (text) => new Paragraph({ text, heading: HeadingLevel.HEADING_2, spacing: { after: 160 } });
+  const H3 = (text) => new Paragraph({ text, heading: HeadingLevel.HEADING_3, spacing: { after: 140 } });
+  const P  = (text, opts = {}) =>
+    new Paragraph({
+      children: [new TextRun({ text: asStr(text), ...opts })],
+      spacing: { after: 120 },
+    });
+  const Bullet = (text) =>
+    new Paragraph({
+      text: asStr(text),
+      bullet: { level: 0 },
+      spacing: { after: 60 },
+    });
+
+  const KV = (label, value) => new TableRow({
+    children: [
+      new TableCell({ children: [P(label, { bold: true })] }),
+      new TableCell({ children: [P(value)] }),
+    ],
+    tableHeader: false,
+  });
+
+  const MetaTable = new Table({
+    width: { size: 100 * 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top:    { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      left:   { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      right:  { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      insideH:{ style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' },
+      insideV:{ style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' },
+    },
+    rows: [
+      KV('Subject', subject),
+      KV('Topic', topic),
+      KV('Grade', grade),
+      KV('Duration', duration),
+      KV('Date', date),
+      KV('Teacher', teacher),
+      ...(school ? [KV('School', school)] : []),
+    ],
+  });
+
+  const SectionsHeader = new TableRow({
+    children: ['Timing', 'Section', 'Student Activity', 'Teacher Activity'].map(t =>
+      new TableCell({ children: [P(t, { bold: true })] })
+    )
+  });
+
+  const SectionsTable = new Table({
+    width: { size: 100 * 100, type: WidthType.PERCENTAGE },
+    rows: [
+      SectionsHeader,
+      ...secRows.map(cols =>
+        new TableRow({
+          children: cols.map(c => new TableCell({ children: [P(c)] })),
+        })
+      ),
+    ],
+  });
+
+  const children = [
+    new Paragraph({
+      children: [new TextRun({ text: 'Lesson Plan', bold: true, size: 32 })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+    }),
+
+    MetaTable,
+
+    H2('Learning Outcomes'),
+    ...(outcomes.length ? outcomes.map(Bullet) : [P('—')]),
+
+    H2('Success Criteria'),
+    ...(successCrit.length ? successCrit.map(Bullet) : [P('—')]),
+
+    H2('Vocabulary'),
+    ...(vocabulary.length ? vocabulary.map(Bullet) : [P('—')]),
+
+    H2('Materials'),
+    ...(materials.length ? materials.map(Bullet) : [P('—')]),
+
+    H2('Lesson Flow'),
+    SectionsTable,
+
+    H2('Assessment / Checks for Understanding'),
+    ...(assessment.length ? assessment.map(Bullet) : [P('—')]),
+
+    H2('Differentiation & Support'),
+    ...(differentiation.length ? differentiation.map(Bullet) : [P('—')]),
+
+    ...(homework ? [H2('Homework'), P(homework)] : []),
+
+    ...(notes ? [H2('Notes'), P(notes)] : []),
+
+    ...(wellBeing.length ? [H2('Safety & Well‑being'), ...wellBeing.map(Bullet)] : []),
+  ];
+
   const doc = new Document({
     sections: [{
-      properties: {},
-      children: [
-        new Paragraph({ text: 'Lesson Plan', heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }),
-        tableKV([
-          ['Subject', meta.subject || 'Mathematics'],
-          ['Topic', meta.topic || ''],
-          ['Grade', meta.grade != null ? `Grade ${meta.grade}` : ''],
-          ['Duration', meta.duration ? `${meta.duration} minutes` : ''],
-          ['Date', meta.date || ''],
-          ['Teacher', meta.teacherName || '']
-        ]),
-
-        h2('Learning Outcomes'),
-        ...((lessonPlan.learningOutcomes || []).map(bullet)),
-
-        h2('Success Criteria'),
-        ...((lessonPlan.successCriteria || []).map(bullet)),
-
-        h2('Vocabulary'),
-        ...((lessonPlan.vocabulary || []).map(bullet)),
-
-        h2('Materials'),
-        ...((lessonPlan.materials || []).map(bullet)),
-
-        h2('Agenda (Student‑Centered)'),
-        ...((lessonPlan.agenda || []).flatMap(block => ([
-          h3(`${block.block} — ${block.minutes} min`),
-          h4('Student Activity'),
-          p(block.studentActivity),
-          h4('Teacher Activity'),
-          p(block.teacherActivity),
-          h4('Checks for Understanding'),
-          ...((block.checksForUnderstanding || []).map(bullet))
-        ]))),
-
-        h2('Assessment'),
-        h3('Formative'),
-        ...((lessonPlan.assessment?.formative) || []).map(bullet),
-        h3('Summative'),
-        p(lessonPlan.assessment?.summative || ''),
-
-        h2('Differentiation'),
-        h3('Low/Medium'),
-        ...((lessonPlan.differentiation?.lowMedium) || []).map(bullet),
-        h3('High Ability'),
-        ...((lessonPlan.differentiation?.highAbility) || []).map(bullet),
-        h3('Accommodations'),
-        ...((lessonPlan.differentiation?.accommodations) || []).map(bullet),
-
-        h2('UDL & Wellbeing'),
-        ...((lessonPlan.udl_and_wellbeing || []).map(bullet))
-      ]
-    }]
+      properties: {
+        page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } }, // 0.5"
+      },
+      children,
+    }],
   });
 
   return await Packer.toBuffer(doc);
 }
 
-router.post('/export-docx', express.json(), async (req, res) => {
+/** ----------- Route: POST /api/lesson-plan-export/export-docx ----------- **/
+router.post('/export-docx', express.json({ limit: '2mb' }), async (req, res) => {
   try {
-    const { lessonPlan } = req.body || {};
-    if (!lessonPlan || !lessonPlan.meta) {
-      return res.status(400).json({ error: 'lessonPlan payload is required' });
+    const lessonPlan = req.body?.lessonPlan;
+    if (!lessonPlan || typeof lessonPlan !== 'object') {
+      return res.status(400).json({ error: 'Invalid payload: { lessonPlan: {...} } is required.' });
     }
+
     const buf = await buildDocx(lessonPlan);
-    const safeTitle = String(lessonPlan.meta?.topic || 'lesson-plan').replace(/[^a-z0-9-_]+/ig,'_');
+    const rawTitle = asStr(lessonPlan?.meta?.topic || lessonPlan?.meta?.title || 'lesson-plan');
+    const safeTitle = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'lesson_plan';
+
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'Content-Disposition': `attachment; filename="${safeTitle}.docx"`,
-      'Content-Length': buf.length
+      'Content-Length': buf.length,
+      'X-Export-Engine': 'docx',
     });
-    res.send(buf);
-  } catch (e) {
-    console.error('export docx error:', e);
-    res.status(500).json({ error: 'Failed to generate DOCX' });
+    return res.send(buf);
+  } catch (err) {
+    // If docx cannot be required, provide a clear message without crashing the process.
+    const explain = (err && err.expose) ? err.message : 'Failed to generate DOCX';
+    console.error('Lesson Plan export error:', err);
+    return res.status(500).json({ error: explain });
   }
 });
 

@@ -23,8 +23,6 @@ const classesRouter = require('./routes/classes');
 const adminRouter = require('./routes/admin');
 const interactiveLessonsRouter = require('./routes/interactive-lessons');
 const { initClassroom } = require('./routes/classroom');
-const lessonPlanGeneratorRouter = require('./routes/lesson-plan-generator');
-const lessonPlanExportRouter    = require('./routes/lesson-plan-export');
 
 // Enhanced Configuration with fixes
 const config = {

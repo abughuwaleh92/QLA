@@ -23,6 +23,8 @@ const classesRouter = require('./routes/classes');
 const adminRouter = require('./routes/admin');
 const interactiveLessonsRouter = require('./routes/interactive-lessons');
 const { initClassroom } = require('./routes/classroom');
+const lessonPlanGeneratorRouter = require('./routes/lesson-plan-generator');
+const lessonPlanExportRouter    = require('./routes/lesson-plan-export');
 
 // Enhanced Configuration with fixes
 const config = {
@@ -229,6 +231,9 @@ app.use('/lessons/grade7', express.static(path.join(__dirname, 'grade7'), static
 app.use('/lessons/grade8', express.static(path.join(__dirname, 'grade8'), staticOptions));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets'), staticOptions));
 app.use(express.static(path.join(__dirname, 'public'), staticOptions));
+app.use('/api/lesson-plan-generator', requireAuth, requireTeacher, lessonPlanGeneratorRouter);
+app.use('/api/lesson-plan-export',    requireAuth, requireTeacher, lessonPlanExportRouter);
+
 
 // Protected portals
 app.get('/portal/student', requireAuth, (req, res) => {

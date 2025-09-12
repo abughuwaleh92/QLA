@@ -2,279 +2,249 @@
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
-const fs = require('fs').promises;
-const path = require('path');
 
-const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL, 
-  ssl: process.env.PGSSL === 'disable' ? false : { rejectUnauthorized: false } 
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.PGSSL === 'disable' ? false : { rejectUnauthorized: false }
 });
 
-// Lesson plan template structure based on QLA format
-const generateLessonPlan = (topic, learningOutcomes, grade, duration = 55, teacherName = '') => {
-  const currentDate = new Date();
-  const formattedDate = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
-  
-  // Parse learning outcomes if provided as string
-  const outcomes = typeof learningOutcomes === 'string' 
-    ? learningOutcomes.split('\n').filter(o => o.trim())
-    : learningOutcomes;
-
-  // Generate activities based on topic
-  const activities = generateActivities(topic, grade);
-  const vocabulary = generateVocabulary(topic);
-  const resources = generateResources(topic, grade);
-  
-  const lessonPlan = {
-    // Header Information
-    subject: 'Mathematics',
-    teacher: teacherName,
-    lessonTitle: topic,
-    schemeOfWork: `Unit: ${determineUnit(topic)}`,
-    date: formattedDate,
-    grade: `Grade ${grade}`,
-    block: '2',
-    duration: duration,
-    
-    // Learning Objectives
-    learningObjectives: outcomes.length > 0 ? outcomes : [
-      `Understand the key concepts of ${topic.toLowerCase()}`,
-      `Apply ${topic.toLowerCase()} concepts to solve problems`,
-      `Analyze and evaluate solutions using ${topic.toLowerCase()}`,
-      `Create connections between ${topic.toLowerCase()} and real-world applications`
-    ],
-    
-    // Lesson Sections with Timing
-    sections: [
-      {
-        timing: '2 mins',
-        title: 'Organisation',
-        studentActivity: 'Students will settle down at their designated places and get ready with their laptops for starter activity.',
-        teacherActivity: 'Attendance will be taken, and initial instructions will be given to students.'
-      },
-      {
-        timing: '3 mins',
-        title: 'Recall',
-        studentActivity: 'Students will answer the questions and will come to board when asked.',
-        teacherActivity: `Teacher will ask students to recall key terms and concepts related to ${topic}. Teacher will call students on board to answer some of the questions asked.`
-      },
-      {
-        timing: '10 mins',
-        title: 'Starter',
-        studentActivity: activities.starter.student,
-        teacherActivity: activities.starter.teacher
-      },
-      {
-        timing: '10 mins',
-        title: 'Inquiry Question',
-        studentActivity: activities.inquiry.student,
-        teacherActivity: activities.inquiry.teacher
-      },
-      {
-        timing: '20 mins',
-        title: 'Main',
-        studentActivity: activities.main.student,
-        teacherActivity: activities.main.teacher
-      },
-      {
-        timing: '10 mins',
-        title: 'Plenary: Feedback and Reflection',
-        studentActivity: 'Students will listen to the instructions by teacher. Students will ask their doubts if any. Students will complete the feedback and reflection form independently.',
-        teacherActivity: 'Teacher will distribute reflection and feedback form based on the concepts taught in the topic. Teacher will explain the expectations to the students. Teacher will collect back the responses and will discuss with the students.'
-      }
-    ],
-    
-    // Differentiation
-    differentiation: {
-      lowMedium: [
-        `Meaning of key words discussed and explained with the help of pictures`,
-        `Given individual attention when needed`,
-        `Visuals are used in the delivery and worksheet to make it easier to understand`,
-        `Scaffolded questions with increasing difficulty`
-      ],
-      highAbility: [
-        `Worksheet will have challenging questions for high ability students`,
-        `Extension problems that require critical thinking`,
-        `Opportunities to peer-teach and mentor other students`,
-        `Open-ended investigation tasks`
-      ]
-    },
-    
-    // Assessment Focus
-    assessmentFocus: [
-      'Question answer',
-      'Observation',
-      'Discussion',
-      'Reflection',
-      'Participation',
-      'Work in pairs',
-      'Math Software (IXL/GeoGebra)',
-      'Mini whiteboard activities'
-    ],
-    
-    // Resources
-    resources: resources,
-    
-    // Key Vocabulary
-    keyVocabulary: vocabulary,
-    
-    // Homework
-    homework: `Complete practice problems ${Math.floor(Math.random() * 10) + 1}-${Math.floor(Math.random() * 10) + 15} from the worksheet. Research one real-world application of ${topic} and prepare a short presentation.`
-  };
-  
-  return lessonPlan;
-};
-
-// Helper function to generate activities based on topic
-function generateActivities(topic, grade) {
-  const topicLower = topic.toLowerCase();
-  
-  return {
-    starter: {
-      student: `Students will participate in online IXL activity on ${topic}. Students will write answers of IXL questions on mini white board and will show when asked. The team with highest questions answered will be declared the winner.`,
-      teacher: `Teacher will explain the expectations of the activity. Teacher will start activity using math software IXL on ${topic}. Teacher will display question on board and students will work in pairs and will write answer on white board.`
-    },
-    inquiry: {
-      student: `Students will listen to the instructions from teacher. Students will work in pairs to solve the problem related to ${topic}. Students will ask relevant questions. Students will answer questions when asked by teacher. Students will complete the solution of the real-life problem.`,
-      teacher: `Teacher will distribute a handout with inquiry question to ignite curiosity and connect the topic to real-life situations. Teacher will allow students to work in pairs to solve the problem. Teacher will ask targeted questions from students and will solve problem with the help of answers from students.`
-    },
-    main: {
-      student: `Students will ask relevant questions about ${topic}. Students will answer the questions from the worksheet. Students will come to board and solve the questions when asked. Students will work collaboratively to explore ${topic} concepts through hands-on activities and problem-solving.`,
-      teacher: `Teacher will explain the approach to solve application type questions on ${topic} with the help of 2 questions from the worksheet. Teacher will give opportunity to students to solve questions from the worksheet in pairs. Teacher will facilitate group discussions and provide guided practice. Teacher will ask students to solve 2 more questions on their worksheet independently.`
-    }
-  };
+function parseOutcomes(input) {
+  if (Array.isArray(input)) return input.map(s => String(s).trim()).filter(Boolean);
+  if (!input) return [];
+  return String(input)
+    .split(/\r?\n|;|•|-/)
+    .map(s => s.replace(/^\s*(\d+\.|\*|\u2022)?\s*/, '').trim())
+    .filter(Boolean);
 }
 
-// Helper function to determine unit based on topic
-function determineUnit(topic) {
-  const topicLower = topic.toLowerCase();
-  
-  if (topicLower.includes('number') || topicLower.includes('integer') || topicLower.includes('fraction')) {
-    return 'Number Systems';
-  } else if (topicLower.includes('algebra') || topicLower.includes('equation') || topicLower.includes('expression')) {
-    return 'Algebra';
-  } else if (topicLower.includes('geometry') || topicLower.includes('angle') || topicLower.includes('shape') || topicLower.includes('area')) {
-    return 'Geometry';
-  } else if (topicLower.includes('statistics') || topicLower.includes('data') || topicLower.includes('probability')) {
-    return 'Statistics and Probability';
-  } else if (topicLower.includes('trigonometry') || topicLower.includes('sine') || topicLower.includes('cosine')) {
-    return 'Trigonometry';
-  } else {
-    return 'Mathematical Concepts';
-  }
+function toSuccessCriteria(outcomes) {
+  // simple, deterministic transformation
+  return outcomes.map(o => {
+    let s = o.replace(/^students? (will\s+be\s+able\s+to|can)\s*/i, '').trim();
+    if (!/^I can/i.test(s)) s = 'I can ' + s.replace(/\.$/, '');
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  });
 }
 
-// Helper function to generate vocabulary
-function generateVocabulary(topic) {
-  const baseVocab = ['Calculate', 'Analyze', 'Evaluate', 'Apply', 'Compare', 'Solution', 'Method', 'Formula'];
-  const topicLower = topic.toLowerCase();
-  const specificVocab = [];
-  
-  if (topicLower.includes('fraction')) {
-    specificVocab.push('Numerator', 'Denominator', 'Simplify', 'Mixed Number', 'Improper Fraction');
-  } else if (topicLower.includes('geometry') || topicLower.includes('angle')) {
-    specificVocab.push('Angle', 'Perpendicular', 'Parallel', 'Vertex', 'Polygon', 'Congruent');
-  } else if (topicLower.includes('algebra')) {
-    specificVocab.push('Variable', 'Coefficient', 'Expression', 'Equation', 'Term', 'Constant');
-  } else if (topicLower.includes('trigonometry')) {
-    specificVocab.push('Sine', 'Cosine', 'Tangent', 'Hypotenuse', 'Adjacent', 'Opposite', 'Radian', 'Degree');
-  } else if (topicLower.includes('statistics')) {
-    specificVocab.push('Mean', 'Median', 'Mode', 'Range', 'Frequency', 'Data Set');
-  }
-  
-  // Add topic-specific terms
-  const topicWords = topic.split(' ').filter(word => word.length > 3);
-  specificVocab.push(...topicWords);
-  
-  return [...new Set([...specificVocab, ...baseVocab.slice(0, 5)])];
+function allocateMinutes(total, weights) {
+  const keys = Object.keys(weights);
+  const sum = keys.reduce((a,k)=>a+weights[k],0);
+  let used = 0, out = {};
+  keys.forEach((k, i) => {
+    const m = Math.round((weights[k]/sum)*total);
+    out[k] = m; used += m;
+  });
+  // fix rounding drift on the last block
+  const last = keys[keys.length-1];
+  out[last] += (total - used);
+  return out;
 }
 
-// Helper function to generate resources
-function generateResources(topic, grade) {
+function defaultMaterials(topic) {
   return [
-    'Worksheets',
-    'Visual aids',
-    'Online platform (IXL/Khan Academy)',
-    'Mini whiteboards',
-    'Manipulatives',
-    `Grade ${grade} textbook`,
-    'Calculator (if needed)',
-    'Graph paper',
-    'Interactive presentations'
+    'Whiteboard/markers',
+    'Student notebooks',
+    'Projector/visuals',
+    `${topic} worksheet (differentiated)`,
+    'Exit‑ticket slips'
   ];
 }
 
-// API endpoint to generate lesson plan
+function defaultVocabulary(topic) {
+  // crude placeholders; adjust for your bank per grade/topic
+  return ['Key term 1', 'Key term 2', `${topic}`];
+}
+
+function nowDDMMYYYY() {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+// Core generator: builds a student‑centered, timed plan skeleton
+function generateLessonPlan({ topic, learningOutcomes, grade = 7, duration = 55, teacherName = '' }) {
+  const los = parseOutcomes(learningOutcomes);
+  const success = toSuccessCriteria(los.length ? los : [`explain core ideas about ${topic}`, `solve basic problems about ${topic}`]);
+
+  // Time distribution: tweak weights to match your instructional cadence
+  const minutes = allocateMinutes(duration, {
+    hook: 5,          // Do Now / Hook
+    tps: 8,           // Think‑Pair‑Share
+    mini: 10,         // Mini‑Lesson
+    guided: 12,       // Guided Practice
+    collab: 8,        // Collaborative/Stations
+    indep: 8,         // Independent Practice
+    exit: 4           // Exit ticket + reflection
+  });
+
+  const plan = {
+    meta: {
+      subject: 'Mathematics',
+      topic: topic,
+      date: nowDDMMYYYY(),
+      grade: grade,
+      duration: duration,
+      teacherName: teacherName || null,
+      format: 'QLA Lesson Plan v1'
+    },
+
+    learningOutcomes: los,
+    successCriteria: success,
+    vocabulary: defaultVocabulary(topic),
+    materials: defaultMaterials(topic),
+
+    agenda: [
+      {
+        block: 'Do Now / Hook',
+        minutes: minutes.hook,
+        studentActivity: `Individually, students attempt a quick warm‑up related to ${topic}; prompt surfaces prior knowledge and misconceptions.`,
+        teacherActivity: 'Circulate, observe, and note misconceptions for brief share‑out.',
+        checksForUnderstanding: ['Collect 2–3 sample responses to display for discussion.']
+      },
+      {
+        block: 'Think‑Pair‑Share',
+        minutes: minutes.tps,
+        studentActivity: `Pairs discuss an inquiry prompt about ${topic}; each pair prepares one sentence or example to share.`,
+        teacherActivity: 'Facilitate norms, cold‑call a few pairs, synthesize key ideas on board.',
+        checksForUnderstanding: ['Randomized share‑outs; quick thumbs/hold‑ups on key claim.']
+      },
+      {
+        block: 'Mini‑Lesson',
+        minutes: minutes.mini,
+        studentActivity: 'Listen actively, annotate examples, ask clarifying questions.',
+        teacherActivity: `Model core procedure/representation for ${topic}, contrasting a common error vs. correct reasoning.`,
+        checksForUnderstanding: ['2–3 hinge questions with show‑of‑hands or mini whiteboards.']
+      },
+      {
+        block: 'Guided Practice',
+        minutes: minutes.guided,
+        studentActivity: 'Solve 2–3 scaffolded items in small groups; show reasoning.',
+        teacherActivity: 'Coach groups, prompt for representations, ask “Why?” and “What if…?”.',
+        checksForUnderstanding: ['Targeted conferencing notes; quick sample work share on visualizer.']
+      },
+      {
+        block: 'Collaborative / Stations',
+        minutes: minutes.collab,
+        studentActivity: `Rotate through short tasks (conceptual, procedural, application) about ${topic}.`,
+        teacherActivity: 'Run one station for feedback; monitor pacing signal.',
+        checksForUnderstanding: ['Station check cards; brief peer‑assessment rubric.']
+      },
+      {
+        block: 'Independent Practice',
+        minutes: minutes.indep,
+        studentActivity: 'Work individually on mixed problems aligned to success criteria.',
+        teacherActivity: 'Support individuals; note students for extension/support next lesson.',
+        checksForUnderstanding: ['Collect 1–2 items per student for quick mark.']
+      },
+      {
+        block: 'Exit Ticket & Reflection',
+        minutes: minutes.exit,
+        studentActivity: 'Complete exit ticket; write brief reflection (“Today I learned… / I’m still unsure about…”).',
+        teacherActivity: 'Collect and skim for grouping in next lesson.',
+        checksForUnderstanding: ['Exit‑ticket responses tagged by success criterion.']
+      }
+    ],
+
+    assessment: {
+      formative: [
+        'Hinge questions during mini‑lesson',
+        'Anecdotal notes in guided practice',
+        'Station check cards',
+        'Exit‑ticket tagged to success criteria'
+      ],
+      summative: `Short quiz next session on ${topic} (selected response + one constructed response).`
+    },
+
+    differentiation: {
+      lowMedium: [
+        'Clarify vocabulary with visuals and sentence frames',
+        'Provide worked examples next to practice questions',
+        'Chunk tasks; allow think time before pair discussion'
+      ],
+      highAbility: [
+        'Extension problems requiring generalization/proof idea',
+        'Ask for multiple solution strategies and efficiency comparison',
+        'Offer challenge station with non‑routine item'
+      ],
+      accommodations: [
+        'Preferential seating; reduced item counts with same criteria',
+        'Alternative response modes (oral explanation with scribe)'
+      ]
+    },
+
+    udl_and_wellbeing: [
+      'Multiple representations (verbal, algebraic, visual)',
+      'Opportunities for movement (stations) and voice',
+      'Explicit norms for respectful collaboration'
+    ]
+  };
+
+  return plan;
+}
+
+// ------- Routes --------
+
+// Create & persist a lesson plan
 router.post('/generate', express.json(), async (req, res) => {
   try {
-    const { topic, learningOutcomes, grade, duration, teacherName } = req.body;
-    
-    if (!topic) {
-      return res.status(400).json({ error: 'Topic is required' });
+    const { topic, learningOutcomes, grade, duration, teacherName } = req.body || {};
+    if (!topic || !String(topic).trim()) {
+      return res.status(400).json({ error: 'Topic is required.' });
     }
-    
-    const lessonPlan = generateLessonPlan(
-      topic, 
-      learningOutcomes || [], 
-      grade || 7,
-      duration || 55,
-      teacherName || req.user?.email || 'Teacher'
+
+    const plan = generateLessonPlan({ topic, learningOutcomes, grade, duration, teacherName });
+    const createdBy = req.user?.email || null;
+
+    const { rows } = await pool.query(
+      `INSERT INTO generated_lesson_plans(topic, grade, learning_outcomes, plan_data, created_by)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, created_at`,
+      [ String(topic).trim(), parseInt(grade||7), JSON.stringify(parseOutcomes(learningOutcomes)), plan, createdBy ]
     );
-    
-    // Store in database for future reference
-    try {
-      await pool.query(
-        `INSERT INTO generated_lesson_plans 
-         (topic, grade, learning_outcomes, plan_data, created_by, created_at) 
-         VALUES ($1, $2, $3, $4, $5, NOW())`,
-        [topic, grade || 7, JSON.stringify(learningOutcomes), JSON.stringify(lessonPlan), req.user?.email]
-      );
-    } catch (dbError) {
-      // Table might not exist yet, continue anyway
-      console.log('Could not store lesson plan:', dbError.message);
-    }
-    
-    res.json({ success: true, lessonPlan });
-    
-  } catch (error) {
-    console.error('Error generating lesson plan:', error);
-    res.status(500).json({ error: 'Failed to generate lesson plan' });
+
+    res.json({ id: rows[0].id, created_at: rows[0].created_at, plan });
+  } catch (e) {
+    console.error('generate error:', e);
+    res.status(500).json({ error: 'Failed to generate lesson plan.' });
   }
 });
 
-// Get previous lesson plans
-router.get('/history', async (req, res) => {
+// List my generated plans
+router.get('/', async (req, res) => {
   try {
+    const user = req.user?.email;
     const { rows } = await pool.query(
-      `SELECT id, topic, grade, created_at 
-       FROM generated_lesson_plans 
-       WHERE created_by = $1 
-       ORDER BY created_at DESC 
-       LIMIT 20`,
-      [req.user?.email]
+      `SELECT id, topic, grade, created_at
+         FROM generated_lesson_plans
+        WHERE ($1::text IS NULL OR created_by = $1)
+        ORDER BY created_at DESC LIMIT 100`,
+      [user || null]
     );
     res.json(rows);
-  } catch (error) {
-    // Table might not exist
-    res.json([]);
+  } catch (e) {
+    console.error('list error:', e);
+    res.status(500).json({ error: 'Failed to list plans.' });
   }
 });
 
-// Get specific lesson plan
+// Get a specific plan
 router.get('/:id', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT * FROM generated_lesson_plans WHERE id = $1 AND created_by = $2`,
-      [req.params.id, req.user?.email]
+      `SELECT id, topic, grade, learning_outcomes, plan_data, created_by, created_at
+         FROM generated_lesson_plans
+        WHERE id = $1`,
+      [parseInt(req.params.id)]
     );
-    
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Lesson plan not found' });
-    }
-    
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    // Optionally restrict to owner: if owner‑only visibility is required uncomment:
+    // if (rows[0].created_by && rows[0].created_by !== req.user?.email) return res.status(403).json({ error: 'Forbidden' });
     res.json(rows[0]);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch lesson plan' });
+  } catch (e) {
+    console.error('get error:', e);
+    res.status(500).json({ error: 'Failed to fetch plan.' });
   }
 });
 

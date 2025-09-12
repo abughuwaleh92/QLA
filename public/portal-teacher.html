@@ -166,10 +166,10 @@
       </div>
     </div>
     <div class="pb-6 nav-tabs" role="tablist">
-      <button class="nav-tab" data-tab="plan"><i class="fas fa-lightbulb mr-2"></i>Plan Generator</button>
       <button class="nav-tab active" data-tab="lessons"><i class="fas fa-book mr-2"></i>Lessons</button>
       <button class="nav-tab" data-tab="create"><i class="fas fa-plus mr-2"></i>Create Lesson</button>
       <button class="nav-tab" data-tab="builder"><i class="fas fa-hammer mr-2"></i>Lesson Builder</button>
+      <button class="nav-tab" data-tab="plan"><i class="fas fa-lightbulb mr-2"></i>Plan Generator</button>
       <button class="nav-tab" data-tab="assign"><i class="fas fa-tasks mr-2"></i>Assignments</button>
       <button class="nav-tab" data-tab="classes"><i class="fas fa-users mr-2"></i>Classes</button>
       <button class="nav-tab" data-tab="analytics"><i class="fas fa-chart-simple mr-2"></i>Analytics</button>
@@ -341,68 +341,73 @@
       </div>
     </div>
   </section>
-<!-- Plan Generator Tab -->
-<section id="plan-tab" class="tab-content hidden">
-  <div class="grid md:grid-cols-3 gap-6">
-    <div class="md:col-span-1 card p-6">
-      <h2 class="text-xl font-bold mb-4">
-        <i class="fas fa-wand-magic-sparkles mr-2 text-[var(--gold)]"></i>
-        Lesson Plan Generator
-      </h2>
+  <!-- Plan Generator Tab -->
+  <section id="plan-tab" class="tab-content hidden">
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="md:col-span-1 card p-6">
+        <h2 class="text-xl font-bold mb-4">
+          <i class="fas fa-wand-magic-sparkles mr-2 text-[var(--gold)]"></i>
+          Lesson Plan Generator
+        </h2>
 
-      <label class="text-sm block mb-3">
-        Topic <span class="text-red-500">*</span>
-        <input id="plan-topic" class="rounded-lg border px-3 py-2 w-full" placeholder="e.g., Arc length & sector area"/>
-      </label>
+        <label class="text-sm block mb-3">
+          Topic <span class="text-red-500">*</span>
+          <input id="plan-topic" class="rounded-lg border px-3 py-2 w-full" placeholder="e.g., Arc length & sector area"/>
+        </label>
 
-      <label class="text-sm block mb-3">
-        Learning Outcomes (one per line)
-        <textarea id="plan-los" class="rounded-lg border px-3 py-2 w-full" rows="6"
-          placeholder="Students will be able to …&#10;Students can …"></textarea>
-      </label>
+        <label class="text-sm block mb-3">
+          Learning Outcomes (one per line)
+          <textarea id="plan-los" class="rounded-lg border px-3 py-2 w-full" rows="6"
+            placeholder="Students will be able to …&#10;Students can …"></textarea>
+        </label>
 
-      <div class="grid grid-cols-3 gap-3 mb-4">
-        <label class="text-sm">
-          Grade
-          <select id="plan-grade" class="rounded-lg border px-3 py-2 w-full">
-            <option value="7">7</option>
-            <option value="8">8</option>
-          </select>
-        </label>
-        <label class="text-sm">
-          Duration
-          <input id="plan-duration" type="number" min="30" max="120" value="55"
-            class="rounded-lg border px-3 py-2 w-full"/>
-        </label>
-        <label class="text-sm">
-          Teacher
-          <input id="plan-teacher" placeholder="(auto)" class="rounded-lg border px-3 py-2 w-full"/>
-        </label>
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <label class="text-sm">
+            Grade
+            <select id="plan-grade" class="rounded-lg border px-3 py-2 w-full">
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+            </select>
+          </label>
+          <label class="text-sm">
+            Duration
+            <input id="plan-duration" type="number" min="30" max="120" value="55"
+              class="rounded-lg border px-3 py-2 w-full"/>
+          </label>
+          <label class="text-sm">
+            Teacher
+            <input id="plan-teacher" placeholder="(auto)" class="rounded-lg border px-3 py-2 w-full"/>
+          </label>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="btn-generate-plan" class="bg-[var(--gold)] text-white px-4 py-2 rounded-lg hover:opacity-90">
+            <i class="fas fa-magic mr-2"></i>Generate Plan
+          </button>
+          <button id="btn-download-docx" class="bg-[var(--blue)] text-white px-4 py-2 rounded-lg hover:opacity-90" disabled>
+            <i class="fas fa-file-word mr-2"></i>Download DOCX
+          </button>
+        </div>
+
+        <hr class="my-6"/>
+
+        <h3 class="font-semibold mb-2">My Generated Plans</h3>
+        <div id="plan-list" class="space-y-2 text-sm"></div>
       </div>
 
-      <div class="flex gap-2">
-        <button id="btn-generate-plan" class="bg-[var(--gold)] text-white px-4 py-2 rounded-lg hover:opacity-90">
-          <i class="fas fa-magic mr-2"></i>Generate Plan
-        </button>
-        <button id="btn-download-docx" class="bg-[var(--blue)] text-white px-4 py-2 rounded-lg hover:opacity-90" disabled>
-          <i class="fas fa-file-word mr-2"></i>Download DOCX
-        </button>
+      <div class="md:col-span-2 card p-6">
+        <h3 class="text-lg font-bold mb-4">Preview</h3>
+        <div id="plan-preview" class="prose max-w-none text-sm">
+          <div class="text-slate-500">No plan yet. Generate one to preview.</div>
+        </div>
       </div>
-
-      <hr class="my-6"/>
-
-      <h3 class="font-semibold mb-2">My Generated Plans</h3>
-      <div id="plan-list" class="space-y-2 text-sm"></div>
     </div>
+  </section>
 
-    <div class="md:col-span-2 card p-6">
-      <h3 class="text-lg font-bold mb-4">Preview</h3>
-      <div id="plan-preview" class="prose max-w-none text-sm">
-        <div class="text-slate-500">No plan yet. Generate one to preview.</div>
-      </div>
-    </div>
-  </div>
-</section>
 
   <!-- Assignments Tab -->
   <section id="assign-tab" class="tab-content hidden">
@@ -1269,6 +1274,147 @@ document.addEventListener('keydown', (e) => {
 });
 
 console.log('Teacher Portal script loaded successfully');
+// --- Plan Generator Frontend Integration ---
+let CURRENT_PLAN = null;
+
+function renderPlanList(items) {
+  const wrap = document.getElementById('plan-list');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  items.forEach(it => {
+    const btn = document.createElement('button');
+    btn.className = 'w-full text-left px-3 py-2 border rounded hover:bg-slate-50';
+    btn.textContent = `${it.topic} — G${it.grade} — ${new Date(it.created_at).toLocaleString()}`;
+    btn.addEventListener('click', async () => {
+      const data = await apiCall(`/api/lesson-plan-generator/${it.id}`);
+      CURRENT_PLAN = data.plan_data;
+      renderPlanPreview(CURRENT_PLAN);
+      const dl = document.getElementById('btn-download-docx');
+      if (dl) dl.disabled = false;
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+function htmlBullets(arr) {
+  return (arr||[]).map(x => `<li>${escapeHtml(x)}</li>`).join('');
+}
+function escapeHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function renderPlanPreview(plan) {
+  const cont = document.getElementById('plan-preview');
+  if (!cont) return;
+  if (!plan) {
+    cont.innerHTML = '<div class="text-slate-500">No plan yet.</div>';
+    return;
+  }
+  const m = plan.meta || {};
+  const agenda = (plan.agenda||[]).map(b => `
+    <h4 class="font-semibold mt-4">${escapeHtml(b.block)} — ${b.minutes} min</h4>
+    <div><b>Student:</b> ${escapeHtml(b.studentActivity)}</div>
+    <div><b>Teacher:</b> ${escapeHtml(b.teacherActivity)}</div>
+    <div><b>Checks:</b><ul class="list-disc ml-6">${htmlBullets(b.checksForUnderstanding)}</ul></div>
+  `).join('');
+
+  cont.innerHTML = `
+    <h2 class="text-xl font-bold mb-2">${escapeHtml(m.topic||'Lesson Plan')}</h2>
+    <div class="text-xs text-slate-600 mb-4">
+      ${escapeHtml(m.subject||'Mathematics')} • Grade ${escapeHtml(m.grade)} • ${escapeHtml(m.duration)} min • ${escapeHtml(m.date)} ${m.teacherName?('• ' + escapeHtml(m.teacherName)) : ''}
+    </div>
+
+    <h3 class="font-semibold mt-3">Learning Outcomes</h3>
+    <ul class="list-disc ml-6">${htmlBullets(plan.learningOutcomes)}</ul>
+
+    <h3 class="font-semibold mt-3">Success Criteria</h3>
+    <ul class="list-disc ml-6">${htmlBullets(plan.successCriteria)}</ul>
+
+    <h3 class="font-semibold mt-3">Vocabulary</h3>
+    <ul class="list-disc ml-6">${htmlBullets(plan.vocabulary)}</ul>
+
+    <h3 class="font-semibold mt-3">Materials</h3>
+    <ul class="list-disc ml-6">${htmlBullets(plan.materials)}</ul>
+
+    <h3 class="font-semibold mt-3">Agenda (Student‑Centered)</h3>
+    ${agenda}
+
+    <h3 class="font-semibold mt-3">Assessment</h3>
+    <div><b>Formative:</b><ul class="list-disc ml-6">${htmlBullets(plan.assessment?.formative||[])}</ul></div>
+    <div class="mt-1"><b>Summative:</b> ${escapeHtml(plan.assessment?.summative||'')}</div>
+
+    <h3 class="font-semibold mt-3">Differentiation</h3>
+    <div><b>Low/Medium:</b><ul class="list-disc ml-6">${htmlBullets(plan.differentiation?.lowMedium||[])}</ul></div>
+    <div class="mt-1"><b>High Ability:</b><ul class="list-disc ml-6">${htmlBullets(plan.differentiation?.highAbility||[])}</ul></div>
+    <div class="mt-1"><b>Accommodations:</b><ul class="list-disc ml-6">${htmlBullets(plan.differentiation?.accommodations||[])}</ul></div>
+
+    <h3 class="font-semibold mt-3">UDL & Wellbeing</h3>
+    <ul class="list-disc ml-6">${htmlBullets(plan.udl_and_wellbeing||[])}</ul>
+  `;
+}
+
+async function loadMyPlans() {
+  try {
+    const items = await apiCall('/api/lesson-plan-generator');
+    renderPlanList(items);
+  } catch (e) {
+    console.error('failed to load plans', e);
+  }
+}
+
+document.getElementById('btn-generate-plan')?.addEventListener('click', async () => {
+  const topicEl = document.getElementById('plan-topic');
+  if (!topicEl || !topicEl.value.trim()) return showNotification('Please enter a topic.', 'error');
+
+  const payload = {
+    topic: topicEl.value.trim(),
+    learningOutcomes: document.getElementById('plan-los')?.value || '',
+    grade: parseInt(document.getElementById('plan-grade')?.value || '7'),
+    duration: parseInt(document.getElementById('plan-duration')?.value || '55'),
+    teacherName: document.getElementById('plan-teacher')?.value || document.getElementById('teacherEmail')?.textContent || ''
+  };
+
+  try {
+    const { plan } = await apiCall('/api/lesson-plan-generator/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    CURRENT_PLAN = plan;
+    renderPlanPreview(CURRENT_PLAN);
+    const dl = document.getElementById('btn-download-docx');
+    if (dl) dl.disabled = false;
+    await loadMyPlans();
+    showNotification('Lesson plan generated', 'success');
+  } catch (e) {
+    console.error(e);
+    showNotification('Failed to generate plan', 'error');
+  }
+});
+
+document.getElementById('btn-download-docx')?.addEventListener('click', async () => {
+  if (!CURRENT_PLAN) return;
+  try {
+    const res = await fetch('/api/lesson-plan-export/export-docx', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ lessonPlan: CURRENT_PLAN })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeTitle = (CURRENT_PLAN.meta?.topic || 'lesson-plan').replace(/[^a-z0-9-_]+/ig,'_');
+    a.href = url; a.download = `${safeTitle}.docx`; a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error(e);
+    showNotification('Export failed', 'error');
+  }
+});
+
+// Load plans on portal init as well
+loadMyPlans();
+
 </script>
 </body>
 </html>

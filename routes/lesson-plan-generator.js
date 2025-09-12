@@ -18,7 +18,6 @@ function parseOutcomes(input) {
 }
 
 function toSuccessCriteria(outcomes) {
-  // simple, deterministic transformation
   return outcomes.map(o => {
     let s = o.replace(/^students? (will\s+be\s+able\s+to|can)\s*/i, '').trim();
     if (!/^I can/i.test(s)) s = 'I can ' + s.replace(/\.$/, '');
@@ -34,7 +33,7 @@ function allocateMinutes(total, weights) {
     const m = Math.round((weights[k]/sum)*total);
     out[k] = m; used += m;
   });
-  // fix rounding drift on the last block
+  // fix rounding drift
   const last = keys[keys.length-1];
   out[last] += (total - used);
   return out;
@@ -51,7 +50,6 @@ function defaultMaterials(topic) {
 }
 
 function defaultVocabulary(topic) {
-  // crude placeholders; adjust for your bank per grade/topic
   return ['Key term 1', 'Key term 2', `${topic}`];
 }
 
@@ -63,20 +61,18 @@ function nowDDMMYYYY() {
   return `${dd}/${mm}/${yyyy}`;
 }
 
-// Core generator: builds a student‑centered, timed plan skeleton
 function generateLessonPlan({ topic, learningOutcomes, grade = 7, duration = 55, teacherName = '' }) {
   const los = parseOutcomes(learningOutcomes);
   const success = toSuccessCriteria(los.length ? los : [`explain core ideas about ${topic}`, `solve basic problems about ${topic}`]);
 
-  // Time distribution: tweak weights to match your instructional cadence
   const minutes = allocateMinutes(duration, {
-    hook: 5,          // Do Now / Hook
-    tps: 8,           // Think‑Pair‑Share
-    mini: 10,         // Mini‑Lesson
-    guided: 12,       // Guided Practice
-    collab: 8,        // Collaborative/Stations
-    indep: 8,         // Independent Practice
-    exit: 4           // Exit ticket + reflection
+    hook: 5,
+    tps: 8,
+    mini: 10,
+    guided: 12,
+    collab: 8,
+    indep: 8,
+    exit: 4
   });
 
   const plan = {
@@ -115,7 +111,7 @@ function generateLessonPlan({ topic, learningOutcomes, grade = 7, duration = 55,
         minutes: minutes.mini,
         studentActivity: 'Listen actively, annotate examples, ask clarifying questions.',
         teacherActivity: `Model core procedure/representation for ${topic}, contrasting a common error vs. correct reasoning.`,
-        checksForUnderstanding: ['2–3 hinge questions with show‑of‑hands or mini whiteboards.']
+        checksForUnderstanding: ['2–3 hinge questions with mini whiteboards.']
       },
       {
         block: 'Guided Practice',
@@ -184,8 +180,6 @@ function generateLessonPlan({ topic, learningOutcomes, grade = 7, duration = 55,
   return plan;
 }
 
-// ------- Routes --------
-
 // Create & persist a lesson plan
 router.post('/generate', express.json(), async (req, res) => {
   try {
@@ -211,7 +205,7 @@ router.post('/generate', express.json(), async (req, res) => {
   }
 });
 
-// List my generated plans
+// List my generated plans (latest first)
 router.get('/', async (req, res) => {
   try {
     const user = req.user?.email;
@@ -219,7 +213,8 @@ router.get('/', async (req, res) => {
       `SELECT id, topic, grade, created_at
          FROM generated_lesson_plans
         WHERE ($1::text IS NULL OR created_by = $1)
-        ORDER BY created_at DESC LIMIT 100`,
+        ORDER BY created_at DESC
+        LIMIT 100`,
       [user || null]
     );
     res.json(rows);
@@ -239,7 +234,7 @@ router.get('/:id', async (req, res) => {
       [parseInt(req.params.id)]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
-    // Optionally restrict to owner: if owner‑only visibility is required uncomment:
+    // Optional owner check:
     // if (rows[0].created_by && rows[0].created_by !== req.user?.email) return res.status(403).json({ error: 'Forbidden' });
     res.json(rows[0]);
   } catch (e) {

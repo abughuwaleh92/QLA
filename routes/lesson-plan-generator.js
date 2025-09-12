@@ -146,7 +146,7 @@ function generateLessonPlan({ topic, learningOutcomes, grade = 7, duration = 55,
     assessment: {
       formative: [
         'Hinge questions during mini‑lesson',
-        'Anecdotal notes in guided practice',
+        'Aneotal notes in guided practice',
         'Station check cards',
         'Exit‑ticket tagged to success criteria'
       ],

@@ -1,0 +1,16 @@
+*** server.js	2025-09-12
+--- server.js	2025-09-12
+@@
+-// Import modules
+-const { mountAuth, requireAuth, requireTeacher, requireAdmin } = require('./auth');
++// Import modules
++const { mountAuth, requireAuth, requireTeacher, requireAdmin } = require('./auth');
++// NEW: Lesson Plan Generator routers
++const lessonPlanGeneratorRouter = require('./routes/lesson-plan-generator');
++const lessonPlanExportRouter = require('./routes/lesson-plan-export');
+@@
+ app.use('/api/interactive', requireAuth, interactiveLessonsRouter);
++
++// NEW: Lesson Plan Generator
++app.use('/api/lesson-plan-generator', requireAuth, requireTeacher, lessonPlanGeneratorRouter);
++app.use('/api/lesson-plan-export', requireAuth, requireTeacher, lessonPlanExportRouter);

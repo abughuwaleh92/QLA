@@ -2,18 +2,20 @@
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
-const express = require('express');
-const router = express.Router();
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.PGSSL === 'disable' ? false : { rejectUnauthorized: false }
 });
+
+// Optional cheerio for HTML import
 let cheerio;
 try {
   cheerio = require('cheerio');
 } catch (err) {
-  console.warn('[teacher-practice] Optional dependency "cheerio" is missing. The HTML import route will be disabled until it is installed.');
+  console.warn('[teacher-practice] Optional dependency "cheerio" is missing. HTML import will be disabled.');
 }
+
 // Get all skills for management
 router.get('/skills', async (req, res) => {
   try {
@@ -70,6 +72,76 @@ router.post('/skills', express.json(), async (req, res) => {
   }
 });
 
+// Update skill
+router.put('/skills/:id', express.json(), async (req, res) => {
+  try {
+    const skillId = parseInt(req.params.id);
+    const { name, description, order_index, prerequisite_skills } = req.body;
+    
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+    
+    if (name !== undefined) {
+      updates.push(`name = $${paramCount}`);
+      values.push(name);
+      paramCount++;
+    }
+    
+    if (description !== undefined) {
+      updates.push(`description = $${paramCount}`);
+      values.push(description);
+      paramCount++;
+    }
+    
+    if (order_index !== undefined) {
+      updates.push(`order_index = $${paramCount}`);
+      values.push(order_index);
+      paramCount++;
+    }
+    
+    if (prerequisite_skills !== undefined) {
+      updates.push(`prerequisite_skills = $${paramCount}`);
+      values.push(JSON.stringify(prerequisite_skills));
+      paramCount++;
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+    
+    values.push(skillId);
+    
+    const result = await pool.query(
+      `UPDATE skills 
+       SET ${updates.join(', ')}
+       WHERE id = $${paramCount}
+       RETURNING *`,
+      values
+    );
+    
+    res.json(result.rows[0]);
+    
+  } catch (error) {
+    console.error('Error updating skill:', error);
+    res.status(500).json({ error: 'Failed to update skill' });
+  }
+});
+
+// Delete skill
+router.delete('/skills/:id', async (req, res) => {
+  try {
+    const skillId = parseInt(req.params.id);
+    
+    await pool.query('DELETE FROM skills WHERE id = $1', [skillId]);
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Error deleting skill:', error);
+    res.status(500).json({ error: 'Failed to delete skill' });
+  }
+});
+
 // Get question banks
 router.get('/banks', async (req, res) => {
   try {
@@ -103,102 +175,100 @@ router.get('/banks', async (req, res) => {
 });
 
 // Create question bank
-router.post('/banks/:bankId/import-html', express.json({ limit: '2mb' }), async (req, res) => {
-  if (!cheerio) {
-    return res.status(501).json({
-      error: 'html_import_disabled_missing_dependency',
-      fix: 'Install cheerio in production: npm i cheerio && rebuild/redeploy'
-    });
-  }
-
-  const client = await pool.connect();
+router.post('/banks', express.json(), async (req, res) => {
   try {
-    const bankId = Number(req.params.bankId);
-    const { html } = req.body || {};
-    if (!bankId || !html) return res.status(400).json({ error: 'missing_bank_or_html' });
-
-    await client.query('BEGIN');
-
-    const { rows: bankRows } = await client.query(
-      'SELECT skill_id FROM practice_banks WHERE id = $1',
-      [bankId]
+    const { skill_id, title, difficulty = 'medium', metadata } = req.body;
+    
+    if (!skill_id || !title) {
+      return res.status(400).json({ error: 'Skill ID and title are required' });
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO practice_banks (skill_id, title, difficulty, created_by, metadata)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [skill_id, title, difficulty, req.user?.email || 'system', 
+       JSON.stringify(metadata || {})]
     );
-    if (!bankRows.length) throw new Error('bank_not_found');
-    const skillId = bankRows[0].skill_id;
-
-    const $ = cheerio.load(html);
-    const inserts = [];
-
-    $('.q').each((_, qel) => {
-      const $q = $(qel);
-      let question_type = String($q.attr('data-type') || 'mcq').trim();
-      const prompt = $q.find('.prompt').first().text().trim();
-      if (!prompt) return; // skip empty entries
-
-      const options = $q.find('.options li').toArray().map(li => $(li).text().trim());
-      const ansText = $q.find('.answer').first().text().trim();
-      const hints  = $q.find('.hints div').toArray().map(d => $(d).text().trim()).filter(Boolean);
-      const steps  = $q.find('.steps div').toArray().map(d => $(d).text().trim()).filter(Boolean);
-
-      let question_data = {};
-      let correct_answer = null;
-
-      if (['mcq','true_false','multi_select'].includes(question_type)) {
-        question_data.options = options;
-        if (question_type === 'multi_select') {
-          correct_answer = (ansText || '')
-            .split(',')
-            .map(s => Number(s.trim()))
-            .filter(v => Number.isFinite(v));
-        } else {
-          const idx = Number(ansText);
-          correct_answer = Number.isFinite(idx) ? idx : 0;
-        }
-      } else if (question_type === 'numeric') {
-        correct_answer = { value: Number(ansText), tolerance: 0 };
-      } else if (question_type === 'text') {
-        correct_answer = { accept: [ansText] };
-      } else {
-        // fallback to MCQ
-        question_type = 'mcq';
-        question_data.options = options;
-        const idx = Number(ansText);
-        correct_answer = Number.isFinite(idx) ? idx : 0;
-      }
-
-      inserts.push(
-        client.query(
-          `INSERT INTO practice_questions
-           (bank_id, skill_id, question_type, question_text, question_data, correct_answer,
-            solution_steps, hints, difficulty_level, points)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-          [
-            bankId,
-            skillId,
-            question_type,
-            prompt,
-            JSON.stringify(question_data),
-            JSON.stringify(correct_answer),
-            steps.length ? JSON.stringify(steps) : null,
-            JSON.stringify(hints || []),
-            3,
-            10
-          ]
-        )
-      );
-    });
-
-    await Promise.all(inserts);
-    await client.query('COMMIT');
-    res.json({ ok: true, inserted: inserts.length });
-  } catch (e) {
-    await client.query('ROLLBACK');
-    console.error('HTML import failed:', e);
-    res.status(500).json({ error: String(e.message || e) });
-  } finally {
-    client.release();
+    
+    res.json(result.rows[0]);
+    
+  } catch (error) {
+    console.error('Error creating bank:', error);
+    res.status(500).json({ error: 'Failed to create question bank' });
   }
 });
+
+// Update question bank
+router.put('/banks/:id', express.json(), async (req, res) => {
+  try {
+    const bankId = parseInt(req.params.id);
+    const { title, difficulty, is_active, metadata } = req.body;
+    
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+    
+    if (title !== undefined) {
+      updates.push(`title = $${paramCount}`);
+      values.push(title);
+      paramCount++;
+    }
+    
+    if (difficulty !== undefined) {
+      updates.push(`difficulty = $${paramCount}`);
+      values.push(difficulty);
+      paramCount++;
+    }
+    
+    if (is_active !== undefined) {
+      updates.push(`is_active = $${paramCount}`);
+      values.push(is_active);
+      paramCount++;
+    }
+    
+    if (metadata !== undefined) {
+      updates.push(`metadata = $${paramCount}`);
+      values.push(JSON.stringify(metadata));
+      paramCount++;
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+    
+    values.push(bankId);
+    
+    const result = await pool.query(
+      `UPDATE practice_banks 
+       SET ${updates.join(', ')}
+       WHERE id = $${paramCount}
+       RETURNING *`,
+      values
+    );
+    
+    res.json(result.rows[0]);
+    
+  } catch (error) {
+    console.error('Error updating bank:', error);
+    res.status(500).json({ error: 'Failed to update bank' });
+  }
+});
+
+// Delete question bank
+router.delete('/banks/:id', async (req, res) => {
+  try {
+    const bankId = parseInt(req.params.id);
+    
+    await pool.query('DELETE FROM practice_banks WHERE id = $1', [bankId]);
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Error deleting bank:', error);
+    res.status(500).json({ error: 'Failed to delete bank' });
+  }
+});
+
 // Get questions for a bank
 router.get('/banks/:bankId/questions', async (req, res) => {
   try {
@@ -221,6 +291,151 @@ router.get('/banks/:bankId/questions', async (req, res) => {
   }
 });
 
+// Import questions from HTML
+router.post('/banks/:bankId/import-html', express.json({ limit: '2mb' }), async (req, res) => {
+  if (!cheerio) {
+    return res.status(501).json({
+      error: 'html_import_disabled',
+      message: 'HTML import is disabled. Install cheerio: npm install cheerio'
+    });
+  }
+
+  const client = await pool.connect();
+  
+  try {
+    const bankId = parseInt(req.params.bankId);
+    const { html } = req.body;
+    
+    if (!html) {
+      return res.status(400).json({ error: 'HTML content is required' });
+    }
+
+    await client.query('BEGIN');
+
+    // Get bank and skill info
+    const { rows: bankRows } = await client.query(
+      'SELECT skill_id FROM practice_banks WHERE id = $1',
+      [bankId]
+    );
+    
+    if (!bankRows.length) {
+      throw new Error('Bank not found');
+    }
+    
+    const skillId = bankRows[0].skill_id;
+
+    // Parse HTML
+    const $ = cheerio.load(html);
+    const questions = [];
+
+    // Extract questions
+    $('.q, .question').each((_, element) => {
+      const $q = $(element);
+      
+      // Extract question data
+      const question_type = $q.attr('data-type') || 'mcq';
+      const prompt = $q.find('.prompt, .question-text').first().text().trim();
+      
+      if (!prompt) return;
+
+      // Extract options
+      const options = [];
+      $q.find('.options li, .option').each((_, opt) => {
+        options.push($(opt).text().trim());
+      });
+
+      // Extract answer
+      const answerText = $q.find('.answer, .correct-answer').first().text().trim();
+      
+      // Extract hints
+      const hints = [];
+      $q.find('.hints li, .hint').each((_, hint) => {
+        const hintText = $(hint).text().trim();
+        if (hintText) hints.push(hintText);
+      });
+
+      // Extract solution steps
+      const steps = [];
+      $q.find('.solution li, .step').each((_, step) => {
+        const stepText = $(step).text().trim();
+        if (stepText) steps.push(stepText);
+      });
+
+      // Build question data
+      let question_data = {};
+      let correct_answer = null;
+
+      if (['mcq', 'true_false', 'multi_select'].includes(question_type)) {
+        question_data.options = options.length > 0 ? options : ['Option A', 'Option B', 'Option C', 'Option D'];
+        
+        if (question_type === 'multi_select') {
+          correct_answer = answerText.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+        } else {
+          const answerNum = parseInt(answerText);
+          correct_answer = !isNaN(answerNum) ? answerNum : 0;
+        }
+      } else if (question_type === 'numeric') {
+        const value = parseFloat(answerText);
+        correct_answer = { 
+          value: !isNaN(value) ? value : 0, 
+          tolerance: 0.01 
+        };
+      } else if (question_type === 'text') {
+        correct_answer = { accept: [answerText] };
+      }
+
+      questions.push({
+        bank_id: bankId,
+        skill_id: skillId,
+        question_type,
+        question_text: prompt,
+        question_data,
+        correct_answer,
+        solution_steps: steps.length > 0 ? steps : null,
+        hints: hints.length > 0 ? hints : [],
+        difficulty_level: 3,
+        points: 10
+      });
+    });
+
+    // Insert questions
+    for (const q of questions) {
+      await client.query(
+        `INSERT INTO practice_questions
+         (bank_id, skill_id, question_type, question_text, question_data, correct_answer,
+          solution_steps, hints, difficulty_level, points)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          q.bank_id,
+          q.skill_id,
+          q.question_type,
+          q.question_text,
+          JSON.stringify(q.question_data),
+          JSON.stringify(q.correct_answer),
+          q.solution_steps ? JSON.stringify(q.solution_steps) : null,
+          JSON.stringify(q.hints),
+          q.difficulty_level,
+          q.points
+        ]
+      );
+    }
+
+    await client.query('COMMIT');
+    
+    res.json({ 
+      success: true, 
+      imported: questions.length,
+      message: `Successfully imported ${questions.length} questions`
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('HTML import failed:', error);
+    res.status(500).json({ error: error.message || 'Failed to import questions' });
+  } finally {
+    client.release();
+  }
+});
 
 // Create practice question
 router.post('/questions', express.json(), async (req, res) => {
@@ -244,9 +459,13 @@ router.post('/questions', express.json(), async (req, res) => {
       tags
     } = req.body;
     
-    // Validate question data
+    // Validation
     if (!question_text || !correct_answer) {
       throw new Error('Question text and correct answer are required');
+    }
+    
+    if (!bank_id || !skill_id) {
+      throw new Error('Bank ID and Skill ID are required');
     }
     
     // Insert question
@@ -257,12 +476,20 @@ router.post('/questions', express.json(), async (req, res) => {
         estimated_time_seconds, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
-      [bank_id, skill_id, question_type, question_text, 
-       JSON.stringify(question_data), JSON.stringify(correct_answer),
-       solution_steps ? JSON.stringify(solution_steps) : null,
-       hints ? JSON.stringify(hints) : '[]',
-       difficulty_level || 3, points || 10,
-       estimated_time_seconds || 60, tags || []]
+      [
+        bank_id, 
+        skill_id, 
+        question_type || 'mcq', 
+        question_text, 
+        JSON.stringify(question_data || {}),
+        JSON.stringify(correct_answer),
+        solution_steps ? JSON.stringify(solution_steps) : null,
+        hints ? JSON.stringify(hints) : '[]',
+        difficulty_level || 3, 
+        points || 10,
+        estimated_time_seconds || 60, 
+        tags || []
+      ]
     );
     
     await client.query('COMMIT');
@@ -287,7 +514,8 @@ router.put('/questions/:id', express.json(), async (req, res) => {
     
     const allowedFields = [
       'question_text', 'question_data', 'correct_answer', 
-      'solution_steps', 'hints', 'difficulty_level', 'points'
+      'solution_steps', 'hints', 'difficulty_level', 'points',
+      'estimated_time_seconds', 'tags'
     ];
     
     for (const field of allowedFields) {
@@ -316,6 +544,10 @@ router.put('/questions/:id', express.json(), async (req, res) => {
       values
     );
     
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+    
     res.json(result.rows[0]);
     
   } catch (error) {
@@ -329,8 +561,16 @@ router.delete('/questions/:id', async (req, res) => {
   try {
     const questionId = parseInt(req.params.id);
     
-    await pool.query('DELETE FROM practice_questions WHERE id = $1', [questionId]);
-    res.json({ success: true });
+    const result = await pool.query(
+      'DELETE FROM practice_questions WHERE id = $1 RETURNING id',
+      [questionId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+    
+    res.json({ success: true, deleted: questionId });
     
   } catch (error) {
     console.error('Error deleting question:', error);
@@ -355,7 +595,11 @@ router.get('/class-progress/:classCode', async (req, res) => {
     const studentEmails = studentsResult.rows.map(r => r.student_email);
     
     if (studentEmails.length === 0) {
-      return res.json({ students: [] });
+      return res.json({ 
+        class_code: classCode,
+        students: [],
+        message: 'No students enrolled in this class'
+      });
     }
     
     // Get detailed progress for each student
@@ -426,13 +670,18 @@ router.get('/class-progress/:classCode', async (req, res) => {
       if (student) {
         student.skills.push({
           skill_name: row.skill_name,
-          mastery_level: row.mastery_level,
+          grade: row.grade,
+          unit: row.unit,
+          mastery_level: parseFloat(row.mastery_level) || 0,
           status: row.status,
+          questions_attempted: parseInt(row.questions_attempted) || 0,
+          questions_correct: parseInt(row.questions_correct) || 0,
           accuracy: row.questions_attempted > 0 
             ? Math.round((row.questions_correct / row.questions_attempted) * 100)
-            : 0
+            : 0,
+          last_practiced: row.last_practiced
         });
-        student.total_time_hours += (row.time_spent_seconds || 0) / 3600;
+        student.total_time_hours += (parseInt(row.time_spent_seconds) || 0) / 3600;
       }
     });
     
@@ -441,8 +690,10 @@ router.get('/class-progress/:classCode', async (req, res) => {
       const student = studentMap.get(row.user_email);
       if (student) {
         student.sessions = {
-          total: parseInt(row.total_sessions),
-          avg_score: Math.round(row.avg_score || 0),
+          total: parseInt(row.total_sessions) || 0,
+          avg_score: Math.round(parseFloat(row.avg_score) || 0),
+          total_questions: parseInt(row.total_questions) || 0,
+          correct_questions: parseInt(row.correct_questions) || 0,
           accuracy: row.total_questions > 0
             ? Math.round((row.correct_questions / row.total_questions) * 100)
             : 0
@@ -455,8 +706,8 @@ router.get('/class-progress/:classCode', async (req, res) => {
       const student = studentMap.get(row.user_email);
       if (student) {
         student.achievements = {
-          count: parseInt(row.achievement_count),
-          points: parseInt(row.total_points)
+          count: parseInt(row.achievement_count) || 0,
+          points: parseInt(row.total_points) || 0
         };
       }
     });
@@ -473,6 +724,7 @@ router.get('/class-progress/:classCode', async (req, res) => {
     
     res.json({
       class_code: classCode,
+      student_count: studentEmails.length,
       students: Array.from(studentMap.values())
     });
     
@@ -580,7 +832,7 @@ router.get('/student-progress/:email', async (req, res) => {
   }
 });
 
-// Create assessment questions from practice questions
+// Create assessment from practice questions
 router.post('/create-assessment', express.json(), async (req, res) => {
   const client = await pool.connect();
   
@@ -589,13 +841,19 @@ router.post('/create-assessment', express.json(), async (req, res) => {
     
     const { 
       lesson_id, 
+      bank_id,
       title, 
       pass_pct = 70,
       question_ids,
-      skill_ids 
+      skill_ids,
+      num_questions = 10
     } = req.body;
     
     const teacherEmail = req.user?.email;
+    
+    if (!title) {
+      throw new Error('Assessment title is required');
+    }
     
     // Create question bank for assessment
     const bankResult = await client.query(
@@ -605,47 +863,53 @@ router.post('/create-assessment', express.json(), async (req, res) => {
       [title, teacherEmail]
     );
     
-    const bankId = bankResult.rows[0].id;
+    const assessmentBankId = bankResult.rows[0].id;
     
-    // Copy practice questions to assessment questions
-    if (question_ids && question_ids.length > 0) {
-      for (const practiceQuestionId of question_ids) {
-        const pqResult = await client.query(
-          `SELECT * FROM practice_questions WHERE id = $1`,
-          [practiceQuestionId]
-        );
-        
-        if (pqResult.rows.length > 0) {
-          const pq = pqResult.rows[0];
-          
-          await client.query(
-            `INSERT INTO questions (bank_id, type, prompt, options, answer, points)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [bankId, pq.question_type, pq.question_text, 
-             pq.question_data.options || null,
-             pq.correct_answer, pq.points]
-          );
-        }
-      }
+    // Copy questions based on input
+    let questions = [];
+    
+    if (bank_id) {
+      // Copy all questions from existing practice bank
+      const { rows } = await client.query(
+        `SELECT * FROM practice_questions WHERE bank_id = $1`,
+        [bank_id]
+      );
+      questions = rows;
+      
+    } else if (question_ids && question_ids.length > 0) {
+      // Copy specific questions
+      const { rows } = await client.query(
+        `SELECT * FROM practice_questions WHERE id = ANY($1)`,
+        [question_ids]
+      );
+      questions = rows;
+      
     } else if (skill_ids && skill_ids.length > 0) {
       // Auto-select questions from skills
-      const questionsResult = await client.query(
+      const { rows } = await client.query(
         `SELECT * FROM practice_questions 
          WHERE skill_id = ANY($1)
          ORDER BY difficulty_level, RANDOM()
-         LIMIT 10`,
-        [skill_ids]
+         LIMIT $2`,
+        [skill_ids, num_questions]
       );
-      
-      for (const pq of questionsResult.rows) {
-        await client.query(
-          `INSERT INTO questions (bank_id, type, prompt, options, answer, points)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [bankId, pq.question_type, pq.question_text,
-           pq.question_data.options || null,
-           pq.correct_answer, pq.points]
-        );
-      }
+      questions = rows;
+    }
+    
+    // Insert questions into assessment bank
+    for (const pq of questions) {
+      await client.query(
+        `INSERT INTO questions (bank_id, type, prompt, options, answer, points)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          assessmentBankId, 
+          pq.question_type, 
+          pq.question_text,
+          pq.question_data?.options || null,
+          pq.correct_answer, 
+          pq.points
+        ]
+      );
     }
     
     // Create assessment
@@ -653,16 +917,21 @@ router.post('/create-assessment', express.json(), async (req, res) => {
       `INSERT INTO assessments (lesson_id, bank_id, title, pass_pct, created_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [lesson_id, bankId, title, pass_pct, teacherEmail]
+      [lesson_id || null, assessmentBankId, title, pass_pct, teacherEmail]
     );
     
     await client.query('COMMIT');
-    res.json(assessmentResult.rows[0]);
+    
+    res.json({
+      ...assessmentResult.rows[0],
+      question_count: questions.length,
+      message: `Assessment created with ${questions.length} questions`
+    });
     
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error creating assessment:', error);
-    res.status(500).json({ error: 'Failed to create assessment' });
+    res.status(500).json({ error: error.message || 'Failed to create assessment' });
   } finally {
     client.release();
   }
@@ -671,11 +940,13 @@ router.post('/create-assessment', express.json(), async (req, res) => {
 // Get analytics summary
 router.get('/analytics', async (req, res) => {
   try {
-    const { start_date, end_date, class_code } = req.query;
+    const { start_date, end_date, class_code, grade, unit } = req.query;
     
     let studentFilter = '';
+    let dateFilter = '';
     const params = [];
     
+    // Build filters
     if (class_code) {
       const classResult = await pool.query(
         `SELECT e.student_email
@@ -690,6 +961,16 @@ router.get('/analytics', async (req, res) => {
         params.push(emails);
         studentFilter = ` AND user_email = ANY($${params.length})`;
       }
+    }
+    
+    if (start_date) {
+      params.push(start_date);
+      dateFilter += ` AND created_at >= $${params.length}`;
+    }
+    
+    if (end_date) {
+      params.push(end_date);
+      dateFilter += ` AND created_at <= $${params.length}`;
     }
     
     // Overall statistics
@@ -711,13 +992,15 @@ router.get('/analytics', async (req, res) => {
     const topSkillsQuery = `
       SELECT 
         s.name,
+        s.grade,
+        s.unit,
         COUNT(DISTINCT pa.user_email) as students,
         COUNT(pa.id) as attempts,
         AVG(CASE WHEN pa.is_correct THEN 100.0 ELSE 0 END) as success_rate
       FROM practice_attempts pa
       JOIN skills s ON s.id = pa.skill_id
       WHERE 1=1 ${studentFilter.replace('user_email', 'pa.user_email')}
-      GROUP BY s.id, s.name
+      GROUP BY s.id, s.name, s.grade, s.unit
       ORDER BY attempts DESC
       LIMIT 10
     `;
@@ -728,6 +1011,8 @@ router.get('/analytics', async (req, res) => {
     const strugglingQuery = `
       SELECT 
         s.name,
+        s.grade,
+        s.unit,
         AVG(sm.mastery_level) as avg_mastery,
         COUNT(DISTINCT sm.user_email) as students,
         AVG(CASE WHEN sm.questions_attempted > 0 
@@ -736,7 +1021,7 @@ router.get('/analytics', async (req, res) => {
       FROM skill_mastery sm
       JOIN skills s ON s.id = sm.skill_id
       WHERE sm.questions_attempted > 5 ${studentFilter.replace('user_email', 'sm.user_email')}
-      GROUP BY s.id, s.name
+      GROUP BY s.id, s.name, s.grade, s.unit
       HAVING AVG(sm.mastery_level) < 50
       ORDER BY avg_mastery ASC
       LIMIT 10
@@ -744,15 +1029,126 @@ router.get('/analytics', async (req, res) => {
     
     const strugglingResult = await pool.query(strugglingQuery, params);
     
+    // Time-based activity
+    const activityQuery = `
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(DISTINCT user_email) as active_students,
+        COUNT(*) as total_attempts,
+        SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as correct_attempts
+      FROM practice_attempts
+      WHERE created_at > NOW() - INTERVAL '30 days'
+        ${studentFilter.replace('user_email', 'user_email')}
+      GROUP BY DATE(created_at)
+      ORDER BY date DESC
+    `;
+    
+    const activityResult = await pool.query(activityQuery, params);
+    
     res.json({
       overall: overallResult.rows[0],
       top_skills: topSkillsResult.rows,
-      struggling_skills: strugglingResult.rows
+      struggling_skills: strugglingResult.rows,
+      recent_activity: activityResult.rows,
+      filters_applied: {
+        class_code,
+        start_date,
+        end_date,
+        grade,
+        unit
+      }
     });
     
   } catch (error) {
     console.error('Error fetching analytics:', error);
     res.status(500).json({ error: 'Failed to fetch analytics' });
+  }
+});
+
+// Export practice data as CSV
+router.get('/export/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    const { class_code, start_date, end_date } = req.query;
+    
+    let data = [];
+    let filename = '';
+    
+    if (type === 'skills') {
+      const result = await pool.query(
+        `SELECT 
+           s.name as skill_name,
+           s.grade,
+           s.unit,
+           COUNT(DISTINCT sm.user_email) as students_practiced,
+           AVG(sm.mastery_level) as avg_mastery,
+           SUM(sm.questions_attempted) as total_attempts,
+           SUM(sm.questions_correct) as total_correct
+         FROM skills s
+         LEFT JOIN skill_mastery sm ON sm.skill_id = s.id
+         GROUP BY s.id, s.name, s.grade, s.unit
+         ORDER BY s.grade, s.unit, s.order_index`
+      );
+      data = result.rows;
+      filename = 'skills_report.csv';
+      
+    } else if (type === 'students') {
+      let query = `
+        SELECT 
+          user_email,
+          COUNT(DISTINCT skill_id) as skills_practiced,
+          AVG(mastery_level) as avg_mastery,
+          SUM(questions_attempted) as total_questions,
+          SUM(questions_correct) as correct_questions,
+          MAX(last_practiced) as last_active
+        FROM skill_mastery
+        WHERE 1=1
+      `;
+      
+      const params = [];
+      if (class_code) {
+        const classResult = await pool.query(
+          `SELECT e.student_email
+           FROM enrollments e
+           JOIN classes c ON c.id = e.class_id
+           WHERE c.code = $1`,
+          [class_code]
+        );
+        const emails = classResult.rows.map(r => r.student_email);
+        if (emails.length > 0) {
+          params.push(emails);
+          query += ` AND user_email = ANY($${params.length})`;
+        }
+      }
+      
+      query += ' GROUP BY user_email ORDER BY avg_mastery DESC';
+      
+      const result = await pool.query(query, params);
+      data = result.rows;
+      filename = 'students_progress.csv';
+    }
+    
+    // Convert to CSV
+    if (data.length > 0) {
+      const headers = Object.keys(data[0]).join(',');
+      const rows = data.map(row => 
+        Object.values(row).map(val => 
+          typeof val === 'string' && val.includes(',') ? `"${val}"` : val
+        ).join(',')
+      );
+      
+      const csv = [headers, ...rows].join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csv);
+    } else {
+      res.status(404).json({ error: 'No data to export' });
+    }
+    
+  } catch (error) {
+    console.error('Error exporting data:', error);
+    res.status(500).json({ error: 'Failed to export data' });
   }
 });
 

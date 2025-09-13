@@ -1,5 +1,5 @@
 /**
- * Teacher Practice UI - Complete Rewrite
+ * Teacher Practice UI - Fixed Version
  * Handles skills, question banks, and questions management for teachers
  */
 
@@ -22,31 +22,138 @@ class TeacherPracticeUI {
     this.selectBank = this.selectBank.bind(this);
     this.addQuestion = this.addQuestion.bind(this);
     this.importHTML = this.importHTML.bind(this);
+    
+    console.log('TeacherPracticeUI constructor called');
   }
 
   // Initialize the practice UI
   async init() {
     console.log('Initializing Teacher Practice UI...');
     
+    // Wait for DOM to be ready
+    if (document.readyState !== 'complete') {
+      console.log('DOM not ready, waiting...');
+      await new Promise(resolve => window.addEventListener('load', resolve));
+    }
+    
     // Check if practice tab exists
     const practiceTab = document.getElementById('practice-tab');
     if (!practiceTab) {
-      console.log('Practice tab not found, waiting...');
-      return false;
+      console.log('Practice tab not found, creating it...');
+      this.createPracticeTab();
     }
     
     // Add CSS if not already added
     this.addStyles();
     
-    // Attach event handlers
-    this.attachEventHandlers();
-    
-    // Load initial data
-    await this.loadSkills();
+    // Attach event handlers with a delay to ensure elements exist
+    setTimeout(() => {
+      this.attachEventHandlers();
+      // Load initial data
+      this.loadSkills().catch(err => {
+        console.error('Failed to load initial skills:', err);
+        this.showNotification('Failed to load skills. Please refresh the page.', 'error');
+      });
+    }, 100);
     
     this.initialized = true;
     console.log('Teacher Practice UI initialized successfully');
     return true;
+  }
+
+  // Create practice tab if it doesn't exist
+  createPracticeTab() {
+    console.log('Creating practice tab structure...');
+    const main = document.querySelector('main');
+    if (!main) {
+      console.error('Main element not found!');
+      return;
+    }
+    
+    const section = document.createElement('section');
+    section.id = 'practice-tab';
+    section.className = 'tab-content hidden';
+    section.innerHTML = `
+      <div class="grid gap-6 md:grid-cols-2">
+        <div class="space-y-6">
+          <div class="card p-6">
+            <h3 class="font-bold text-lg mb-4"><i class="fas fa-lightbulb mr-2 text-[var(--gold)]"></i>Skills Management</h3>
+            <div class="mb-4">
+              <label class="text-sm font-semibold">Grade</label>
+              <select id="tSkillGrade" class="rounded-lg border px-3 py-2 w-full">
+                <option value="7">Grade 7</option>
+                <option value="8">Grade 8</option>
+              </select>
+            </div>
+            <button id="loadSkillsBtn" class="bg-[var(--blue)] text-white px-4 py-2 rounded-lg mb-4 w-full">
+              <i class="fas fa-sync mr-2"></i>Load Skills
+            </button>
+            <div id="tSkillsList" class="space-y-2 max-h-[400px] overflow-y-auto border rounded-lg p-3"></div>
+            
+            <div class="border-t pt-4 mt-4">
+              <h4 class="font-semibold mb-3">Create New Skill</h4>
+              <div class="space-y-3">
+                <input id="tSkillName" class="rounded-lg border px-3 py-2 w-full" placeholder="Skill name (e.g., Linear Equations)"/>
+                <div class="grid grid-cols-2 gap-2">
+                  <input id="tSkillUnit" type="number" min="1" max="20" class="rounded-lg border px-3 py-2" placeholder="Unit (1-20)"/>
+                  <select id="tSkillGradeCreate" class="rounded-lg border px-3 py-2">
+                    <option value="7">Grade 7</option>
+                    <option value="8">Grade 8</option>
+                  </select>
+                </div>
+                <textarea id="tSkillDesc" class="rounded-lg border px-3 py-2 w-full" rows="2" placeholder="Description (optional)"></textarea>
+                <button id="tCreateSkill" class="bg-[var(--ok)] text-white px-4 py-2 rounded-lg w-full">
+                  <i class="fas fa-plus mr-2"></i>Create Skill
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="space-y-6">
+          <div class="card p-6">
+            <h3 class="font-bold text-lg mb-4"><i class="fas fa-database mr-2 text-[var(--gold)]"></i>Question Banks</h3>
+            <div class="mb-4">
+              <div id="tBankMeta" class="text-sm text-gray-600 mb-2">Select a skill first</div>
+              <button id="tCreateBank" class="bg-[var(--blue)] text-white px-4 py-2 rounded-lg w-full mb-3">
+                <i class="fas fa-plus mr-2"></i>Create New Bank
+              </button>
+              <div id="tBanksList" class="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-3"></div>
+            </div>
+            
+            <div class="border-t pt-4">
+              <h4 class="font-semibold mb-3">Add Question</h4>
+              <div class="space-y-3">
+                <select id="tQType" class="rounded-lg border px-3 py-2 w-full">
+                  <option value="mcq">Multiple Choice</option>
+                  <option value="true_false">True/False</option>
+                  <option value="multi_select">Multi-select</option>
+                  <option value="numeric">Numeric</option>
+                  <option value="text">Text</option>
+                </select>
+                <textarea id="tQPrompt" class="rounded-lg border px-3 py-2 w-full" rows="2" placeholder="Question text"></textarea>
+                <textarea id="tQOptions" class="rounded-lg border px-3 py-2 w-full" rows="3" placeholder="Options (one per line, for MCQ/Multi-select)"></textarea>
+                <input id="tQAnswer" class="rounded-lg border px-3 py-2 w-full" placeholder="Answer (index for MCQ, comma-separated for multi)"/>
+                <div class="grid grid-cols-2 gap-2">
+                  <input id="tQDiff" type="number" min="1" max="5" value="3" class="rounded-lg border px-3 py-2" placeholder="Difficulty (1-5)"/>
+                  <input id="tQPoints" type="number" min="1" value="10" class="rounded-lg border px-3 py-2" placeholder="Points"/>
+                </div>
+                <button id="tAddQ" class="bg-[var(--ok)] text-white px-4 py-2 rounded-lg w-full">
+                  <i class="fas fa-plus mr-2"></i>Add Question
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card p-6">
+            <h3 class="font-bold text-lg mb-4">Questions Preview</h3>
+            <div id="tQuestionsList" class="space-y-2 max-h-[300px] overflow-y-auto"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    main.appendChild(section);
+    console.log('Practice tab structure created');
   }
 
   // Add required CSS styles
@@ -86,6 +193,10 @@ class TeacherPracticeUI {
       .skill-item, .bank-item {
         transition: all 0.3s ease;
         cursor: pointer;
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: white;
       }
       
       .skill-item:hover, .bank-item:hover {
@@ -97,6 +208,13 @@ class TeacherPracticeUI {
         background: #f0f9ff;
         border-color: #3b82f6;
         box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+      }
+      
+      .question-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
       }
     `;
     document.head.appendChild(style);
@@ -132,8 +250,9 @@ class TeacherPracticeUI {
     }, 3000);
   }
 
-  // API helper
+  // API helper with better error handling
   async apiCall(url, options = {}) {
+    console.log(`API Call: ${options.method || 'GET'} ${url}`);
     try {
       const response = await fetch(url, {
         headers: {
@@ -145,15 +264,22 @@ class TeacherPracticeUI {
       });
       
       const text = await response.text();
+      console.log(`Response status: ${response.status}`);
       
       if (!response.ok) {
-        const errorMsg = text || `HTTP ${response.status}`;
+        let errorMsg = text;
+        try {
+          const errorJson = JSON.parse(text);
+          errorMsg = errorJson.error || errorJson.message || text;
+        } catch {}
         console.error('API Error:', errorMsg);
         throw new Error(errorMsg);
       }
       
       try {
-        return JSON.parse(text);
+        const json = JSON.parse(text);
+        console.log('API Response:', json);
+        return json;
       } catch {
         return text;
       }
@@ -170,18 +296,25 @@ class TeacherPracticeUI {
     // Create skill button
     const createSkillBtn = document.getElementById('tCreateSkill');
     if (createSkillBtn) {
+      createSkillBtn.removeEventListener('click', this.createSkill); // Remove if exists
       createSkillBtn.addEventListener('click', this.createSkill);
+      console.log('Attached handler to Create Skill button');
+    } else {
+      console.warn('Create Skill button not found');
     }
     
     // Load skills button
     const loadSkillsBtn = document.getElementById('loadSkillsBtn');
     if (loadSkillsBtn) {
-      loadSkillsBtn.addEventListener('click', this.loadSkills);
+      loadSkillsBtn.removeEventListener('click', this.loadSkills);
+      loadSkillsBtn.addEventListener('click', () => this.loadSkills());
+      console.log('Attached handler to Load Skills button');
     }
     
     // Grade select
     const gradeSelect = document.getElementById('tSkillGrade');
     if (gradeSelect) {
+      gradeSelect.removeEventListener('change', this.handleGradeChange);
       gradeSelect.addEventListener('change', (e) => {
         this.currentGrade = parseInt(e.target.value);
         this.loadSkills();
@@ -191,25 +324,15 @@ class TeacherPracticeUI {
     // Create bank button
     const createBankBtn = document.getElementById('tCreateBank');
     if (createBankBtn) {
+      createBankBtn.removeEventListener('click', this.createBank);
       createBankBtn.addEventListener('click', this.createBank);
     }
     
     // Add question button
     const addQuestionBtn = document.getElementById('tAddQ');
     if (addQuestionBtn) {
+      addQuestionBtn.removeEventListener('click', this.addQuestion);
       addQuestionBtn.addEventListener('click', this.addQuestion);
-    }
-    
-    // Import HTML button
-    const importHTMLBtn = document.getElementById('tImportHtml');
-    if (importHTMLBtn) {
-      importHTMLBtn.addEventListener('click', this.importHTML);
-    }
-    
-    // Create assessment button
-    const createAssessmentBtn = document.getElementById('asmtFromBank');
-    if (createAssessmentBtn) {
-      createAssessmentBtn.addEventListener('click', () => this.createAssessment());
     }
   }
 
@@ -220,11 +343,12 @@ class TeacherPracticeUI {
     
     const nameInput = document.getElementById('tSkillName');
     const unitInput = document.getElementById('tSkillUnit');
-    const gradeSelect = document.getElementById('tSkillGrade');
+    const gradeSelect = document.getElementById('tSkillGradeCreate') || document.getElementById('tSkillGrade');
     const descInput = document.getElementById('tSkillDesc');
     
     if (!nameInput || !unitInput || !gradeSelect) {
-      this.showNotification('Form elements not found', 'error');
+      console.error('Form elements not found:', { nameInput, unitInput, gradeSelect });
+      this.showNotification('Form elements not found. Please refresh the page.', 'error');
       return;
     }
     
@@ -232,6 +356,8 @@ class TeacherPracticeUI {
     const unit = parseInt(unitInput.value);
     const grade = parseInt(gradeSelect.value || 7);
     const description = descInput?.value.trim() || '';
+    
+    console.log('Skill data:', { name, unit, grade, description });
     
     // Validation
     if (!name) {
@@ -252,6 +378,7 @@ class TeacherPracticeUI {
         body: JSON.stringify({ name, description, grade, unit })
       });
       
+      console.log('Skill created:', response);
       this.showNotification(`Skill "${name}" created successfully!`, 'success');
       
       // Clear form
@@ -263,13 +390,14 @@ class TeacherPracticeUI {
       await this.loadSkills();
       
     } catch (error) {
+      console.error('Failed to create skill:', error);
       this.showNotification(`Failed to create skill: ${error.message}`, 'error');
     }
   }
 
   // Load skills
   async loadSkills() {
-    console.log('Loading skills...');
+    console.log('Loading skills for grade', this.currentGrade);
     
     const skillsList = document.getElementById('tSkillsList');
     if (!skillsList) {
@@ -277,10 +405,13 @@ class TeacherPracticeUI {
       return;
     }
     
+    skillsList.innerHTML = '<div class="text-gray-500 text-sm p-3">Loading skills...</div>';
+    
     try {
       const response = await this.apiCall(`/api/teacher/practice/skills?grade=${this.currentGrade}`);
       this.skills = response.skills || response || [];
       
+      console.log(`Loaded ${this.skills.length} skills`);
       skillsList.innerHTML = '';
       
       if (this.skills.length === 0) {
@@ -288,7 +419,7 @@ class TeacherPracticeUI {
       } else {
         this.skills.forEach(skill => {
           const skillDiv = document.createElement('div');
-          skillDiv.className = 'skill-item interactive-row p-3 mb-2 border rounded-lg';
+          skillDiv.className = 'skill-item';
           skillDiv.dataset.skillId = skill.id;
           
           skillDiv.innerHTML = `
@@ -309,7 +440,7 @@ class TeacherPracticeUI {
       
     } catch (error) {
       console.error('Error loading skills:', error);
-      skillsList.innerHTML = '<div class="text-red-600 text-sm p-3">Failed to load skills</div>';
+      skillsList.innerHTML = `<div class="text-red-600 text-sm p-3">Failed to load skills: ${error.message}</div>`;
     }
   }
 
@@ -373,28 +504,31 @@ class TeacherPracticeUI {
     const banksList = document.getElementById('tBanksList');
     if (!banksList) return;
     
+    banksList.innerHTML = '<div class="text-gray-500 text-sm p-3">Loading banks...</div>';
+    
     try {
       const response = await this.apiCall(`/api/teacher/practice/banks?skill_id=${skillId}`);
       this.banks = response.banks || response || [];
       
+      console.log(`Loaded ${this.banks.length} banks`);
       banksList.innerHTML = '';
       
       if (this.banks.length === 0) {
-        banksList.innerHTML = '<div class="text-gray-500 text-sm p-3">No question banks yet. Click "New Bank" to create one.</div>';
+        banksList.innerHTML = '<div class="text-gray-500 text-sm p-3">No question banks yet. Click "Create New Bank" above.</div>';
       } else {
         this.banks.forEach(bank => {
           const bankDiv = document.createElement('div');
-          bankDiv.className = 'bank-item p-3 border rounded mb-2';
+          bankDiv.className = 'bank-item';
           bankDiv.dataset.bankId = bank.id;
           
           bankDiv.innerHTML = `
             <div class="flex justify-between items-center">
               <div>
-                <div class="font-semibold">${bank.title}</div>
+                <div class="font-semibold">${bank.title || bank.name}</div>
                 <div class="text-xs text-gray-600">${bank.question_count || 0} questions • ${bank.difficulty || 'medium'}</div>
               </div>
-              <span class="text-xs px-2 py-1 rounded-full ${bank.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}">
-                ${bank.is_active ? 'Active' : 'Inactive'}
+              <span class="text-xs px-2 py-1 rounded-full ${bank.is_active !== false ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}">
+                ${bank.is_active !== false ? 'Active' : 'Inactive'}
               </span>
             </div>
           `;
@@ -406,7 +540,7 @@ class TeacherPracticeUI {
       
     } catch (error) {
       console.error('Error loading banks:', error);
-      banksList.innerHTML = '<div class="text-red-600 text-sm p-3">Failed to load banks</div>';
+      banksList.innerHTML = `<div class="text-red-600 text-sm p-3">Failed to load banks: ${error.message}</div>`;
     }
   }
 
@@ -423,7 +557,7 @@ class TeacherPracticeUI {
       }
     });
     
-    this.showNotification(`Selected bank: ${bank.title}`, 'info');
+    this.showNotification(`Selected bank: ${bank.title || bank.name}`, 'info');
     
     // Load questions for this bank
     await this.loadQuestions(bank.id);
@@ -434,18 +568,21 @@ class TeacherPracticeUI {
     const questionsList = document.getElementById('tQuestionsList');
     if (!questionsList) return;
     
+    questionsList.innerHTML = '<div class="text-gray-500 text-sm p-3">Loading questions...</div>';
+    
     try {
       const response = await this.apiCall(`/api/teacher/practice/banks/${bankId}/questions`);
       const questions = response.questions || response || [];
       
+      console.log(`Loaded ${questions.length} questions`);
       questionsList.innerHTML = '';
       
       if (questions.length === 0) {
-        questionsList.innerHTML = '<div class="text-gray-500 text-sm p-3">No questions yet. Add questions using the form below.</div>';
+        questionsList.innerHTML = '<div class="text-gray-500 text-sm p-3">No questions yet. Add questions using the form above.</div>';
       } else {
         questions.forEach((q, index) => {
           const qDiv = document.createElement('div');
-          qDiv.className = 'card p-4 mb-3';
+          qDiv.className = 'question-card';
           
           qDiv.innerHTML = `
             <div class="flex justify-between items-start mb-2">
@@ -459,7 +596,9 @@ class TeacherPracticeUI {
             <div class="font-semibold mb-2">${q.question_text || 'No question text'}</div>
             ${q.question_data?.options ? `
               <div class="text-sm text-gray-600">
-                Options: ${q.question_data.options.map((opt, i) => `<span class="inline-block px-2 py-1 bg-gray-100 rounded mr-1 mb-1">${opt}</span>`).join('')}
+                Options: ${q.question_data.options.map((opt, i) => 
+                  `<span class="inline-block px-2 py-1 bg-gray-100 rounded mr-1 mb-1">${opt}</span>`
+                ).join('')}
               </div>
             ` : ''}
           `;
@@ -470,6 +609,7 @@ class TeacherPracticeUI {
       
     } catch (error) {
       console.error('Error loading questions:', error);
+      questionsList.innerHTML = `<div class="text-red-600 text-sm p-3">Failed to load questions: ${error.message}</div>`;
     }
   }
 
@@ -484,8 +624,6 @@ class TeacherPracticeUI {
     const prompt = document.getElementById('tQPrompt')?.value.trim();
     const rawOpts = document.getElementById('tQOptions')?.value;
     const rawAns = document.getElementById('tQAnswer')?.value.trim();
-    const hints = document.getElementById('tQHints')?.value.trim().split('\n').filter(Boolean);
-    const steps = document.getElementById('tQSteps')?.value.trim().split('\n').filter(Boolean);
     const diff = parseInt(document.getElementById('tQDiff')?.value || 3);
     const points = parseInt(document.getElementById('tQPoints')?.value || 10);
     
@@ -510,7 +648,7 @@ class TeacherPracticeUI {
       } else {
         correct_answer = parseInt(rawAns);
         if (isNaN(correct_answer)) {
-          this.showNotification('Please provide a valid answer index', 'warning');
+          this.showNotification('Please provide a valid answer index (0-based)', 'warning');
           return;
         }
       }
@@ -532,8 +670,8 @@ class TeacherPracticeUI {
           question_text: prompt,
           question_data,
           correct_answer,
-          solution_steps: steps,
-          hints,
+          solution_steps: [],
+          hints: [],
           difficulty_level: diff,
           points
         })
@@ -545,8 +683,6 @@ class TeacherPracticeUI {
       document.getElementById('tQPrompt').value = '';
       document.getElementById('tQOptions').value = '';
       document.getElementById('tQAnswer').value = '';
-      document.getElementById('tQHints').value = '';
-      document.getElementById('tQSteps').value = '';
       
       // Reload questions
       await this.loadQuestions(this.selectedBank.id);
@@ -604,39 +740,6 @@ class TeacherPracticeUI {
       this.showNotification(`Import failed: ${error.message}`, 'error');
     }
   }
-
-  // Create assessment from bank
-  async createAssessment() {
-    if (!this.selectedBank) {
-      this.showNotification('Please select a bank first', 'warning');
-      return;
-    }
-    
-    const title = document.getElementById('asmtTitle')?.value || `${this.selectedBank.title} Assessment`;
-    const lesson_id = parseInt(document.getElementById('asmtLessonId')?.value || 0) || null;
-    const pass_pct = parseInt(document.getElementById('asmtPass')?.value || 70);
-    
-    try {
-      await this.apiCall('/api/teacher/practice/create-assessment', {
-        method: 'POST',
-        body: JSON.stringify({
-          bank_id: this.selectedBank.id,
-          title,
-          lesson_id,
-          pass_pct
-        })
-      });
-      
-      this.showNotification('Assessment created successfully', 'success');
-      
-      // Clear form
-      document.getElementById('asmtTitle').value = '';
-      document.getElementById('asmtLessonId').value = '';
-      
-    } catch (error) {
-      this.showNotification(`Failed to create assessment: ${error.message}`, 'error');
-    }
-  }
 }
 
 // Create global instance
@@ -653,7 +756,9 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Practice tab clicked');
       setTimeout(() => {
         if (!teacherPracticeUI.initialized) {
-          teacherPracticeUI.init();
+          teacherPracticeUI.init().catch(err => {
+            console.error('Failed to initialize:', err);
+          });
         }
       }, 100);
     }
@@ -663,7 +768,10 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     const practiceTab = document.getElementById('practice-tab');
     if (practiceTab && !practiceTab.classList.contains('hidden')) {
-      teacherPracticeUI.init();
+      console.log('Practice tab is visible, initializing...');
+      teacherPracticeUI.init().catch(err => {
+        console.error('Failed to initialize:', err);
+      });
     }
   }, 500);
 });
@@ -672,3 +780,4 @@ document.addEventListener('DOMContentLoaded', () => {
 window.teacherPracticeUI = teacherPracticeUI;
 
 console.log('Teacher Practice UI loaded. Access via: window.teacherPracticeUI');
+console.log('To manually initialize: teacherPracticeUI.init()');

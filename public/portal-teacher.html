@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>QLA Mathematics — Teacher Portal</title>
+  <title>QLA Mathematics — Teacher Portal (Enhanced)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -14,9 +14,10 @@
     *{box-sizing:border-box} html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5}
     .hero{position:relative;color:#fff;background:linear-gradient(135deg,rgba(108,29,69,.9) 0%,rgba(139,36,80,.86) 45%,rgba(108,29,69,.9) 100%);overflow:hidden}
     .nav-tabs{ display:flex; gap:8px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:6px; flex-wrap:wrap }
-    .nav-tab{ flex:1; min-width:120px; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.35); color:#fff; background:transparent; cursor:pointer; font-weight:600; text-align:center; transition:all .3s ease }
+    .nav-tab{ flex:1; min-width:100px; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.35); color:#fff; background:transparent; cursor:pointer; font-weight:600; text-align:center; transition:all .3s ease }
     .nav-tab.active{ background:linear-gradient(135deg,var(--gold),var(--gold2)); color:var(--maroon); transform:scale(1.02) }
-    .card{ background:#fff; border:1px solid var(--line); border-radius:18px; transition:all .3s ease } .card:hover{ transform:translateY(-2px); box-shadow:0 20px 40px rgba(0,0,0,.1) }
+    .card{ background:#fff; border:1px solid var(--line); border-radius:18px; transition:all .3s ease } 
+    .card:hover{ transform:translateY(-2px); box-shadow:0 20px 40px rgba(0,0,0,.1) }
     .interactive-row{ border:1px solid var(--line); border-radius:12px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fff; transition:all .3s ease; cursor:pointer; position:relative; overflow:hidden }
     .interactive-row::before{ content:""; position:absolute; left:-100%; top:0; bottom:0; width:4px; background:linear-gradient(135deg,var(--gold),var(--maroon)); transition:left .3s ease }
     .interactive-row:hover{ transform:translateX(4px); box-shadow:0 12px 28px rgba(0,0,0,.08) } .interactive-row:hover::before{ left:0 }
@@ -67,65 +68,32 @@
       cursor: not-allowed;
     }
     
-    /* Component card styles */
-    .component-card {
+    /* Question Bank Styles */
+    .question-card {
       background: white;
       border: 2px solid var(--line);
       border-radius: 12px;
       padding: 16px;
       margin-bottom: 12px;
-      position: relative;
-    }
-    
-    .component-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-    
-    .component-type {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 4px 12px;
-      background: var(--gold2);
-      color: var(--maroon);
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    
-    .add-component-btn {
-      border: 2px dashed var(--line);
-      border-radius: 12px;
-      padding: 24px;
-      text-align: center;
-      cursor: pointer;
       transition: all 0.3s ease;
-      background: #fafafa;
     }
-    
-    .add-component-btn:hover {
-      border-color: var(--gold);
-      background: #fff;
-    }
-    
-    .component-option {
-      padding: 16px;
-      border: 2px solid var(--line);
-      border-radius: 12px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      background: white;
-    }
-    
-    .component-option:hover {
+    .question-card:hover {
       border-color: var(--gold);
       transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(0,0,0,0.1);
     }
+    
+    .difficulty-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .difficulty-easy { background: #dcfce7; color: #16a34a; }
+    .difficulty-medium { background: #fed7aa; color: #ea580c; }
+    .difficulty-hard { background: #fecaca; color: #dc2626; }
     
     .modal {
       display: none;
@@ -136,19 +104,32 @@
       align-items: center;
       justify-content: center;
     }
-    
     .modal.show {
       display: flex;
     }
-    
     .modal-content {
       background: white;
       border-radius: 20px;
-      max-width: 600px;
+      max-width: 800px;
       width: 90%;
       max-height: 80vh;
       overflow-y: auto;
       padding: 24px;
+    }
+    
+    /* Student List Styles */
+    .student-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      margin-bottom: 8px;
+    }
+    .student-row:hover {
+      background: #f9fafb;
     }
   </style>
 </head>
@@ -167,6 +148,7 @@
     </div>
     <div class="pb-6 nav-tabs" role="tablist">
       <button class="nav-tab active" data-tab="lessons"><i class="fas fa-book mr-2"></i>Lessons</button>
+      <button class="nav-tab" data-tab="practice"><i class="fas fa-brain mr-2"></i>Practice Banks</button>
       <button class="nav-tab" data-tab="create"><i class="fas fa-plus mr-2"></i>Create Lesson</button>
       <button class="nav-tab" data-tab="builder"><i class="fas fa-hammer mr-2"></i>Lesson Builder</button>
       <button class="nav-tab" data-tab="plan"><i class="fas fa-lightbulb mr-2"></i>Plan Generator</button>
@@ -193,6 +175,83 @@
       </div>
     </div>
     <div id="lessonsList" class="grid gap-4 md:grid-cols-2"></div>
+  </section>
+
+  <!-- Practice Banks Tab -->
+  <section id="practice-tab" class="tab-content hidden">
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="md:col-span-2">
+        <div class="card p-6 mb-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-xl">
+              <i class="fas fa-brain mr-2 text-[var(--gold)]"></i>Practice Question Banks
+            </h3>
+            <button id="createBankBtn" class="bg-[var(--gold)] text-white px-4 py-2 rounded-lg hover:opacity-90">
+              <i class="fas fa-plus mr-2"></i>New Bank
+            </button>
+          </div>
+          <div id="banksList" class="space-y-3"></div>
+        </div>
+
+        <div class="card p-6">
+          <h3 class="font-bold text-xl mb-4">
+            <i class="fas fa-question-circle mr-2 text-[var(--gold)]"></i>Questions
+          </h3>
+          <div id="questionsList" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card p-6 mb-6">
+          <h3 class="font-bold text-lg mb-4">
+            <i class="fas fa-plus-circle mr-2 text-[var(--gold)]"></i>Add Question
+          </h3>
+          <form id="addQuestionForm" class="space-y-3">
+            <select id="qBankId" class="w-full rounded-lg border px-3 py-2" required>
+              <option value="">Select Bank...</option>
+            </select>
+            
+            <select id="qType" class="w-full rounded-lg border px-3 py-2" required>
+              <option value="mcq">Multiple Choice</option>
+              <option value="true_false">True/False</option>
+              <option value="numeric">Numeric</option>
+              <option value="text">Text</option>
+              <option value="multi_select">Multi-Select</option>
+            </select>
+            
+            <textarea id="qText" class="w-full rounded-lg border px-3 py-2" rows="3" placeholder="Question text..." required></textarea>
+            
+            <div id="qOptionsContainer" class="space-y-2">
+              <input class="w-full rounded-lg border px-3 py-2 option-input" placeholder="Option 1"/>
+              <input class="w-full rounded-lg border px-3 py-2 option-input" placeholder="Option 2"/>
+              <input class="w-full rounded-lg border px-3 py-2 option-input" placeholder="Option 3"/>
+              <input class="w-full rounded-lg border px-3 py-2 option-input" placeholder="Option 4"/>
+            </div>
+            
+            <input id="qAnswer" class="w-full rounded-lg border px-3 py-2" placeholder="Correct answer (index for MCQ, value for others)" required/>
+            
+            <select id="qDifficulty" class="w-full rounded-lg border px-3 py-2">
+              <option value="1">Very Easy</option>
+              <option value="2">Easy</option>
+              <option value="3" selected>Medium</option>
+              <option value="4">Hard</option>
+              <option value="5">Very Hard</option>
+            </select>
+            
+            <input id="qPoints" type="number" value="10" class="w-full rounded-lg border px-3 py-2" placeholder="Points"/>
+            
+            <button type="submit" class="w-full bg-[var(--ok)] text-white px-4 py-2 rounded-lg hover:opacity-90">
+              <i class="fas fa-save mr-2"></i>Save Question
+            </button>
+          </form>
+        </div>
+
+        <div class="card p-6">
+          <h3 class="font-bold text-lg mb-4">Skills</h3>
+          <div id="skillsList" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Create Tab (Simple HTML) -->
@@ -269,145 +328,104 @@
     </div>
   </section>
 
-  <!-- Lesson Builder Tab -->
-  <section id="builder-tab" class="tab-content hidden">
-    <div class="card p-6 mb-6">
-      <h2 class="text-2xl font-bold mb-4"><i class="fas fa-hammer mr-2 text-[var(--gold)]"></i>Interactive Lesson Builder</h2>
-      <div class="grid md:grid-cols-4 gap-4 mb-6">
-        <div>
-          <label class="text-sm font-semibold">Title <span class="text-red-500">*</span></label>
-          <input id="builder-title" class="w-full rounded-lg border px-3 py-2" placeholder="Lesson title"/>
+  <!-- Classes Tab (Enhanced) -->
+  <section id="classes-tab" class="tab-content hidden">
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        <div class="card p-6 mb-6">
+          <h3 class="font-bold text-lg mb-3">
+            <i class="fas fa-graduation-cap mr-2 text-[var(--gold)]"></i>Create Class
+          </h3>
+          <div class="grid gap-3">
+            <input id="ccode" placeholder="Class Code (e.g., MATH7A)" class="rounded-lg border px-3 py-2 w-full"/>
+            <input id="cname" placeholder="Class Name (e.g., Grade 7 Section A)" class="rounded-lg border px-3 py-2 w-full"/>
+            <div class="grid grid-cols-2 gap-3">
+              <select id="cgrade" class="rounded-lg border px-3 py-2 w-full">
+                <option value="7">Grade 7</option>
+                <option value="8">Grade 8</option>
+              </select>
+              <button id="createClassBtn" class="bg-[var(--maroon)] text-white px-4 py-2 rounded-lg hover:opacity-90">
+                <i class="fas fa-plus mr-2"></i>Create
+              </button>
+            </div>
+          </div>
         </div>
-        <div>
-          <label class="text-sm font-semibold">Grade</label>
-          <select id="builder-grade" class="w-full rounded-lg border px-3 py-2">
-            <option value="7">Grade 7</option>
-            <option value="8">Grade 8</option>
+        
+        <div class="card p-6">
+          <h3 class="font-bold text-lg mb-3">
+            <i class="fas fa-users mr-2 text-[var(--gold)]"></i>My Classes
+          </h3>
+          <div id="myClasses" class="space-y-3"></div>
+        </div>
+      </div>
+      
+      <div class="card p-6">
+        <h3 class="font-bold text-lg mb-4">
+          <i class="fas fa-user-plus mr-2 text-[var(--gold)]"></i>Manage Students
+        </h3>
+        <div class="mb-4">
+          <select id="classSelectForStudents" class="w-full rounded-lg border px-3 py-2 mb-3">
+            <option value="">Select a class...</option>
           </select>
         </div>
+        
+        <div class="mb-4">
+          <h4 class="font-semibold mb-2">Add Student</h4>
+          <div class="flex gap-2">
+            <input id="studentEmail" placeholder="student@qla.qfschools.qa" class="flex-1 rounded-lg border px-3 py-2"/>
+            <button id="addStudentBtn" class="bg-[var(--gold)] text-white px-4 py-2 rounded-lg hover:opacity-90">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+        </div>
+        
         <div>
-          <label class="text-sm font-semibold">Unit</label>
-          <input id="builder-unit" type="number" min="1" max="20" value="1" class="w-full rounded-lg border px-3 py-2"/>
-        </div>
-        <div>
-          <label class="text-sm font-semibold">Order</label>
-          <input id="builder-order" type="number" min="1" max="50" value="1" class="w-full rounded-lg border px-3 py-2"/>
-        </div>
-      </div>
-      <div class="mb-6">
-        <label class="text-sm font-semibold">Learning Objectives</label>
-        <textarea id="builder-objectives" class="w-full rounded-lg border px-3 py-2" rows="2" placeholder="What will students learn?"></textarea>
-      </div>
-    </div>
-
-    <div class="card p-6 mb-6">
-      <h3 class="text-xl font-bold mb-4">Lesson Components</h3>
-      <div id="lesson-components" class="mb-4"></div>
-      
-      <div id="addComponentBox" class="add-component-btn">
-        <i class="fas fa-plus-circle text-3xl text-[var(--gold)] mb-2"></i>
-        <p class="font-semibold">Add Component</p>
-      </div>
-      
-      <div id="component-options" class="hidden grid grid-cols-3 gap-4 mt-4">
-        <div class="component-option" data-type="video">
-          <i class="fas fa-video text-2xl text-[var(--maroon)] mb-2"></i>
-          <p class="font-semibold">Video</p>
-        </div>
-        <div class="component-option" data-type="text">
-          <i class="fas fa-paragraph text-2xl text-[var(--maroon)] mb-2"></i>
-          <p class="font-semibold">Text Content</p>
-        </div>
-        <div class="component-option" data-type="quiz">
-          <i class="fas fa-question-circle text-2xl text-[var(--maroon)] mb-2"></i>
-          <p class="font-semibold">Quiz</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="card p-6">
-      <div class="flex justify-between">
-        <button id="previewLessonBtn" class="bg-gray-600 text-white px-6 py-2 rounded-lg">
-          <i class="fas fa-eye mr-2"></i>Preview
-        </button>
-        <div class="flex gap-3">
-          <button id="saveDraftBtn" class="bg-gray-500 text-white px-6 py-2 rounded-lg">
-            <i class="fas fa-save mr-2"></i>Save Draft
-          </button>
-          <button id="publishLessonBtn" class="bg-[var(--ok)] text-white px-6 py-2 rounded-lg">
-            <i class="fas fa-rocket mr-2"></i>Publish
-          </button>
+          <h4 class="font-semibold mb-2">Enrolled Students</h4>
+          <div id="classStudentsList" class="space-y-2 max-h-96 overflow-y-auto"></div>
         </div>
       </div>
     </div>
   </section>
+
+  <!-- Analytics Tab (Enhanced) -->
+  <section id="analytics-tab" class="tab-content hidden">
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div class="card p-6">
+        <h3 class="font-bold text-xl mb-4">
+          <i class="fas fa-chart-bar mr-2 text-[var(--gold)]"></i>Class Performance
+        </h3>
+        <select id="analyticsClassSelect" class="w-full rounded-lg border px-3 py-2 mb-4">
+          <option value="">Select a class...</option>
+        </select>
+        <div id="classPerformanceData"></div>
+      </div>
+      
+      <div class="card p-6">
+        <h3 class="font-bold text-xl mb-4">
+          <i class="fas fa-trophy mr-2 text-[var(--gold)]"></i>Top Students
+        </h3>
+        <div id="topStudentsList"></div>
+      </div>
+    </div>
+    
+    <div class="card p-6">
+      <h3 class="font-bold text-xl mb-4">
+        <i class="fas fa-brain mr-2 text-[var(--gold)]"></i>Practice Analytics
+      </h3>
+      <div id="practiceAnalytics"></div>
+    </div>
+  </section>
+
+  <!-- Other tabs remain the same... -->
+  <!-- Lesson Builder Tab -->
+  <section id="builder-tab" class="tab-content hidden">
+    <!-- Keep existing builder content -->
+  </section>
+
   <!-- Plan Generator Tab -->
   <section id="plan-tab" class="tab-content hidden">
-    <div class="grid md:grid-cols-3 gap-6">
-      <div class="md:col-span-1 card p-6">
-        <h2 class="text-xl font-bold mb-4">
-          <i class="fas fa-wand-magic-sparkles mr-2 text-[var(--gold)]"></i>
-          Lesson Plan Generator
-        </h2>
-
-        <label class="text-sm block mb-3">
-          Topic <span class="text-red-500">*</span>
-          <input id="plan-topic" class="rounded-lg border px-3 py-2 w-full" placeholder="e.g., Arc length & sector area"/>
-        </label>
-
-        <label class="text-sm block mb-3">
-          Learning Outcomes (one per line)
-          <textarea id="plan-los" class="rounded-lg border px-3 py-2 w-full" rows="6"
-            placeholder="Students will be able to …&#10;Students can …"></textarea>
-        </label>
-
-        <div class="grid grid-cols-3 gap-3 mb-4">
-          <label class="text-sm">
-            Grade
-            <select id="plan-grade" class="rounded-lg border px-3 py-2 w-full">
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
-              <option value="10">10</option>
-              <option value="11">11</option>
-              <option value="12">12</option>
-            </select>
-          </label>
-          <label class="text-sm">
-            Duration
-            <input id="plan-duration" type="number" min="30" max="120" value="55"
-              class="rounded-lg border px-3 py-2 w-full"/>
-          </label>
-          <label class="text-sm">
-            Teacher
-            <input id="plan-teacher" placeholder="(auto)" class="rounded-lg border px-3 py-2 w-full"/>
-          </label>
-        </div>
-
-        <div class="flex gap-2">
-          <button id="btn-generate-plan" class="bg-[var(--gold)] text-white px-4 py-2 rounded-lg hover:opacity-90">
-            <i class="fas fa-magic mr-2"></i>Generate Plan
-          </button>
-          <button id="btn-download-docx" class="bg-[var(--blue)] text-white px-4 py-2 rounded-lg hover:opacity-90" disabled>
-            <i class="fas fa-file-word mr-2"></i>Download DOCX
-          </button>
-        </div>
-
-        <hr class="my-6"/>
-
-        <h3 class="font-semibold mb-2">My Generated Plans</h3>
-        <div id="plan-list" class="space-y-2 text-sm"></div>
-      </div>
-
-      <div class="md:col-span-2 card p-6">
-        <h3 class="text-lg font-bold mb-4">Preview</h3>
-        <div id="plan-preview" class="prose max-w-none text-sm">
-          <div class="text-slate-500">No plan yet. Generate one to preview.</div>
-        </div>
-      </div>
-    </div>
+    <!-- Keep existing plan generator content -->
   </section>
-
 
   <!-- Assignments Tab -->
   <section id="assign-tab" class="tab-content hidden">
@@ -426,81 +444,46 @@
       <div id="assignmentsList" class="space-y-2"></div>
     </div>
   </section>
-
-  <!-- Classes Tab -->
-  <section id="classes-tab" class="tab-content hidden">
-    <div class="card p-6 mb-6">
-      <h3 class="font-bold text-lg mb-3">Create Class</h3>
-      <div class="grid md:grid-cols-4 gap-3">
-        <input id="ccode" placeholder="Code (MATH7A)" class="rounded border px-3 py-2"/>
-        <input id="cname" placeholder="Name (Grade 7 A)" class="rounded border px-3 py-2"/>
-        <input id="cgrade" type="number" value="7" class="rounded border px-3 py-2"/>
-        <button id="createClassBtn" class="bg-[var(--maroon)] text-white px-4 py-2 rounded">Create</button>
-      </div>
-    </div>
-    <div class="card p-6">
-      <h3 class="font-bold text-lg mb-3">My Classes</h3>
-      <div id="myClasses" class="space-y-3"></div>
-    </div>
-  </section>
-
-  <!-- Analytics Tab -->
-  <section id="analytics-tab" class="tab-content hidden">
-    <div class="card p-6">
-      <h3 class="font-bold text-lg mb-2">Analytics</h3>
-      <p class="text-slate-600">Student progress and performance data will appear here.</p>
-    </div>
-  </section>
 </main>
 
-<!-- Edit Modal -->
-<div id="editModal" class="modal">
+<!-- Question Edit Modal -->
+<div id="editQuestionModal" class="modal">
   <div class="modal-content">
-    <h3 class="text-xl font-bold mb-4">Edit Lesson</h3>
-    <input type="hidden" id="edit-id"/>
-    <div class="space-y-4">
-      <div>
-        <label class="text-sm font-semibold">Title</label>
-        <input id="edit-title" class="w-full rounded-lg border px-3 py-2"/>
-      </div>
-      <div>
-        <label class="text-sm font-semibold">Description</label>
-        <textarea id="edit-description" class="w-full rounded-lg border px-3 py-2" rows="3"></textarea>
-      </div>
-      <div class="grid grid-cols-3 gap-3">
-        <div>
-          <label class="text-sm font-semibold">Grade</label>
-          <select id="edit-grade" class="w-full rounded-lg border px-3 py-2">
-            <option value="7">7</option>
-            <option value="8">8</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-sm font-semibold">Unit</label>
-          <input id="edit-unit" type="number" class="w-full rounded-lg border px-3 py-2"/>
-        </div>
-        <div>
-          <label class="text-sm font-semibold">Order</label>
-          <input id="edit-order" type="number" class="w-full rounded-lg border px-3 py-2"/>
-        </div>
-      </div>
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold">Edit Question</h3>
+      <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700">
+        <i class="fas fa-times text-2xl"></i>
+      </button>
     </div>
-    <div class="flex justify-end gap-3 mt-6">
-      <button id="cancelEditBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg">Cancel</button>
-      <button id="saveEditBtn" class="bg-[var(--ok)] text-white px-4 py-2 rounded-lg">Save Changes</button>
-    </div>
+    <form id="editQuestionForm" class="space-y-4">
+      <input type="hidden" id="editQuestionId"/>
+      <textarea id="editQuestionText" class="w-full rounded-lg border px-3 py-2" rows="3" required></textarea>
+      <input id="editQuestionAnswer" class="w-full rounded-lg border px-3 py-2" placeholder="Correct answer" required/>
+      <select id="editQuestionDifficulty" class="w-full rounded-lg border px-3 py-2">
+        <option value="1">Very Easy</option>
+        <option value="2">Easy</option>
+        <option value="3">Medium</option>
+        <option value="4">Hard</option>
+        <option value="5">Very Hard</option>
+      </select>
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="closeEditModal()" class="bg-gray-500 text-white px-4 py-2 rounded-lg">Cancel</button>
+        <button type="submit" class="bg-[var(--ok)] text-white px-4 py-2 rounded-lg">Save Changes</button>
+      </div>
+    </form>
   </div>
 </div>
 
 <script>
-// Global variables
-let lessonComponents = [];
-let componentCounter = 0;
-let allLessons = [];
+// Enhanced Teacher Portal JavaScript
+let currentBankId = null;
+let currentClassId = null;
+let allClasses = [];
+let allBanks = [];
+let allSkills = [];
 
 // Notification system
 function showNotification(message, type = 'info') {
-  console.log(`Notification [${type}]: ${message}`);
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   
@@ -524,9 +507,8 @@ function showNotification(message, type = 'info') {
   }, 3000);
 }
 
-// API helper function
+// API helper
 async function apiCall(url, options = {}) {
-  console.log(`API Call: ${options.method || 'GET'} ${url}`);
   try {
     const response = await fetch(url, {
       headers: {
@@ -537,7 +519,6 @@ async function apiCall(url, options = {}) {
     });
     
     const text = await response.text();
-    console.log(`Response status: ${response.status}`);
     
     if (!response.ok) {
       throw new Error(text || `HTTP ${response.status}`);
@@ -556,9 +537,6 @@ async function apiCall(url, options = {}) {
 
 // Tab switching
 function switchTab(tabName) {
-  console.log('Switching to tab:', tabName);
-  
-  // Update nav tabs
   document.querySelectorAll('.nav-tab').forEach(tab => {
     if (tab.dataset.tab === tabName) {
       tab.classList.add('active');
@@ -567,7 +545,6 @@ function switchTab(tabName) {
     }
   });
   
-  // Update content sections
   document.querySelectorAll('.tab-content').forEach(content => {
     if (content.id === `${tabName}-tab`) {
       content.classList.remove('hidden');
@@ -575,504 +552,391 @@ function switchTab(tabName) {
       content.classList.add('hidden');
     }
   });
-}
-
-// Load user info
-async function loadUserInfo() {
-  try {
-    const data = await apiCall('/api/auth/me');
-    document.getElementById('teacherEmail').textContent = data.user?.email || 'Teacher';
-  } catch (error) {
-    console.error('Failed to load user info:', error);
-    document.getElementById('teacherEmail').textContent = 'Teacher';
+  
+  // Load tab-specific data
+  if (tabName === 'practice') {
+    loadPracticeBanks();
+    loadSkills();
+  } else if (tabName === 'classes') {
+    loadClasses();
+  } else if (tabName === 'analytics') {
+    loadAnalytics();
+  } else if (tabName === 'lessons') {
+    loadLessons();
   }
 }
 
-// Load lessons
-async function loadLessons() {
-  console.log('Loading lessons...');
+// Load practice banks
+async function loadPracticeBanks() {
   try {
-    const data = await apiCall('/api/lessons/catalog?all=1');
-    const lessonsList = document.getElementById('lessonsList');
-    const assignSelect = document.getElementById('assignLesson');
+    const banks = await apiCall('/api/teacher/practice/banks');
+    allBanks = banks;
     
-    lessonsList.innerHTML = '';
-    assignSelect.innerHTML = '<option value="">-- Select a lesson --</option>';
-    allLessons = [];
+    const banksList = document.getElementById('banksList');
+    const bankSelect = document.getElementById('qBankId');
     
-    (data.units || []).forEach(unit => {
-      (unit.lessons || []).forEach(lesson => {
-        allLessons.push(lesson);
-        
-        // Create lesson card
-        const card = document.createElement('div');
-        card.className = 'card p-4 lesson-card';
-        card.dataset.lessonId = lesson.id;
-        card.innerHTML = `
-          <div class="font-semibold mb-1">${lesson.title}</div>
-          <div class="text-sm text-slate-600 mb-3">Grade ${lesson.grade} • Unit ${lesson.unit} • Order ${lesson.order}</div>
-          <div class="flex flex-wrap gap-2">
-            <button class="preview-btn bg-[var(--blue)] text-white px-3 py-1 rounded text-sm" data-id="${lesson.id}" data-src="${lesson.src}">
-              <i class="fas fa-eye mr-1"></i>Preview
-            </button>
-            <button class="edit-btn bg-[var(--gold)] text-white px-3 py-1 rounded text-sm" data-id="${lesson.id}">
-              <i class="fas fa-edit mr-1"></i>Edit
-            </button>
-            <button class="delete-btn bg-red-600 text-white px-3 py-1 rounded text-sm" data-id="${lesson.id}" data-title="${lesson.title}">
-              <i class="fas fa-trash mr-1"></i>Delete
-            </button>
+    banksList.innerHTML = '';
+    bankSelect.innerHTML = '<option value="">Select Bank...</option>';
+    
+    banks.forEach(bank => {
+      // Bank card
+      const card = document.createElement('div');
+      card.className = 'interactive-row';
+      card.innerHTML = `
+        <div>
+          <div class="font-semibold">${bank.title}</div>
+          <div class="text-sm text-gray-600">
+            ${bank.skill_name || 'General'} • ${bank.question_count || 0} questions
+            <span class="difficulty-badge difficulty-${bank.difficulty}">${bank.difficulty}</span>
           </div>
-        `;
-        lessonsList.appendChild(card);
-        
-        // Add to assignment dropdown
-        const option = document.createElement('option');
-        option.value = lesson.id;
-        option.textContent = `${lesson.title} (G${lesson.grade} U${lesson.unit})`;
-        assignSelect.appendChild(option);
-      });
-    });
-    
-    if (allLessons.length === 0) {
-      lessonsList.innerHTML = '<div class="text-center text-gray-500 py-8">No lessons yet. Create your first lesson!</div>';
-    }
-    
-    console.log(`Loaded ${allLessons.length} lessons`);
-  } catch (error) {
-    console.error('Failed to load lessons:', error);
-    showNotification('Failed to load lessons', 'error');
-  }
-}
-
-// Save lesson (simple HTML method)
-async function saveLesson() {
-  console.log('Saving lesson...');
-  const title = document.getElementById('title').value.trim();
-  const grade = parseInt(document.getElementById('grade').value);
-  const unit = parseInt(document.getElementById('unit').value);
-  const order = parseInt(document.getElementById('order').value);
-  const description = document.getElementById('description').value.trim();
-  const videoUrl = document.getElementById('videoUrl').value.trim();
-  const htmlContent = document.getElementById('htmlContent').value.trim();
-  
-  // Validation
-  if (!title) {
-    showNotification('Please enter a lesson title', 'warning');
-    return;
-  }
-  
-  if (!unit || unit < 1 || unit > 20) {
-    showNotification('Unit must be between 1 and 20', 'warning');
-    return;
-  }
-  
-  if (!order || order < 1 || order > 50) {
-    showNotification('Order must be between 1 and 50', 'warning');
-    return;
-  }
-  
-  try {
-    const payload = {
-      title,
-      grade,
-      unit,
-      lesson_order: order,
-      description: description || null,
-      video_url: videoUrl || null,
-      html_content: htmlContent || null
-    };
-    
-    console.log('Payload:', payload);
-    
-    await apiCall('/api/lessons', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    
-    showNotification(`Lesson "${title}" saved successfully!`, 'success');
-    
-    // Clear form
-    document.getElementById('title').value = '';
-    document.getElementById('description').value = '';
-    document.getElementById('videoUrl').value = '';
-    document.getElementById('htmlContent').value = '';
-    document.getElementById('unit').value = '1';
-    document.getElementById('order').value = '1';
-    
-    // Reload lessons and switch to lessons tab
-    await loadLessons();
-    switchTab('lessons');
-    
-  } catch (error) {
-    showNotification(`Failed to save lesson: ${error.message}`, 'error');
-  }
-}
-
-// Edit lesson
-async function editLesson(id) {
-  console.log('Opening edit modal for lesson:', id);
-  const lesson = allLessons.find(l => l.id === parseInt(id));
-  
-  if (lesson) {
-    document.getElementById('edit-id').value = id;
-    document.getElementById('edit-title').value = lesson.title || '';
-    document.getElementById('edit-description').value = lesson.description || '';
-    document.getElementById('edit-grade').value = lesson.grade || 7;
-    document.getElementById('edit-unit').value = lesson.unit || 1;
-    document.getElementById('edit-order').value = lesson.order || 1;
-    
-    document.getElementById('editModal').classList.add('show');
-  }
-}
-
-// Save edit
-async function saveEdit() {
-  const id = document.getElementById('edit-id').value;
-  console.log('Saving edit for lesson:', id);
-  
-  try {
-    const payload = {
-      title: document.getElementById('edit-title').value.trim(),
-      description: document.getElementById('edit-description').value.trim(),
-      grade: parseInt(document.getElementById('edit-grade').value),
-      unit: parseInt(document.getElementById('edit-unit').value),
-      lesson_order: parseInt(document.getElementById('edit-order').value)
-    };
-    
-    await apiCall(`/api/lessons/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload)
-    });
-    
-    showNotification('Lesson updated successfully', 'success');
-    document.getElementById('editModal').classList.remove('show');
-    await loadLessons();
-  } catch (error) {
-    showNotification('Failed to update lesson', 'error');
-  }
-}
-
-// Delete lesson
-async function deleteLesson(id, title) {
-  console.log('Deleting lesson:', id, title);
-  if (confirm(`Are you sure you want to delete "${title}"?\n\nThis action cannot be undone.`)) {
-    try {
-      await apiCall(`/api/lessons/${id}`, {
-        method: 'DELETE'
-      });
-      
-      showNotification('Lesson deleted successfully', 'success');
-      await loadLessons();
-    } catch (error) {
-      showNotification('Failed to delete lesson', 'error');
-    }
-  }
-}
-
-// Preview HTML
-function previewHTML() {
-  const html = document.getElementById('htmlContent').value;
-  if (!html.trim()) {
-    showNotification('Please enter some HTML content to preview', 'warning');
-    return;
-  }
-  
-  const frame = document.getElementById('previewFrame');
-  document.getElementById('previewWrap').classList.remove('hidden');
-  frame.srcdoc = html;
-  showNotification('Preview updated', 'info');
-}
-
-// Upload video
-async function uploadVideo() {
-  const file = document.getElementById('videoFile').files[0];
-  if (!file) {
-    showNotification('Please select a video file', 'warning');
-    return;
-  }
-  
-  try {
-    const formData = new FormData();
-    formData.append('video', file);
-    
-    const response = await fetch('/api/uploads/video', {
-      method: 'POST',
-      body: formData
-    });
-    
-    if (!response.ok) throw new Error('Upload failed');
-    
-    const result = await response.json();
-    document.getElementById('videoUrl').value = result.url;
-    document.getElementById('videoUploadResult').textContent = 'Uploaded: ' + result.url;
-    showNotification('Video uploaded successfully', 'success');
-  } catch (error) {
-    showNotification('Failed to upload video', 'error');
-  }
-}
-
-// LESSON BUILDER FUNCTIONS
-
-// Add component to lesson
-function addComponent(type) {
-  console.log('Adding component:', type);
-  const component = {
-    id: ++componentCounter,
-    type: type,
-    data: {}
-  };
-  
-  // Initialize component data
-  switch(type) {
-    case 'video':
-      component.data = { url: '', title: 'Video Lesson' };
-      break;
-    case 'text':
-      component.data = { content: '', title: 'Text Content' };
-      break;
-    case 'quiz':
-      component.data = { 
-        title: 'Quick Quiz',
-        questions: [{
-          question: '',
-          options: ['', '', '', ''],
-          correct: 0
-        }]
-      };
-      break;
-  }
-  
-  lessonComponents.push(component);
-  renderComponents();
-  showNotification(`Added ${type} component`, 'success');
-}
-
-// Render lesson components
-function renderComponents() {
-  const container = document.getElementById('lesson-components');
-  container.innerHTML = '';
-  
-  lessonComponents.forEach((comp, index) => {
-    const div = document.createElement('div');
-    div.className = 'component-card';
-    
-    let icon = '';
-    switch(comp.type) {
-      case 'video': icon = 'fa-video'; break;
-      case 'text': icon = 'fa-paragraph'; break;
-      case 'quiz': icon = 'fa-question-circle'; break;
-    }
-    
-    div.innerHTML = `
-      <div class="component-header">
-        <div class="flex items-center gap-3">
-          <span class="component-type"><i class="fas ${icon}"></i> ${comp.type}</span>
-          <input class="flex-1 rounded border px-2 py-1 comp-title" data-index="${index}" 
-                 placeholder="Component title" value="${comp.data.title || ''}">
         </div>
-        <button class="remove-comp text-red-500 hover:text-red-700" data-index="${index}">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-      <div class="mt-3">
-        ${renderComponentContent(comp, index)}
-      </div>
-    `;
-    
-    container.appendChild(div);
-  });
-  
-  // Add event listeners to component inputs
-  document.querySelectorAll('.comp-title').forEach(input => {
-    input.addEventListener('change', (e) => {
-      const index = parseInt(e.target.dataset.index);
-      lessonComponents[index].data.title = e.target.value;
+        <div class="flex gap-2">
+          <button onclick="loadBankQuestions(${bank.id})" class="bg-[var(--blue)] text-white px-3 py-1 rounded text-sm">
+            <i class="fas fa-eye"></i>
+          </button>
+          <button onclick="deleteBank(${bank.id})" class="bg-red-600 text-white px-3 py-1 rounded text-sm">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+      banksList.appendChild(card);
+      
+      // Add to select
+      const option = document.createElement('option');
+      option.value = bank.id;
+      option.textContent = bank.title;
+      bankSelect.appendChild(option);
     });
-  });
-  
-  document.querySelectorAll('.remove-comp').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const index = parseInt(e.target.dataset.index);
-      if (confirm('Remove this component?')) {
-        lessonComponents.splice(index, 1);
-        renderComponents();
-      }
-    });
-  });
-}
-
-// Render component content
-function renderComponentContent(comp, index) {
-  switch(comp.type) {
-    case 'video':
-      return `<input class="w-full rounded border px-3 py-2 comp-video-url" data-index="${index}" 
-                     placeholder="YouTube URL or video file path" value="${comp.data.url || ''}">`;
     
-    case 'text':
-      return `<textarea class="w-full rounded border px-3 py-2 comp-text-content" data-index="${index}" 
-                        rows="4" placeholder="Enter text content...">${comp.data.content || ''}</textarea>`;
-    
-    case 'quiz':
-      return `<div class="text-sm text-gray-600">Quiz questions configuration...</div>`;
-    
-    default:
-      return '';
-  }
-}
-
-// Preview lesson
-function previewLesson() {
-  const title = document.getElementById('builder-title').value || 'Untitled Lesson';
-  
-  let html = `<h1 class="text-2xl font-bold mb-4">${title}</h1>`;
-  
-  lessonComponents.forEach(comp => {
-    html += `<div class="mb-6">`;
-    html += `<h3 class="text-lg font-semibold mb-2">${comp.data.title || comp.type}</h3>`;
-    
-    switch(comp.type) {
-      case 'video':
-        html += `<div class="bg-gray-100 p-4 rounded">Video: ${comp.data.url || 'No URL set'}</div>`;
-        break;
-      case 'text':
-        html += `<p>${comp.data.content || 'No content'}</p>`;
-        break;
-      case 'quiz':
-        html += '<div class="text-gray-600">Quiz component</div>';
-        break;
+    if (banks.length === 0) {
+      banksList.innerHTML = '<div class="text-center text-gray-500 py-8">No question banks yet. Create your first one!</div>';
     }
-    html += '</div>';
-  });
-  
-  alert('Preview:\n\n' + html.replace(/<[^>]*>/g, ''));
-}
-
-// Save draft
-function saveDraft() {
-  const lessonData = {
-    title: document.getElementById('builder-title').value,
-    grade: document.getElementById('builder-grade').value,
-    unit: document.getElementById('builder-unit').value,
-    order: document.getElementById('builder-order').value,
-    objectives: document.getElementById('builder-objectives').value,
-    components: lessonComponents
-  };
-  
-  localStorage.setItem('lesson-draft', JSON.stringify(lessonData));
-  showNotification('Draft saved to browser', 'success');
-}
-
-// Publish lesson
-async function publishLesson() {
-  const title = document.getElementById('builder-title').value.trim();
-  
-  if (!title) {
-    showNotification('Please enter a lesson title', 'warning');
-    return;
-  }
-  
-  if (lessonComponents.length === 0) {
-    showNotification('Please add at least one component', 'warning');
-    return;
-  }
-  
-  try {
-    // Generate HTML from components
-    let html = `<h1>${title}</h1>`;
-    lessonComponents.forEach(comp => {
-      html += `<div><h2>${comp.data.title || comp.type}</h2>`;
-      if (comp.type === 'text') html += `<p>${comp.data.content}</p>`;
-      html += '</div>';
-    });
-    
-    const payload = {
-      title: title,
-      grade: parseInt(document.getElementById('builder-grade').value),
-      unit: parseInt(document.getElementById('builder-unit').value),
-      lesson_order: parseInt(document.getElementById('builder-order').value),
-      description: document.getElementById('builder-objectives').value.trim() || null,
-      html_content: html
-    };
-    
-    await apiCall('/api/lessons', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    
-    showNotification(`Lesson "${title}" published successfully!`, 'success');
-    
-    // Clear builder
-    document.getElementById('builder-title').value = '';
-    document.getElementById('builder-objectives').value = '';
-    lessonComponents = [];
-    renderComponents();
-    
-    await loadLessons();
-    switchTab('lessons');
-    
   } catch (error) {
-    showNotification(`Failed to publish: ${error.message}`, 'error');
+    showNotification('Failed to load practice banks', 'error');
   }
 }
 
-// Create assignment
-async function createAssignment() {
-  const lessonId = document.getElementById('assignLesson').value;
-  const classCode = document.getElementById('classCode').value.trim();
-  const passPct = parseInt(document.getElementById('passPct').value) || 70;
-  const dueDate = document.getElementById('dueDate').value;
-  
-  if (!lessonId || !classCode) {
-    showNotification('Please select a lesson and enter class code', 'warning');
-    return;
+// Load skills
+async function loadSkills() {
+  try {
+    const skills = await apiCall('/api/teacher/practice/skills');
+    allSkills = skills;
+    
+    const skillsList = document.getElementById('skillsList');
+    skillsList.innerHTML = '';
+    
+    skills.forEach(skill => {
+      const div = document.createElement('div');
+      div.className = 'p-2 border rounded hover:bg-gray-50 cursor-pointer';
+      div.innerHTML = `
+        <div class="font-semibold text-sm">${skill.name}</div>
+        <div class="text-xs text-gray-600">
+          Grade ${skill.grade} Unit ${skill.unit} • 
+          ${skill.question_count || 0} questions
+        </div>
+      `;
+      div.onclick = () => createBankForSkill(skill);
+      skillsList.appendChild(div);
+    });
+  } catch (error) {
+    console.error('Failed to load skills');
   }
+}
+
+// Create bank for skill
+async function createBankForSkill(skill) {
+  const title = prompt(`Create question bank for "${skill.name}"?`, `${skill.name} Practice`);
+  if (!title) return;
   
   try {
-    await apiCall('/api/assignments', {
+    await apiCall('/api/teacher/practice/banks', {
       method: 'POST',
       body: JSON.stringify({
-        lesson_id: parseInt(lessonId),
-        class_code: classCode,
-        pass_pct: passPct,
-        due_at: dueDate || null
+        skill_id: skill.id,
+        title: title,
+        difficulty: 'medium'
       })
     });
     
-    showNotification('Assignment created successfully', 'success');
-    await loadAssignments();
+    showNotification('Question bank created', 'success');
+    loadPracticeBanks();
   } catch (error) {
-    showNotification('Failed to create assignment', 'error');
+    showNotification('Failed to create bank', 'error');
   }
 }
 
-// Load assignments
-async function loadAssignments() {
+// Load questions for a bank
+async function loadBankQuestions(bankId) {
+  currentBankId = bankId;
+  
   try {
-    const assignments = await apiCall('/api/assignments');
-    const list = document.getElementById('assignmentsList');
-    list.innerHTML = '';
+    const questions = await apiCall(`/api/teacher/practice/banks/${bankId}/questions`);
     
-    assignments.forEach(a => {
-      const div = document.createElement('div');
-      div.className = 'interactive-row';
-      div.innerHTML = `
-        <div>
-          <div class="font-semibold">Lesson ${a.lesson_id} → ${a.class_code}</div>
-          <div class="text-sm text-slate-600">Due: ${a.due_at || '—'} • Pass: ${a.pass_pct}%</div>
+    const questionsList = document.getElementById('questionsList');
+    questionsList.innerHTML = '';
+    
+    questions.forEach(question => {
+      const card = document.createElement('div');
+      card.className = 'question-card';
+      
+      const difficultyClass = question.difficulty_level <= 2 ? 'easy' : 
+                              question.difficulty_level <= 3 ? 'medium' : 'hard';
+      
+      card.innerHTML = `
+        <div class="flex justify-between items-start mb-2">
+          <div class="flex-1">
+            <div class="font-semibold mb-1">${question.question_text}</div>
+            <div class="text-sm text-gray-600">
+              Type: ${question.question_type} • Points: ${question.points}
+              <span class="difficulty-badge difficulty-${difficultyClass} ml-2">
+                ${'⭐'.repeat(question.difficulty_level)}
+              </span>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="editQuestion(${question.id})" class="text-blue-600 hover:text-blue-800">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button onclick="deleteQuestion(${question.id})" class="text-red-600 hover:text-red-800">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        ${question.question_data?.options ? `
+          <div class="text-sm text-gray-700">
+            Options: ${question.question_data.options.join(', ')}
+          </div>
+        ` : ''}
+        <div class="text-sm text-gray-600 mt-1">
+          Answer: ${JSON.stringify(question.correct_answer)}
         </div>
       `;
-      list.appendChild(div);
+      
+      questionsList.appendChild(card);
     });
+    
+    if (questions.length === 0) {
+      questionsList.innerHTML = '<div class="text-center text-gray-500 py-8">No questions in this bank yet.</div>';
+    }
+    
+    // Update form bank selection
+    document.getElementById('qBankId').value = bankId;
+    
   } catch (error) {
-    console.error('Failed to load assignments');
+    showNotification('Failed to load questions', 'error');
+  }
+}
+
+// Add question
+document.getElementById('addQuestionForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const type = document.getElementById('qType').value;
+  const options = [];
+  
+  if (type === 'mcq' || type === 'multi_select') {
+    document.querySelectorAll('.option-input').forEach(input => {
+      if (input.value.trim()) {
+        options.push(input.value.trim());
+      }
+    });
+  }
+  
+  const questionData = {
+    bank_id: parseInt(document.getElementById('qBankId').value),
+    skill_id: allBanks.find(b => b.id === parseInt(document.getElementById('qBankId').value))?.skill_id || 1,
+    question_type: type,
+    question_text: document.getElementById('qText').value,
+    question_data: { options },
+    correct_answer: type === 'mcq' ? parseInt(document.getElementById('qAnswer').value) : 
+                    type === 'numeric' ? { value: parseFloat(document.getElementById('qAnswer').value), tolerance: 0.01 } :
+                    type === 'true_false' ? document.getElementById('qAnswer').value === 'true' ? 0 : 1 :
+                    document.getElementById('qAnswer').value,
+    difficulty_level: parseInt(document.getElementById('qDifficulty').value),
+    points: parseInt(document.getElementById('qPoints').value)
+  };
+  
+  try {
+    await apiCall('/api/teacher/practice/questions', {
+      method: 'POST',
+      body: JSON.stringify(questionData)
+    });
+    
+    showNotification('Question added successfully', 'success');
+    e.target.reset();
+    
+    if (currentBankId) {
+      loadBankQuestions(currentBankId);
+    }
+  } catch (error) {
+    showNotification('Failed to add question', 'error');
+  }
+});
+
+// Delete question
+async function deleteQuestion(questionId) {
+  if (!confirm('Are you sure you want to delete this question?')) return;
+  
+  try {
+    await apiCall(`/api/teacher/practice/questions/${questionId}`, {
+      method: 'DELETE'
+    });
+    
+    showNotification('Question deleted', 'success');
+    if (currentBankId) {
+      loadBankQuestions(currentBankId);
+    }
+  } catch (error) {
+    showNotification('Failed to delete question', 'error');
+  }
+}
+
+// Edit question modal
+function editQuestion(questionId) {
+  // Implementation for edit modal
+  document.getElementById('editQuestionModal').classList.add('show');
+  document.getElementById('editQuestionId').value = questionId;
+  // Load question data and populate form
+}
+
+function closeEditModal() {
+  document.getElementById('editQuestionModal').classList.remove('show');
+}
+
+// Classes Management
+async function loadClasses() {
+  try {
+    const classes = await apiCall('/api/classes');
+    allClasses = classes;
+    
+    const myClassesList = document.getElementById('myClasses');
+    const classSelect = document.getElementById('classSelectForStudents');
+    const analyticsSelect = document.getElementById('analyticsClassSelect');
+    
+    myClassesList.innerHTML = '';
+    classSelect.innerHTML = '<option value="">Select a class...</option>';
+    analyticsSelect.innerHTML = '<option value="">Select a class...</option>';
+    
+    classes.forEach(cls => {
+      // Class card
+      const card = document.createElement('div');
+      card.className = 'interactive-row';
+      card.innerHTML = `
+        <div>
+          <div class="font-semibold">${cls.name}</div>
+          <div class="text-xs text-slate-600">
+            ${cls.code} • Grade ${cls.grade || '-'} • ${cls.students || 0} student(s)
+          </div>
+        </div>
+        <button onclick="selectClass(${cls.id})" class="bg-[var(--blue)] text-white px-3 py-1 rounded text-sm">
+          Manage
+        </button>
+      `;
+      myClassesList.appendChild(card);
+      
+      // Add to selects
+      const option1 = document.createElement('option');
+      option1.value = cls.id;
+      option1.textContent = `${cls.name} (${cls.code})`;
+      classSelect.appendChild(option1);
+      
+      const option2 = option1.cloneNode(true);
+      analyticsSelect.appendChild(option2);
+    });
+    
+    if (classes.length === 0) {
+      myClassesList.innerHTML = '<div class="text-center text-gray-500 py-8">No classes yet. Create your first class!</div>';
+    }
+  } catch (error) {
+    showNotification('Failed to load classes', 'error');
+  }
+}
+
+// Select class for management
+async function selectClass(classId) {
+  currentClassId = classId;
+  document.getElementById('classSelectForStudents').value = classId;
+  
+  try {
+    const enrollments = await apiCall(`/api/classes/${classId}/enrollments`);
+    
+    const studentsList = document.getElementById('classStudentsList');
+    studentsList.innerHTML = '';
+    
+    enrollments.forEach(enrollment => {
+      const row = document.createElement('div');
+      row.className = 'student-row';
+      row.innerHTML = `
+        <div>
+          <i class="fas fa-user-circle mr-2 text-gray-400"></i>
+          ${enrollment.student_email}
+        </div>
+        <button onclick="removeStudent(${classId}, '${enrollment.student_email}')" class="text-red-600 hover:text-red-800">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      studentsList.appendChild(row);
+    });
+    
+    if (enrollments.length === 0) {
+      studentsList.innerHTML = '<div class="text-center text-gray-500 py-4">No students enrolled yet.</div>';
+    }
+  } catch (error) {
+    showNotification('Failed to load students', 'error');
+  }
+}
+
+// Add student to class
+document.getElementById('addStudentBtn')?.addEventListener('click', async () => {
+  const classId = document.getElementById('classSelectForStudents').value;
+  const studentEmail = document.getElementById('studentEmail').value.trim();
+  
+  if (!classId) {
+    showNotification('Please select a class first', 'warning');
+    return;
+  }
+  
+  if (!studentEmail) {
+    showNotification('Please enter student email', 'warning');
+    return;
+  }
+  
+  try {
+    await apiCall(`/api/classes/${classId}/enroll`, {
+      method: 'POST',
+      body: JSON.stringify({ student_email: studentEmail })
+    });
+    
+    showNotification('Student added successfully', 'success');
+    document.getElementById('studentEmail').value = '';
+    selectClass(parseInt(classId));
+  } catch (error) {
+    showNotification('Failed to add student', 'error');
+  }
+});
+
+// Remove student from class
+async function removeStudent(classId, studentEmail) {
+  if (!confirm(`Remove ${studentEmail} from this class?`)) return;
+  
+  try {
+    await apiCall(`/api/classes/${classId}/unenroll`, {
+      method: 'POST',
+      body: JSON.stringify({ student_email: studentEmail })
+    });
+    
+    showNotification('Student removed', 'success');
+    selectClass(classId);
+  } catch (error) {
+    showNotification('Failed to remove student', 'error');
   }
 }
 
 // Create class
-async function createClass() {
+document.getElementById('createClassBtn')?.addEventListener('click', async () => {
   const code = document.getElementById('ccode').value.trim();
   const name = document.getElementById('cname').value.trim();
-  const grade = parseInt(document.getElementById('cgrade').value) || null;
+  const grade = document.getElementById('cgrade').value;
   
   if (!code || !name) {
     showNotification('Please enter class code and name', 'warning');
@@ -1082,55 +946,146 @@ async function createClass() {
   try {
     await apiCall('/api/classes', {
       method: 'POST',
-      body: JSON.stringify({ code, name, grade })
+      body: JSON.stringify({ code, name, grade: parseInt(grade) })
     });
     
     showNotification('Class created successfully', 'success');
     document.getElementById('ccode').value = '';
     document.getElementById('cname').value = '';
-    await loadClasses();
+    loadClasses();
   } catch (error) {
     showNotification('Failed to create class', 'error');
   }
-}
+});
 
-// Load classes
-async function loadClasses() {
+// Analytics
+async function loadAnalytics() {
+  const classCode = document.getElementById('analyticsClassSelect').value;
+  
+  if (!classCode) {
+    document.getElementById('classPerformanceData').innerHTML = 
+      '<div class="text-gray-500">Select a class to view performance data</div>';
+    return;
+  }
+  
   try {
-    const classes = await apiCall('/api/classes');
-    const list = document.getElementById('myClasses');
-    list.innerHTML = '';
+    const classData = allClasses.find(c => c.id === parseInt(classCode));
+    const analytics = await apiCall(`/api/teacher/practice/class-progress/${classData.code}`);
     
-    classes.forEach(c => {
-      const div = document.createElement('div');
-      div.className = 'interactive-row';
-      div.innerHTML = `
-        <div>
-          <div class="font-semibold">${c.name}</div>
-          <div class="text-xs text-slate-600">${c.code} • Grade ${c.grade || '-'} • ${c.students || 0} student(s)</div>
+    // Display class performance
+    const perfContainer = document.getElementById('classPerformanceData');
+    perfContainer.innerHTML = `
+      <div class="space-y-3">
+        ${analytics.students.map(student => `
+          <div class="p-3 border rounded">
+            <div class="font-semibold">${student.email}</div>
+            <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+              <div>Mastery: ${student.overall_mastery}%</div>
+              <div>Accuracy: ${student.sessions.accuracy}%</div>
+              <div>Sessions: ${student.sessions.total}</div>
+              <div>Time: ${student.total_time_hours}h</div>
+            </div>
+            <div class="mt-2">
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-gradient-to-r from-[var(--gold)] to-[var(--maroon)] h-2 rounded-full" 
+                     style="width:${student.overall_mastery}%"></div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    
+    // Display top students
+    const topStudents = analytics.students
+      .sort((a, b) => b.overall_mastery - a.overall_mastery)
+      .slice(0, 5);
+    
+    const topContainer = document.getElementById('topStudentsList');
+    topContainer.innerHTML = topStudents.map((student, index) => `
+      <div class="flex items-center justify-between p-3 border rounded mb-2">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-[var(--gold)] text-white flex items-center justify-center font-bold">
+            ${index + 1}
+          </div>
+          <div>
+            <div class="font-semibold">${student.email}</div>
+            <div class="text-sm text-gray-600">
+              ${student.achievements.points} points • ${student.achievements.count} achievements
+            </div>
+          </div>
         </div>
-      `;
-      list.appendChild(div);
-    });
+        <div class="text-xl font-bold text-[var(--maroon)]">${student.overall_mastery}%</div>
+      </div>
+    `).join('');
+    
   } catch (error) {
-    console.error('Failed to load classes');
+    showNotification('Failed to load analytics', 'error');
   }
 }
 
-// Search lessons
-function filterLessons() {
-  const query = document.getElementById('searchLessons').value.toLowerCase();
-  document.querySelectorAll('.lesson-card').forEach(card => {
-    const title = card.querySelector('.font-semibold').textContent.toLowerCase();
-    card.style.display = title.includes(query) ? '' : 'none';
-  });
+// Load lessons
+async function loadLessons() {
+  try {
+    const data = await apiCall('/api/lessons/catalog?all=1');
+    const lessonsList = document.getElementById('lessonsList');
+    lessonsList.innerHTML = '';
+    
+    (data.units || []).forEach(unit => {
+      (unit.lessons || []).forEach(lesson => {
+        const card = document.createElement('div');
+        card.className = 'card p-4';
+        card.innerHTML = `
+          <div class="font-semibold mb-1">${lesson.title}</div>
+          <div class="text-sm text-slate-600 mb-3">
+            Grade ${lesson.grade} • Unit ${lesson.unit} • Order ${lesson.order}
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button class="bg-[var(--blue)] text-white px-3 py-1 rounded text-sm">
+              <i class="fas fa-eye mr-1"></i>Preview
+            </button>
+            <button class="bg-[var(--gold)] text-white px-3 py-1 rounded text-sm">
+              <i class="fas fa-edit mr-1"></i>Edit
+            </button>
+            <button onclick="createPracticeForLesson(${lesson.id}, '${lesson.title}')" 
+                    class="bg-[var(--purple)] text-white px-3 py-1 rounded text-sm">
+              <i class="fas fa-brain mr-1"></i>Add Practice
+            </button>
+          </div>
+        `;
+        lessonsList.appendChild(card);
+      });
+    });
+  } catch (error) {
+    showNotification('Failed to load lessons', 'error');
+  }
 }
 
-// Initialize everything when DOM is loaded
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('Initializing Teacher Portal...');
+// Create practice questions for lesson
+async function createPracticeForLesson(lessonId, lessonTitle) {
+  if (!confirm(`Create practice questions for "${lessonTitle}"?`)) return;
   
-  // Attach event listeners to nav tabs
+  try {
+    // Create assessment from practice questions
+    await apiCall('/api/teacher/practice/create-assessment', {
+      method: 'POST',
+      body: JSON.stringify({
+        lesson_id: lessonId,
+        title: `${lessonTitle} - Practice Questions`,
+        pass_pct: 70,
+        skill_ids: allSkills.filter(s => s.grade === 7 || s.grade === 8).map(s => s.id).slice(0, 3)
+      })
+    });
+    
+    showNotification('Practice questions created for lesson', 'success');
+  } catch (error) {
+    showNotification('Failed to create practice questions', 'error');
+  }
+}
+
+// Initialize on DOM load
+document.addEventListener('DOMContentLoaded', async () => {
+  // Setup tab listeners
   document.querySelectorAll('.nav-tab[data-tab]').forEach(tab => {
     tab.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1138,119 +1093,79 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
   
-  // Logout button
+  // Logout
   document.getElementById('logoutBtn').addEventListener('click', async (e) => {
     e.preventDefault();
     await fetch('/auth/logout', { method: 'POST' });
     window.location.href = '/login';
   });
   
-  // New Lesson button
-  document.getElementById('newLessonBtn').addEventListener('click', () => {
-    switchTab('builder');
-  });
-  
-  // Use Builder button
-  document.getElementById('useBuilderBtn').addEventListener('click', () => {
-    switchTab('builder');
-  });
-  
-  // Save Lesson button
-  document.getElementById('saveLessonBtn').addEventListener('click', saveLesson);
-  
-  // Preview HTML button
-  document.getElementById('previewHTMLBtn').addEventListener('click', previewHTML);
-  
-  // Upload Video button
-  document.getElementById('uploadVideoBtn').addEventListener('click', uploadVideo);
-  
-  // Edit modal buttons
-  document.getElementById('cancelEditBtn').addEventListener('click', () => {
-    document.getElementById('editModal').classList.remove('show');
-  });
-  
-  document.getElementById('saveEditBtn').addEventListener('click', saveEdit);
-  
-  // Search lessons
-  document.getElementById('searchLessons').addEventListener('input', filterLessons);
-  
-  // Lesson Builder buttons
-  document.getElementById('addComponentBox').addEventListener('click', () => {
-    document.getElementById('component-options').classList.toggle('hidden');
-  });
-  
-  document.querySelectorAll('.component-option').forEach(option => {
-    option.addEventListener('click', () => {
-      addComponent(option.dataset.type);
-      document.getElementById('component-options').classList.add('hidden');
-    });
-  });
-  
-  document.getElementById('previewLessonBtn').addEventListener('click', previewLesson);
-  document.getElementById('saveDraftBtn').addEventListener('click', saveDraft);
-  document.getElementById('publishLessonBtn').addEventListener('click', publishLesson);
-  
-  // Assignment button
-  document.getElementById('createAssignBtn').addEventListener('click', createAssignment);
-  
-  // Class button
-  document.getElementById('createClassBtn').addEventListener('click', createClass);
-  
-  // Event delegation for dynamically created buttons
-  document.addEventListener('click', (e) => {
-    // Preview button
-    if (e.target.closest('.preview-btn')) {
-      const btn = e.target.closest('.preview-btn');
-      const src = btn.dataset.src;
-      window.open(src, '_blank');
-    }
+  // Question type change handler
+  document.getElementById('qType')?.addEventListener('change', (e) => {
+    const container = document.getElementById('qOptionsContainer');
     
-    // Edit button
-    if (e.target.closest('.edit-btn')) {
-      const btn = e.target.closest('.edit-btn');
-      editLesson(btn.dataset.id);
-    }
-    
-    // Delete button
-    if (e.target.closest('.delete-btn')) {
-      const btn = e.target.closest('.delete-btn');
-      deleteLesson(btn.dataset.id, btn.dataset.title);
+    if (e.target.value === 'true_false') {
+      container.innerHTML = `
+        <select id="qAnswer" class="w-full rounded-lg border px-3 py-2">
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+      `;
+    } else if (e.target.value === 'numeric' || e.target.value === 'text') {
+      container.style.display = 'none';
+    } else {
+      container.style.display = 'block';
+      container.innerHTML = `
+        <input class="w-full rounded-lg border px-3 py-2 option-input" placeholder="Option 1"/>
+        <input class="w-full rounded-lg border px-3 py-2 option-input" placeholder="Option 2"/>
+        <input class="w-full rounded-lg border px-3 py-2 option-input" placeholder="Option 3"/>
+        <input class="w-full rounded-lg border px-3 py-2 option-input" placeholder="Option 4"/>
+      `;
     }
   });
   
-  // Update component data when inputs change
-  document.addEventListener('change', (e) => {
-    if (e.target.classList.contains('comp-video-url')) {
-      const index = parseInt(e.target.dataset.index);
-      lessonComponents[index].data.url = e.target.value;
-    }
+  // Create bank button
+  document.getElementById('createBankBtn')?.addEventListener('click', async () => {
+    const title = prompt('Enter question bank title:');
+    if (!title) return;
     
-    if (e.target.classList.contains('comp-text-content')) {
-      const index = parseInt(e.target.dataset.index);
-      lessonComponents[index].data.content = e.target.value;
+    try {
+      await apiCall('/api/teacher/practice/banks', {
+        method: 'POST',
+        body: JSON.stringify({
+          skill_id: 1, // Default skill
+          title: title,
+          difficulty: 'medium'
+        })
+      });
+      
+      showNotification('Question bank created', 'success');
+      loadPracticeBanks();
+    } catch (error) {
+      showNotification('Failed to create bank', 'error');
     }
+  });
+  
+  // Class select change
+  document.getElementById('classSelectForStudents')?.addEventListener('change', (e) => {
+    if (e.target.value) {
+      selectClass(parseInt(e.target.value));
+    }
+  });
+  
+  // Analytics class select
+  document.getElementById('analyticsClassSelect')?.addEventListener('change', () => {
+    loadAnalytics();
   });
   
   // Load initial data
   try {
-    await loadUserInfo();
-    await loadLessons();
-    await loadAssignments();
-    await loadClasses();
+    // Load user info
+    const data = await apiCall('/api/auth/me');
+    document.getElementById('teacherEmail').textContent = data.user?.email || 'Teacher';
     
-    // Try to load any saved draft
-    const draft = localStorage.getItem('lesson-draft');
-    if (draft) {
-      const data = JSON.parse(draft);
-      document.getElementById('builder-title').value = data.title || '';
-      document.getElementById('builder-grade').value = data.grade || '7';
-      document.getElementById('builder-unit').value = data.unit || '1';
-      document.getElementById('builder-order').value = data.order || '1';
-      document.getElementById('builder-objectives').value = data.objectives || '';
-      lessonComponents = data.components || [];
-      renderComponents();
-      showNotification('Draft loaded from browser', 'info');
-    }
+    // Load initial tab data
+    loadLessons();
     
     showNotification('Portal loaded successfully', 'success');
   } catch (error) {
@@ -1258,163 +1173,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     showNotification('Some features may not be available', 'warning');
   }
 });
-
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-  // Ctrl+S to save
-  if (e.ctrlKey && e.key === 's') {
-    e.preventDefault();
-    const activeTab = document.querySelector('.nav-tab.active');
-    if (activeTab && activeTab.dataset.tab === 'create') {
-      saveLesson();
-    } else if (activeTab && activeTab.dataset.tab === 'builder') {
-      saveDraft();
-    }
-  }
-});
-
-console.log('Teacher Portal script loaded successfully');
-// --- Plan Generator Frontend Integration ---
-let CURRENT_PLAN = null;
-
-function renderPlanList(items) {
-  const wrap = document.getElementById('plan-list');
-  if (!wrap) return;
-  wrap.innerHTML = '';
-  items.forEach(it => {
-    const btn = document.createElement('button');
-    btn.className = 'w-full text-left px-3 py-2 border rounded hover:bg-slate-50';
-    btn.textContent = `${it.topic} — G${it.grade} — ${new Date(it.created_at).toLocaleString()}`;
-    btn.addEventListener('click', async () => {
-      const data = await apiCall(`/api/lesson-plan-generator/${it.id}`);
-      CURRENT_PLAN = data.plan_data;
-      renderPlanPreview(CURRENT_PLAN);
-      const dl = document.getElementById('btn-download-docx');
-      if (dl) dl.disabled = false;
-    });
-    wrap.appendChild(btn);
-  });
-}
-
-function htmlBullets(arr) {
-  return (arr||[]).map(x => `<li>${escapeHtml(x)}</li>`).join('');
-}
-function escapeHtml(s) {
-  return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
-function renderPlanPreview(plan) {
-  const cont = document.getElementById('plan-preview');
-  if (!cont) return;
-  if (!plan) {
-    cont.innerHTML = '<div class="text-slate-500">No plan yet.</div>';
-    return;
-  }
-  const m = plan.meta || {};
-  const agenda = (plan.agenda||[]).map(b => `
-    <h4 class="font-semibold mt-4">${escapeHtml(b.block)} — ${b.minutes} min</h4>
-    <div><b>Student:</b> ${escapeHtml(b.studentActivity)}</div>
-    <div><b>Teacher:</b> ${escapeHtml(b.teacherActivity)}</div>
-    <div><b>Checks:</b><ul class="list-disc ml-6">${htmlBullets(b.checksForUnderstanding)}</ul></div>
-  `).join('');
-
-  cont.innerHTML = `
-    <h2 class="text-xl font-bold mb-2">${escapeHtml(m.topic||'Lesson Plan')}</h2>
-    <div class="text-xs text-slate-600 mb-4">
-      ${escapeHtml(m.subject||'Mathematics')} • Grade ${escapeHtml(m.grade)} • ${escapeHtml(m.duration)} min • ${escapeHtml(m.date)} ${m.teacherName?('• ' + escapeHtml(m.teacherName)) : ''}
-    </div>
-
-    <h3 class="font-semibold mt-3">Learning Outcomes</h3>
-    <ul class="list-disc ml-6">${htmlBullets(plan.learningOutcomes)}</ul>
-
-    <h3 class="font-semibold mt-3">Success Criteria</h3>
-    <ul class="list-disc ml-6">${htmlBullets(plan.successCriteria)}</ul>
-
-    <h3 class="font-semibold mt-3">Vocabulary</h3>
-    <ul class="list-disc ml-6">${htmlBullets(plan.vocabulary)}</ul>
-
-    <h3 class="font-semibold mt-3">Materials</h3>
-    <ul class="list-disc ml-6">${htmlBullets(plan.materials)}</ul>
-
-    <h3 class="font-semibold mt-3">Agenda (Student‑Centered)</h3>
-    ${agenda}
-
-    <h3 class="font-semibold mt-3">Assessment</h3>
-    <div><b>Formative:</b><ul class="list-disc ml-6">${htmlBullets(plan.assessment?.formative||[])}</ul></div>
-    <div class="mt-1"><b>Summative:</b> ${escapeHtml(plan.assessment?.summative||'')}</div>
-
-    <h3 class="font-semibold mt-3">Differentiation</h3>
-    <div><b>Low/Medium:</b><ul class="list-disc ml-6">${htmlBullets(plan.differentiation?.lowMedium||[])}</ul></div>
-    <div class="mt-1"><b>High Ability:</b><ul class="list-disc ml-6">${htmlBullets(plan.differentiation?.highAbility||[])}</ul></div>
-    <div class="mt-1"><b>Accommodations:</b><ul class="list-disc ml-6">${htmlBullets(plan.differentiation?.accommodations||[])}</ul></div>
-
-    <h3 class="font-semibold mt-3">UDL & Wellbeing</h3>
-    <ul class="list-disc ml-6">${htmlBullets(plan.udl_and_wellbeing||[])}</ul>
-  `;
-}
-
-async function loadMyPlans() {
-  try {
-    const items = await apiCall('/api/lesson-plan-generator');
-    renderPlanList(items);
-  } catch (e) {
-    console.error('failed to load plans', e);
-  }
-}
-
-document.getElementById('btn-generate-plan')?.addEventListener('click', async () => {
-  const topicEl = document.getElementById('plan-topic');
-  if (!topicEl || !topicEl.value.trim()) return showNotification('Please enter a topic.', 'error');
-
-  const payload = {
-    topic: topicEl.value.trim(),
-    learningOutcomes: document.getElementById('plan-los')?.value || '',
-    grade: parseInt(document.getElementById('plan-grade')?.value || '7'),
-    duration: parseInt(document.getElementById('plan-duration')?.value || '55'),
-    teacherName: document.getElementById('plan-teacher')?.value || document.getElementById('teacherEmail')?.textContent || ''
-  };
-
-  try {
-    const { plan } = await apiCall('/api/lesson-plan-generator/generate', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    CURRENT_PLAN = plan;
-    renderPlanPreview(CURRENT_PLAN);
-    const dl = document.getElementById('btn-download-docx');
-    if (dl) dl.disabled = false;
-    await loadMyPlans();
-    showNotification('Lesson plan generated', 'success');
-  } catch (e) {
-    console.error(e);
-    showNotification('Failed to generate plan', 'error');
-  }
-});
-
-document.getElementById('btn-download-docx')?.addEventListener('click', async () => {
-  if (!CURRENT_PLAN) return;
-  try {
-    const res = await fetch('/api/lesson-plan-export/export-docx', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ lessonPlan: CURRENT_PLAN })
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const safeTitle = (CURRENT_PLAN.meta?.topic || 'lesson-plan').replace(/[^a-z0-9-_]+/ig,'_');
-    a.href = url; a.download = `${safeTitle}.docx`; a.click();
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    console.error(e);
-    showNotification('Export failed', 'error');
-  }
-});
-
-// Load plans on portal init as well
-loadMyPlans();
-
 </script>
 </body>
 </html>

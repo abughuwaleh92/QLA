@@ -2,12 +2,18 @@
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
-
+const express = require('express');
+const router = express.Router();
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.PGSSL === 'disable' ? false : { rejectUnauthorized: false }
 });
-
+let cheerio;
+try {
+  cheerio = require('cheerio');
+} catch (err) {
+  console.warn('[teacher-practice] Optional dependency "cheerio" is missing. The HTML import route will be disabled until it is installed.');
+}
 // Get all skills for management
 router.get('/skills', async (req, res) => {
   try {
@@ -97,26 +103,102 @@ router.get('/banks', async (req, res) => {
 });
 
 // Create question bank
-router.post('/banks', express.json(), async (req, res) => {
+router.post('/banks/:bankId/import-html', express.json({ limit: '2mb' }), async (req, res) => {
+  if (!cheerio) {
+    return res.status(501).json({
+      error: 'html_import_disabled_missing_dependency',
+      fix: 'Install cheerio in production: npm i cheerio && rebuild/redeploy'
+    });
+  }
+
+  const client = await pool.connect();
   try {
-    const { skill_id, title, difficulty } = req.body;
-    const teacherEmail = req.user?.email;
-    
-    const result = await pool.query(
-      `INSERT INTO practice_banks (skill_id, title, difficulty, created_by)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [skill_id, title, difficulty || 'medium', teacherEmail]
+    const bankId = Number(req.params.bankId);
+    const { html } = req.body || {};
+    if (!bankId || !html) return res.status(400).json({ error: 'missing_bank_or_html' });
+
+    await client.query('BEGIN');
+
+    const { rows: bankRows } = await client.query(
+      'SELECT skill_id FROM practice_banks WHERE id = $1',
+      [bankId]
     );
-    
-    res.json(result.rows[0]);
-    
-  } catch (error) {
-    console.error('Error creating bank:', error);
-    res.status(500).json({ error: 'Failed to create question bank' });
+    if (!bankRows.length) throw new Error('bank_not_found');
+    const skillId = bankRows[0].skill_id;
+
+    const $ = cheerio.load(html);
+    const inserts = [];
+
+    $('.q').each((_, qel) => {
+      const $q = $(qel);
+      let question_type = String($q.attr('data-type') || 'mcq').trim();
+      const prompt = $q.find('.prompt').first().text().trim();
+      if (!prompt) return; // skip empty entries
+
+      const options = $q.find('.options li').toArray().map(li => $(li).text().trim());
+      const ansText = $q.find('.answer').first().text().trim();
+      const hints  = $q.find('.hints div').toArray().map(d => $(d).text().trim()).filter(Boolean);
+      const steps  = $q.find('.steps div').toArray().map(d => $(d).text().trim()).filter(Boolean);
+
+      let question_data = {};
+      let correct_answer = null;
+
+      if (['mcq','true_false','multi_select'].includes(question_type)) {
+        question_data.options = options;
+        if (question_type === 'multi_select') {
+          correct_answer = (ansText || '')
+            .split(',')
+            .map(s => Number(s.trim()))
+            .filter(v => Number.isFinite(v));
+        } else {
+          const idx = Number(ansText);
+          correct_answer = Number.isFinite(idx) ? idx : 0;
+        }
+      } else if (question_type === 'numeric') {
+        correct_answer = { value: Number(ansText), tolerance: 0 };
+      } else if (question_type === 'text') {
+        correct_answer = { accept: [ansText] };
+      } else {
+        // fallback to MCQ
+        question_type = 'mcq';
+        question_data.options = options;
+        const idx = Number(ansText);
+        correct_answer = Number.isFinite(idx) ? idx : 0;
+      }
+
+      inserts.push(
+        client.query(
+          `INSERT INTO practice_questions
+           (bank_id, skill_id, question_type, question_text, question_data, correct_answer,
+            solution_steps, hints, difficulty_level, points)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [
+            bankId,
+            skillId,
+            question_type,
+            prompt,
+            JSON.stringify(question_data),
+            JSON.stringify(correct_answer),
+            steps.length ? JSON.stringify(steps) : null,
+            JSON.stringify(hints || []),
+            3,
+            10
+          ]
+        )
+      );
+    });
+
+    await Promise.all(inserts);
+    await client.query('COMMIT');
+    res.json({ ok: true, inserted: inserts.length });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('HTML import failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
+  } finally {
+    client.release();
   }
 });
-
 // Get questions for a bank
 router.get('/banks/:bankId/questions', async (req, res) => {
   try {
@@ -138,6 +220,7 @@ router.get('/banks/:bankId/questions', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch questions' });
   }
 });
+
 
 // Create practice question
 router.post('/questions', express.json(), async (req, res) => {

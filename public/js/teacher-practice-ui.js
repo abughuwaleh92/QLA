@@ -1,19 +1,11 @@
-// Fixed Teacher Practice UI Script
-// This script fixes the skill creation functionality in the Teacher Portal
-
+// Teacher Practice UI - Complete Fix for Skill Creation
 (function() {
-  console.log('Loading fixed teacher practice UI...');
+  console.log('Loading Teacher Practice UI v2...');
   
-  // Wait for DOM to be ready
-  function onReady(fn) {
-    if (document.readyState !== 'loading') {
-      fn();
-    } else {
-      document.addEventListener('DOMContentLoaded', fn);
-    }
-  }
-
-  // API helper
+  // Global state
+  let practiceInitialized = false;
+  
+  // API helper with better error handling
   async function apiCall(url, options = {}) {
     try {
       const response = await fetch(url, {
@@ -21,13 +13,16 @@
           'Content-Type': 'application/json',
           ...options.headers
         },
+        credentials: 'same-origin',
         ...options
       });
       
       const text = await response.text();
       
       if (!response.ok) {
-        throw new Error(text || `HTTP ${response.status}`);
+        const errorMsg = text || `HTTP ${response.status}`;
+        console.error('API Error:', errorMsg);
+        throw new Error(errorMsg);
       }
       
       try {
@@ -36,21 +31,21 @@
         return text;
       }
     } catch (error) {
-      console.error('API Error:', error);
+      console.error('API Call Failed:', error);
       throw error;
     }
   }
 
-  // Show notification
+  // Enhanced notification system
   function showNotification(message, type = 'info') {
     console.log(`[${type.toUpperCase()}] ${message}`);
     
     // Remove any existing notifications
-    const existing = document.querySelector('.notification');
+    const existing = document.querySelector('.practice-notification');
     if (existing) existing.remove();
     
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = `practice-notification ${type}`;
     
     const icons = {
       success: 'fa-check-circle',
@@ -76,7 +71,7 @@
       align-items: center;
       gap: 12px;
       animation: slideIn 0.3s ease;
-      z-index: 9999;
+      z-index: 99999;
       max-width: 400px;
       background: ${type === 'success' ? '#136f3a' : type === 'error' ? '#dc2626' : type === 'warning' ? '#8a3d00' : '#1D4ED8'};
       color: white;
@@ -87,46 +82,31 @@
     setTimeout(() => {
       notification.style.animation = 'slideIn 0.3s ease reverse';
       setTimeout(() => notification.remove(), 300);
-    }, 3000);
+    }, 4000);
   }
 
-  // Create skill function
+  // Create skill with proper validation
   async function createSkill() {
-    console.log('Create skill button clicked');
+    console.log('Create skill triggered');
     
-    // Find the input elements - check multiple possible IDs
-    const nameInput = document.getElementById('tSkillName') || 
-                     document.querySelector('input[placeholder*="Skill name"]') ||
-                     document.querySelector('#practice-tab input[placeholder*="name"]');
-    
-    const unitInput = document.getElementById('tSkillUnit') || 
-                     document.querySelector('input[placeholder*="Unit"]') ||
-                     document.querySelector('#practice-tab input[type="number"][placeholder*="Unit"]');
-    
-    const gradeSelect = document.getElementById('tSkillGrade') || 
-                       document.querySelector('#practice-tab select') ||
-                       document.getElementById('gradeSelect');
-    
-    const descInput = document.getElementById('tSkillDesc') || 
-                     document.querySelector('textarea[placeholder*="Description"]') ||
-                     document.querySelector('#practice-tab textarea');
+    // Wait for elements to be available
+    const nameInput = document.getElementById('tSkillName');
+    const unitInput = document.getElementById('tSkillUnit');
+    const gradeSelect = document.getElementById('tSkillGrade');
+    const descInput = document.getElementById('tSkillDesc');
 
-    if (!nameInput || !unitInput) {
-      console.error('Could not find input elements:', {
-        nameInput: !!nameInput,
-        unitInput: !!unitInput,
-        gradeSelect: !!gradeSelect
-      });
-      showNotification('Form elements not found. Please refresh the page.', 'error');
+    if (!nameInput || !unitInput || !gradeSelect) {
+      console.error('Required form elements not found');
+      showNotification('Practice form not ready. Please try again.', 'error');
       return;
     }
 
     const name = nameInput.value.trim();
     const unit = parseInt(unitInput.value);
-    const grade = parseInt(gradeSelect?.value || 7);
+    const grade = parseInt(gradeSelect.value || 7);
     const description = descInput?.value.trim() || '';
 
-    console.log('Form values:', { name, unit, grade, description });
+    console.log('Creating skill with:', { name, unit, grade, description });
 
     // Validation
     if (!name) {
@@ -141,13 +121,7 @@
       return;
     }
 
-    if (!grade || isNaN(grade)) {
-      showNotification('Please select a grade', 'warning');
-      return;
-    }
-
     try {
-      console.log('Sending API request to create skill...');
       showNotification('Creating skill...', 'info');
 
       const response = await apiCall('/api/teacher/practice/skills', {
@@ -160,9 +134,9 @@
         })
       });
 
-      console.log('API Response:', response);
+      console.log('Skill created:', response);
 
-      if (response.ok) {
+      if (response.ok || response.skill) {
         showNotification(`Skill "${name}" created successfully!`, 'success');
         
         // Clear the form
@@ -182,153 +156,227 @@
     }
   }
 
-  // Load skills function
+  // Load skills for selected grade
   async function loadSkills() {
     console.log('Loading skills...');
     
-    const gradeSelect = document.getElementById('tSkillGrade') || 
-                       document.querySelector('#practice-tab select') ||
-                       document.getElementById('gradeSelect');
+    const gradeSelect = document.getElementById('tSkillGrade');
+    const skillsList = document.getElementById('tSkillsList');
     
-    const grade = parseInt(gradeSelect?.value || 7);
+    if (!gradeSelect || !skillsList) {
+      console.warn('Skills UI elements not found');
+      return;
+    }
+    
+    const grade = parseInt(gradeSelect.value || 7);
     
     try {
       const response = await apiCall(`/api/teacher/practice/skills?grade=${grade}`);
-      console.log('Loaded skills:', response);
+      console.log('Skills loaded:', response);
       
-      const skillsList = document.getElementById('tSkillsList') || 
-                        document.querySelector('#practice-tab .space-y-2');
+      const skills = response.skills || response || [];
+      skillsList.innerHTML = '';
       
-      if (skillsList && response.skills) {
-        skillsList.innerHTML = '';
-        
-        if (response.skills.length === 0) {
-          skillsList.innerHTML = '<div class="text-gray-500 text-sm">No skills found. Create your first skill!</div>';
-        } else {
-          response.skills.forEach(skill => {
-            const skillDiv = document.createElement('div');
-            skillDiv.className = 'interactive-row p-2 mb-2 border rounded hover:bg-gray-50 cursor-pointer';
-            skillDiv.innerHTML = `
-              <div class="font-semibold">${skill.name}</div>
-              <div class="text-xs text-gray-600">Unit ${skill.unit} • Grade ${skill.grade}</div>
-            `;
-            skillsList.appendChild(skillDiv);
-          });
-        }
-        
-        showNotification(`Loaded ${response.skills.length} skills`, 'success');
+      if (skills.length === 0) {
+        skillsList.innerHTML = '<div class="text-gray-500 text-sm p-3">No skills found. Create your first skill above!</div>';
+      } else {
+        skills.forEach(skill => {
+          const skillDiv = document.createElement('div');
+          skillDiv.className = 'interactive-row p-3 mb-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all';
+          skillDiv.innerHTML = `
+            <div class="flex justify-between items-center">
+              <div>
+                <div class="font-semibold">${skill.name}</div>
+                <div class="text-xs text-gray-600">Unit ${skill.unit} • Grade ${skill.grade}</div>
+                ${skill.description ? `<div class="text-xs text-gray-500 mt-1">${skill.description}</div>` : ''}
+              </div>
+              <i class="fas fa-chevron-right text-gray-400"></i>
+            </div>
+          `;
+          skillDiv.addEventListener('click', () => selectSkill(skill));
+          skillsList.appendChild(skillDiv);
+        });
       }
+      
     } catch (error) {
       console.error('Error loading skills:', error);
-      showNotification(`Failed to load skills: ${error.message}`, 'error');
+      skillsList.innerHTML = '<div class="text-red-600 text-sm p-3">Failed to load skills</div>';
     }
   }
 
-  // Initialize when DOM is ready
-  onReady(() => {
-    console.log('DOM ready, initializing teacher practice UI...');
+  // Select a skill for managing questions
+  function selectSkill(skill) {
+    console.log('Selected skill:', skill);
+    showNotification(`Selected: ${skill.name}`, 'info');
     
-    // Wait a bit for dynamic content to be created
-    setTimeout(() => {
-      // Find and attach to create button
-      const createButton = document.getElementById('tCreateSkill') || 
-                          document.querySelector('#practice-tab button:contains("Create")') ||
-                          Array.from(document.querySelectorAll('#practice-tab button')).find(b => b.textContent.includes('Create'));
-      
-      if (createButton) {
-        console.log('Found create button, attaching handler');
-        createButton.removeEventListener('click', createSkill); // Remove any existing
-        createButton.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          createSkill();
-        });
-      } else {
-        console.warn('Create button not found, trying alternative approach');
-        
-        // Try to find button by class and text
-        const buttons = document.querySelectorAll('.bg-\\[\\#136f3a\\]');
-        buttons.forEach(btn => {
-          if (btn.textContent.includes('Create')) {
-            console.log('Found create button by class, attaching handler');
-            btn.removeEventListener('click', createSkill);
-            btn.addEventListener('click', (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              createSkill();
-            });
-          }
-        });
-      }
-      
-      // Find and attach to load button
-      const loadButton = document.getElementById('loadSkillsBtn') || 
-                        document.querySelector('#practice-tab button:contains("Load")') ||
-                        Array.from(document.querySelectorAll('#practice-tab button')).find(b => b.textContent.includes('Load Skills'));
-      
-      if (loadButton) {
-        console.log('Found load button, attaching handler');
-        loadButton.removeEventListener('click', loadSkills);
-        loadButton.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          loadSkills();
-        });
-      }
-      
-      // Add CSS for animations if not present
-      if (!document.querySelector('#practice-ui-styles')) {
-        const style = document.createElement('style');
-        style.id = 'practice-ui-styles';
-        style.textContent = `
-          @keyframes slideIn {
-            from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-          }
-          .interactive-row {
-            transition: all 0.3s ease;
-          }
-          .interactive-row:hover {
-            transform: translateX(4px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          }
-        `;
-        document.head.appendChild(style);
-      }
-      
-      // Load skills on initialization
-      loadSkills();
-      
-    }, 500); // Give dynamic content time to load
-  });
+    // Update UI to show selected skill
+    const skillsList = document.getElementById('tSkillsList');
+    if (skillsList) {
+      skillsList.querySelectorAll('.interactive-row').forEach(row => {
+        row.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
+      });
+      event.currentTarget.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
+    }
+    
+    // Store selected skill
+    window.selectedSkill = skill;
+    
+    // Load banks for this skill
+    loadBanks(skill.id);
+  }
 
-  // Also try to attach handlers when Practice tab is clicked
-  document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-tab="practice"]')) {
-      console.log('Practice tab clicked, re-initializing handlers in 500ms...');
-      setTimeout(() => {
-        const createButton = document.getElementById('tCreateSkill') || 
-                            Array.from(document.querySelectorAll('#practice-tab button')).find(b => b.textContent === 'Create');
-        
-        if (createButton && !createButton.hasAttribute('data-fixed')) {
-          createButton.setAttribute('data-fixed', 'true');
-          createButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            createSkill();
-          });
-          console.log('Re-attached create handler');
+  // Load question banks for a skill
+  async function loadBanks(skillId) {
+    console.log('Loading banks for skill:', skillId);
+    
+    const banksList = document.getElementById('tBanksList');
+    if (!banksList) return;
+    
+    try {
+      const response = await apiCall(`/api/teacher/practice/banks?skillId=${skillId}`);
+      const banks = response.banks || response || [];
+      
+      banksList.innerHTML = '';
+      
+      if (banks.length === 0) {
+        banksList.innerHTML = '<div class="text-gray-500 text-sm">No question banks yet.</div>';
+      } else {
+        banks.forEach(bank => {
+          const bankDiv = document.createElement('div');
+          bankDiv.className = 'p-2 border rounded mb-2 hover:bg-gray-50 cursor-pointer';
+          bankDiv.innerHTML = `
+            <div class="font-semibold">${bank.name}</div>
+            <div class="text-xs text-gray-600">Bank ID: ${bank.id}</div>
+          `;
+          banksList.appendChild(bankDiv);
+        });
+      }
+    } catch (error) {
+      console.error('Error loading banks:', error);
+    }
+  }
+
+  // Initialize practice UI
+  function initializePractice() {
+    if (practiceInitialized) {
+      console.log('Practice already initialized, refreshing...');
+      attachEventHandlers();
+      return;
+    }
+    
+    console.log('Initializing Practice UI...');
+    
+    // Add CSS for animations
+    if (!document.querySelector('#practice-ui-styles')) {
+      const style = document.createElement('style');
+      style.id = 'practice-ui-styles';
+      style.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(400px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
-      }, 500);
+        .practice-notification {
+          transition: all 0.3s ease;
+        }
+        .interactive-row {
+          transition: all 0.3s ease;
+        }
+        .interactive-row:hover {
+          transform: translateX(4px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    attachEventHandlers();
+    practiceInitialized = true;
+  }
+
+  // Attach event handlers to practice UI elements
+  function attachEventHandlers() {
+    console.log('Attaching event handlers...');
+    
+    // Create skill button
+    const createBtn = document.getElementById('tCreateSkill');
+    if (createBtn) {
+      // Remove any existing handlers
+      createBtn.replaceWith(createBtn.cloneNode(true));
+      const newCreateBtn = document.getElementById('tCreateSkill');
+      
+      newCreateBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Create button clicked');
+        createSkill();
+      });
+      console.log('Attached handler to create button');
+    } else {
+      console.warn('Create button not found');
+    }
+    
+    // Load skills button
+    const loadBtn = document.getElementById('loadSkillsBtn');
+    if (loadBtn) {
+      loadBtn.replaceWith(loadBtn.cloneNode(true));
+      const newLoadBtn = document.getElementById('loadSkillsBtn');
+      
+      newLoadBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Load button clicked');
+        loadSkills();
+      });
+      console.log('Attached handler to load button');
+    }
+    
+    // Grade select change
+    const gradeSelect = document.getElementById('tSkillGrade');
+    if (gradeSelect) {
+      gradeSelect.addEventListener('change', () => {
+        console.log('Grade changed to:', gradeSelect.value);
+        loadSkills();
+      });
+    }
+    
+    // Load initial skills
+    loadSkills();
+  }
+
+  // Watch for Practice tab activation
+  document.addEventListener('click', (e) => {
+    // Check if Practice tab was clicked
+    const tab = e.target.closest('[data-tab="practice"]');
+    if (tab) {
+      console.log('Practice tab activated');
+      // Wait for content to render
+      setTimeout(() => {
+        initializePractice();
+      }, 100);
     }
   });
 
-  // Export functions to window for debugging
+  // Also initialize on DOM ready if practice tab is already visible
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, checking for practice tab...');
+    
+    // Check if practice tab exists and is visible
+    setTimeout(() => {
+      const practiceTab = document.getElementById('practice-tab');
+      if (practiceTab && !practiceTab.classList.contains('hidden')) {
+        initializePractice();
+      }
+    }, 500);
+  });
+
+  // Export functions for debugging
   window.teacherPractice = {
     createSkill,
     loadSkills,
-    showNotification
+    loadBanks,
+    showNotification,
+    initializePractice
   };
 
-  console.log('Fixed teacher practice UI loaded. Functions available at window.teacherPractice');
+  console.log('Teacher Practice UI v2 loaded. Debug with: window.teacherPractice');
 })();

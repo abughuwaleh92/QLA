@@ -3,121 +3,79 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>QLA Mathematics — Student Portal</title>
+  <title>QLA Mathematics — Student Portal (Enhanced)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Poppins:wght@600;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-  <link rel="icon" type="image/png" href="/assets/logo/qla-favicon.png"/>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root{ 
-      --maroon:#6C1D45; 
-      --maroon2:#8B2450; 
-      --gold:#C7A34F; 
-      --gold2:#E4D4A8; 
-      --ink:#0F172A; 
-      --slate:#5b6572; 
-      --line:#e9eef2; 
-      --bg:#F7FAFC; 
-      --ok:#136f3a; 
-      --soon:#8a3d00; 
-      --purple:#7C3AED; 
-      --blue:#1D4ED8; 
+      --maroon:#6C1D45; --maroon2:#8B2450; --gold:#C7A34F; --gold2:#E4D4A8; 
+      --ink:#0F172A; --slate:#5b6572; --line:#e9eef2; --bg:#F7FAFC; 
+      --ok:#136f3a; --soon:#8a3d00; --purple:#7C3AED; --blue:#1D4ED8; 
     }
     *{box-sizing:border-box} 
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,sans-serif;line-height:1.5}
     .hero{position:relative;color:#fff;background:linear-gradient(135deg,rgba(108,29,69,.88),rgba(139,36,80,.84))} 
-    .logo-main{
-      height: 64px;
-      width: auto;
-      filter: brightness(0) invert(1);
-      transition: transform 0.3s ease;
-    }
-    .logo-main:hover {
-      transform: scale(1.05);
-    }
-    .logo-container {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-    .school-info {
-      display: flex;
-      flex-direction: column;
-    }
-    .fallback-logo {
-      background: white;
-      border-radius: 16px;
-      padding: 14px 18px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .fallback-logo-text {
-      font-size: 1.75rem;
-      font-weight: bold;
-      color: var(--maroon);
-    }
     .nav-tabs{ display:flex; gap:8px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:6px; flex-wrap:wrap }
-    .nav-tab{ flex:1; min-width:120px; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.35); color:#fff; background:transparent; cursor:pointer; font-weight:600; text-align:center; transition:all .3s ease }
+    .nav-tab{ flex:1; min-width:100px; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.35); color:#fff; background:transparent; cursor:pointer; font-weight:600; text-align:center; transition:all .3s ease }
     .nav-tab.active{ background:linear-gradient(135deg,var(--gold),var(--gold2)); color:var(--maroon); transform:scale(1.02) }
     .card{ background:#fff; border:1px solid var(--line); border-radius:18px; transition:all .3s ease } 
     .card:hover{ transform:translateY(-2px); box-shadow:0 20px 40px rgba(0,0,0,.1) }
-    .interactive-row{ border:1px solid var(--line); border-radius:12px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fff; transition:all .3s ease; cursor:pointer; position:relative; overflow:hidden }
-    .interactive-row::before{ content:""; position:absolute; left:-100%; top:0; bottom:0; width:4px; background:linear-gradient(135deg,var(--gold),var(--maroon)); transition:left .3s ease }
-    .interactive-row:hover{ transform:translateX(4px); box-shadow:0 12px 28px rgba(0,0,0,.08) } 
-    .interactive-row:hover::before{ left:0 }
-    .status{font-size:11px; padding:6px 12px; border-radius:999px; border:1px solid transparent; text-transform:uppercase; letter-spacing:.3px; font-weight:600}
-    .open{ background:rgba(19,111,58,.1); color:var(--ok); border-color:rgba(19,111,58,.25) }
+    .progress-ring { transition: stroke-dashoffset 0.5s ease; }
+    .mastery-bar { transition: width 0.5s ease; }
+    .achievement-badge { 
+      display:inline-flex; align-items:center; justify-content:center;
+      width:60px; height:60px; border-radius:50%; font-size:24px;
+      background:linear-gradient(135deg, var(--gold), var(--gold2));
+      box-shadow:0 4px 12px rgba(0,0,0,0.15);
+    }
+    .skill-card {
+      background: white; border-radius:12px; padding:16px;
+      border:2px solid var(--line); transition:all 0.3s ease;
+    }
+    .skill-card:hover { 
+      border-color:var(--gold); transform:translateY(-2px);
+      box-shadow:0 8px 20px rgba(0,0,0,0.1);
+    }
+    .skill-mastery-0 { background: linear-gradient(90deg, #f3f4f6 0%, #f3f4f6 100%); }
+    .skill-mastery-1 { background: linear-gradient(90deg, #fee2e2 0%, #fecaca 25%, #f3f4f6 25%); }
+    .skill-mastery-2 { background: linear-gradient(90deg, #fed7aa 0%, #fb923c 50%, #f3f4f6 50%); }
+    .skill-mastery-3 { background: linear-gradient(90deg, #fde047 0%, #facc15 75%, #f3f4f6 75%); }
+    .skill-mastery-4 { background: linear-gradient(90deg, #86efac 0%, #22c55e 95%, #f3f4f6 95%); }
+    .skill-mastery-5 { background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%); }
     .modal{ position:fixed; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(8px); z-index:1000; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:all .3s ease }
-    .modal.show{ opacity:1; pointer-events:auto } 
-    .modal-content{ background:#fff; border-radius:20px; max-width:90vw; max-height:90vh; overflow:auto; box-shadow:0 25px 50px rgba(0,0,0,.25) }
-    .progress-bar{ height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden } 
-    .progress-fill{ height:100%; background:linear-gradient(90deg,var(--gold),var(--maroon)); transition:width .5s ease }
-    iframe.lesson-frame{width:100%;height:65vh;border:1px solid var(--line);border-radius:14px}
-    .footer-logo {
-      height: 32px;
-      width: auto;
-      opacity: 0.6;
-      transition: opacity 0.3s ease;
+    .modal.show{ opacity:1; pointer-events:auto }
+    .hint-box { background:#fef3c7; border-left:4px solid #f59e0b; padding:12px; border-radius:8px; margin:12px 0; }
+    .pie-chart-container { position:relative; width:200px; height:200px; margin:0 auto; }
+    @keyframes fadeInUp {
+      from { opacity:0; transform:translateY(20px); }
+      to { opacity:1; transform:translateY(0); }
     }
-    .footer-logo:hover {
-      opacity: 1;
-    }
+    .fade-in-up { animation: fadeInUp 0.5s ease-out; }
   </style>
 </head>
 <body>
   <header class="hero shadow-2xl">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between py-6">
-        <div class="logo-container">
-          <!-- Main Logo -->
-          <img src="/assets/logo/qla-logo.png" 
-               alt="Qatar Leadership Academy" 
-               class="logo-main"
-               onerror="this.style.display='none'; document.getElementById('header-fallback-logo').style.display='flex';">
-          
-          <!-- Fallback Logo -->
-          <div id="header-fallback-logo" class="fallback-logo" style="display:none;">
-            <span class="fallback-logo-text">QLA</span>
-          </div>
-          
-          <div class="school-info">
-            <h1 class="text-3xl lg:text-5xl font-extrabold" style="font-family:Poppins,Inter,sans-serif">Mathematics Portal</h1>
-            <p class="text-sm opacity-90 mt-1">Qatar Leadership Academy • Student Portal</p>
+        <div class="flex items-center gap-4">
+          <div class="w-16 h-16 bg-[var(--maroon)] rounded-lg flex items-center justify-center text-white font-bold text-xl">QLA</div>
+          <div>
+            <h1 class="text-3xl lg:text-5xl font-extrabold">Mathematics Mastery Portal</h1>
+            <p class="text-sm opacity-90 mt-1">Qatar Leadership Academy • Adaptive Learning System</p>
           </div>
         </div>
-        
         <div id="userBadge" class="hidden lg:flex items-center gap-4">
           <div class="bg-white/10 backdrop-blur rounded-full p-2">
             <i class="fas fa-user-circle text-2xl"></i>
           </div>
           <div class="text-right">
-            <div class="font-semibold">Student</div>
-            <div class="text-xs opacity-80">Welcome</div>
+            <div class="font-semibold" id="userName">Student</div>
+            <div class="text-xs opacity-80" id="userEmail">Loading...</div>
           </div>
         </div>
       </div>
@@ -125,10 +83,11 @@
       <div class="pb-6 flex flex-col gap-4">
         <div class="nav-tabs" role="tablist">
           <button class="nav-tab active" data-tab="dashboard"><i class="fas fa-home mr-2"></i>Dashboard</button>
+          <button class="nav-tab" data-tab="practice"><i class="fas fa-brain mr-2"></i>Practice</button>
           <button class="nav-tab" data-tab="lessons"><i class="fas fa-book mr-2"></i>Lessons</button>
-          <button class="nav-tab" data-tab="practice"><i class="fas fa-dumbbell mr-2"></i>Practice</button>
           <button class="nav-tab" data-tab="assessments"><i class="fas fa-clipboard-check mr-2"></i>Assessments</button>
-          <button class="nav-tab" data-tab="progress"><i class="fas fa-chart-line mr-2"></i>Progress</button>
+          <button class="nav-tab" data-tab="progress"><i class="fas fa-chart-line mr-2"></i>My Progress</button>
+          <button class="nav-tab" data-tab="achievements"><i class="fas fa-trophy mr-2"></i>Achievements</button>
           <a class="nav-tab" href="#" onclick="logout()"><i class="fas fa-sign-out-alt mr-2"></i>Sign out</a>
         </div>
         
@@ -138,15 +97,18 @@
               <option value="7">Grade 7</option>
               <option value="8">Grade 8</option>
             </select>
+            <div class="bg-white/10 backdrop-blur rounded-full px-4 py-2 flex items-center gap-2">
+              <i class="fas fa-fire text-orange-400"></i>
+              <span class="font-semibold" id="streakDisplay">0 day streak</span>
+            </div>
           </div>
           <div class="hidden sm:flex items-center gap-4 bg-white/10 rounded-2xl px-4 py-2">
-            <div class="flex items-center gap-2">
-              <span class="kbd">/</span>
-              <span class="text-xs">Search</span>
+            <div class="text-sm">
+              <span class="font-semibold" id="masteryCount">0</span> Skills Mastered
             </div>
-            <div class="flex items-center gap-2">
-              <span class="kbd">G</span>
-              <span class="text-xs">Switch Grade</span>
+            <div class="text-sm">
+              <i class="fas fa-star text-yellow-400"></i>
+              <span id="totalPoints">0</span> Points
             </div>
           </div>
         </div>
@@ -155,443 +117,917 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Dashboard Tab -->
+    <!-- Enhanced Dashboard Tab -->
     <section id="dashboard-tab" class="tab-content">
-      <div class="grid gap-6 md:grid-cols-3 mb-8">
+      <!-- Progress Overview Cards -->
+      <div class="grid gap-6 md:grid-cols-4 mb-8">
         <div class="card p-6 text-center">
-          <div class="w-16 h-16 rounded-full bg-gradient-to-r from-[var(--gold)] to-[var(--maroon)] mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">
-            <span id="overallProgress">0%</span>
+          <div class="pie-chart-container mb-4">
+            <canvas id="masteryPieChart"></canvas>
           </div>
-          <h3 class="font-bold text-lg mb-2">Overall Progress</h3>
-          <div class="progress-bar">
-            <div class="progress-fill" id="overallProgressBar" style="width:0%"></div>
-          </div>
+          <h3 class="font-bold text-lg mb-2">Overall Mastery</h3>
+          <div class="text-3xl font-bold text-[var(--maroon)]" id="overallMastery">0%</div>
         </div>
         
         <div class="card p-6 text-center">
           <div class="w-16 h-16 rounded-full bg-[var(--ok)] mx-auto mb-4 flex items-center justify-center text-white">
-            <i class="fas fa-trophy text-2xl"></i>
+            <i class="fas fa-graduation-cap text-2xl"></i>
           </div>
-          <h3 class="font-bold text-lg mb-2">Completed Lessons</h3>
-          <div class="text-3xl font-bold text-[var(--ok)]" id="completedCount">0</div>
+          <h3 class="font-bold text-lg mb-2">Skills Mastered</h3>
+          <div class="text-3xl font-bold text-[var(--ok)]" id="skillsMastered">0/0</div>
+          <div class="text-sm text-gray-600 mt-1">Ready for next level</div>
         </div>
         
         <div class="card p-6 text-center">
           <div class="w-16 h-16 rounded-full bg-[var(--blue)] mx-auto mb-4 flex items-center justify-center text-white">
+            <i class="fas fa-bullseye text-2xl"></i>
+          </div>
+          <h3 class="font-bold text-lg mb-2">Accuracy Rate</h3>
+          <div class="text-3xl font-bold text-[var(--blue)]" id="accuracyRate">0%</div>
+          <div class="text-sm text-gray-600 mt-1" id="questionsStats">0 correct / 0 total</div>
+        </div>
+        
+        <div class="card p-6 text-center">
+          <div class="w-16 h-16 rounded-full bg-[var(--purple)] mx-auto mb-4 flex items-center justify-center text-white">
             <i class="fas fa-clock text-2xl"></i>
           </div>
           <h3 class="font-bold text-lg mb-2">Study Time</h3>
-          <div class="text-3xl font-bold text-[var(--blue)]" id="studyTime">0h</div>
+          <div class="text-3xl font-bold text-[var(--purple)]" id="studyTime">0h</div>
+          <div class="text-sm text-gray-600 mt-1">This week: <span id="weekTime">0h</span></div>
         </div>
       </div>
       
+      <!-- Learning Path Progress -->
       <section class="card p-6 mb-8">
         <h3 class="font-bold text-xl mb-4">
-          <i class="fas fa-bolt mr-2 text-[var(--gold)]"></i>Quick Actions
+          <i class="fas fa-road mr-2 text-[var(--gold)]"></i>Your Learning Path
         </h3>
-        <div class="grid gap-4 md:grid-cols-4">
-          <button class="interactive-row justify-center" onclick="continueLastLesson()">
-            <i class="fas fa-play mr-2"></i>Continue Learning
-          </button>
-          <button class="interactive-row justify-center" onclick="startPractice()">
-            <i class="fas fa-dumbbell mr-2"></i>Practice Problems
-          </button>
-          <button class="interactive-row justify-center" onclick="takeAssessment()">
-            <i class="fas fa-clipboard-check mr-2"></i>Take Assessment
-          </button>
-          <button class="interactive-row justify-center" onclick="viewProgress()">
-            <i class="fas fa-chart-line mr-2"></i>View Progress
-          </button>
+        <div id="learningPath" class="space-y-4">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+      
+      <!-- Recommendations -->
+      <section class="card p-6 mb-8">
+        <h3 class="font-bold text-xl mb-4">
+          <i class="fas fa-lightbulb mr-2 text-[var(--gold)]"></i>Recommended for You
+        </h3>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="bg-red-50 p-4 rounded-lg border-2 border-red-200">
+            <h4 class="font-semibold text-red-800 mb-2">
+              <i class="fas fa-redo mr-2"></i>Review Needed
+            </h4>
+            <div id="reviewSkills" class="space-y-2 text-sm">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+            <h4 class="font-semibold text-blue-800 mb-2">
+              <i class="fas fa-arrow-right mr-2"></i>Ready to Learn
+            </h4>
+            <div id="nextSkills" class="space-y-2 text-sm">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          <div class="bg-purple-50 p-4 rounded-lg border-2 border-purple-200">
+            <h4 class="font-semibold text-purple-800 mb-2">
+              <i class="fas fa-rocket mr-2"></i>Challenge Yourself
+            </h4>
+            <div id="challengeSkills" class="space-y-2 text-sm">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Recent Achievements -->
+      <section class="card p-6">
+        <h3 class="font-bold text-xl mb-4">
+          <i class="fas fa-medal mr-2 text-[var(--gold)]"></i>Recent Achievements
+        </h3>
+        <div id="recentAchievements" class="flex flex-wrap gap-4">
+          <!-- Dynamically populated -->
         </div>
       </section>
     </section>
 
-    <!-- Lessons Tab -->
+    <!-- Practice Tab -->
+    <section id="practice-tab" class="tab-content hidden">
+      <div class="card p-6 mb-6">
+        <h2 class="text-2xl font-bold mb-4">
+          <i class="fas fa-brain mr-2 text-[var(--gold)]"></i>Adaptive Practice
+        </h2>
+        <div class="grid md:grid-cols-4 gap-4">
+          <button onclick="startPractice('adaptive')" class="p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:opacity-90">
+            <i class="fas fa-magic text-2xl mb-2"></i>
+            <div class="font-semibold">Adaptive Practice</div>
+            <div class="text-xs opacity-90">Personalized to your level</div>
+          </button>
+          <button onclick="startPractice('targeted')" class="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:opacity-90">
+            <i class="fas fa-bullseye text-2xl mb-2"></i>
+            <div class="font-semibold">Targeted Practice</div>
+            <div class="text-xs opacity-90">Focus on specific skills</div>
+          </button>
+          <button onclick="startPractice('review')" class="p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:opacity-90">
+            <i class="fas fa-redo text-2xl mb-2"></i>
+            <div class="font-semibold">Review Practice</div>
+            <div class="text-xs opacity-90">Strengthen weak areas</div>
+          </button>
+          <button onclick="startPractice('mixed')" class="p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:opacity-90">
+            <i class="fas fa-random text-2xl mb-2"></i>
+            <div class="font-semibold">Mixed Practice</div>
+            <div class="text-xs opacity-90">Variety of topics</div>
+          </button>
+        </div>
+      </div>
+      
+      <div class="card p-6">
+        <h3 class="font-bold text-xl mb-4">Skills to Practice</h3>
+        <div id="skillsList" class="grid md:grid-cols-2 gap-4">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </section>
+
+    <!-- My Progress Tab -->
+    <section id="progress-tab" class="tab-content hidden">
+      <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <div class="card p-6">
+          <h3 class="font-bold text-xl mb-4">Mastery by Unit</h3>
+          <canvas id="unitMasteryChart"></canvas>
+        </div>
+        <div class="card p-6">
+          <h3 class="font-bold text-xl mb-4">Weekly Activity</h3>
+          <canvas id="weeklyActivityChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="card p-6">
+        <h3 class="font-bold text-xl mb-4">Detailed Skill Progress</h3>
+        <div id="detailedProgress" class="space-y-3">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Achievements Tab -->
+    <section id="achievements-tab" class="tab-content hidden">
+      <div class="grid gap-6">
+        <div class="card p-6">
+          <h3 class="font-bold text-2xl mb-6">
+            <i class="fas fa-trophy mr-2 text-[var(--gold)]"></i>Your Achievements
+          </h3>
+          <div id="allAchievements" class="grid md:grid-cols-4 gap-6">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+        
+        <div class="card p-6">
+          <h3 class="font-bold text-xl mb-4">Achievement Progress</h3>
+          <div id="achievementProgress" class="space-y-4">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lessons Tab (existing) -->
     <section id="lessons-tab" class="tab-content hidden">
       <div class="card p-5 mb-6">
-        <label class="block text-sm font-semibold text-slate-700 mb-2">
-          <i class="fas fa-search mr-2"></i>Search lessons
-        </label>
-        <div class="relative">
-          <input id="lessonSearch" type="search" 
-                 placeholder="e.g., Fractions, BIDMAS, Pythagoras, Geometry" 
-                 class="w-full rounded-xl border border-[var(--line)] pl-10 pr-3 py-3 focus:outline-none focus:border-[var(--gold)] focus:ring-2 focus:ring-[var(--gold)]/20"/>
-          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-        </div>
+        <input id="lessonSearch" type="search" placeholder="Search lessons..." 
+               class="w-full rounded-xl border px-3 py-3"/>
       </div>
       <div id="lessonsContent"></div>
     </section>
 
-    <!-- Assessments Tab -->
+    <!-- Assessments Tab (existing) -->
     <section id="assessments-tab" class="tab-content hidden">
-      <div class="grid gap-6">
-        <div class="card p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-xl">
-              <i class="fas fa-clipboard-check mr-2 text-[var(--maroon)]"></i>Available Assessments
-            </h3>
-            <div class="text-sm text-slate-600">Assessments appear after you open a lesson.</div>
-          </div>
-          <div id="assessmentsList" class="space-y-3"></div>
-        </div>
+      <div class="card p-6">
+        <h3 class="font-bold text-xl mb-4">Available Assessments</h3>
+        <div id="assessmentsList" class="space-y-3"></div>
       </div>
     </section>
-
-    <!-- Practice Tab -->
-    <section id="practice-tab" class="tab-content hidden">
-      <div class="card p-6 text-slate-600">Practice modules coming from your teacher.</div>
-    </section>
-    
-    <!-- Progress Tab -->
-    <section id="progress-tab" class="tab-content hidden">
-      <div class="grid gap-6">
-        <div class="card p-6">
-          <h3 class="font-bold text-xl mb-4">
-            <i class="fas fa-chart-line mr-2 text-[var(--gold)]"></i>Your Learning Journey
-          </h3>
-          <div id="progressChart" class="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-            <p class="text-gray-500">Progress visualization will appear here</p>
-          </div>
-        </div>
-      </div>
-    </section>
-    
-    <!-- Footer -->
-    <footer class="mt-12 mb-8 text-center">
-      <div class="flex items-center justify-center gap-4 mb-4">
-        <img src="/assets/logo/qla-logo.png" 
-             alt="QLA" 
-             class="footer-logo"
-             onerror="this.style.display='none'; document.getElementById('footer-small-logo').style.display='inline-block'">
-        <div id="footer-small-logo" class="bg-gray-200 rounded px-3 py-1" style="display:none;">
-          <span class="text-[var(--maroon)] font-bold">QLA</span>
-        </div>
-        <p class="text-sm text-slate-500">© <span id="year"></span> Qatar Leadership Academy — Member of Qatar Foundation</p>
-        <img src="/assets/logo/qf-logo.png" 
-             alt="Qatar Foundation" 
-             class="footer-logo"
-             onerror="this.style.display='none'">
-      </div>
-    </footer>
   </main>
 
-  <!-- Lesson Modal -->
-  <div id="lessonModal" class="modal">
-    <div class="modal-content w-full max-w-5xl mx-4">
+  <!-- Practice Session Modal -->
+  <div id="practiceModal" class="modal">
+    <div class="modal-content bg-white rounded-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
       <div class="p-6">
-        <div class="flex items-center justify-between mb-3">
-          <h2 id="lessonTitle" class="text-2xl font-bold"></h2>
-          <button onclick="closeLessonModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-            <i class="fas fa-times"></i>
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold" id="practiceTitle">Practice Session</h2>
+          <button onclick="closePracticeModal()" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times text-2xl"></i>
           </button>
         </div>
+        
         <div class="mb-4">
-          <div class="progress-bar">
-            <div class="progress-fill" id="lessonProgressFill" style="width:0%"></div>
+          <div class="flex justify-between text-sm text-gray-600 mb-2">
+            <span>Progress: <span id="questionProgress">1/10</span></span>
+            <span>Score: <span id="sessionScore">0</span></span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div id="progressBar" class="bg-gradient-to-r from-[var(--gold)] to-[var(--maroon)] h-2 rounded-full" style="width:0%"></div>
           </div>
         </div>
-        <iframe id="lessonFrame" class="lesson-frame" src="about:blank"></iframe>
-        <div class="flex justify-between mt-4">
-          <button id="prevLessonBtn" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors">
-            <i class="fas fa-arrow-left mr-2"></i>Previous
+        
+        <div id="questionContainer" class="mb-6">
+          <!-- Question content dynamically loaded -->
+        </div>
+        
+        <div id="hintContainer" class="hidden"></div>
+        
+        <div class="flex justify-between">
+          <button id="hintBtn" onclick="showHint()" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600">
+            <i class="fas fa-lightbulb mr-2"></i>Hint (<span id="hintsAvailable">3</span>)
           </button>
           <div class="space-x-2">
-            <button id="markCompleteBtn" class="bg-[var(--ok)] text-white px-6 py-2 rounded-lg hover:opacity-80 transition-opacity">
-              <i class="fas fa-check mr-2"></i>Mark Complete
+            <button id="skipBtn" onclick="skipQuestion()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+              Skip
             </button>
-            <button id="nextLessonBtn" class="bg-[var(--maroon)] text-white px-6 py-2 rounded-lg hover:bg-[var(--maroon2)] transition-colors">
-              Next<i class="fas fa-arrow-right ml-2"></i>
+            <button id="submitBtn" onclick="submitAnswer()" class="bg-[var(--maroon)] text-white px-6 py-2 rounded-lg hover:opacity-90">
+              Submit Answer
             </button>
           </div>
-        </div>
-        <div class="mt-6">
-          <button id="startAssessmentBtn" class="bg-[var(--blue)] text-white px-4 py-2 rounded">
-            Start Assessment
-          </button>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // [Previous JavaScript code remains the same]
-    const socket = typeof io !== 'undefined' ? io() : null;
-    const userData = { currentGrade:7, lastLesson:null };
-    let currentLessonId = null, currentAssessmentId = null;
-
-    function show(message,type='info'){
-      const n = document.createElement('div');
-      n.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 transform translate-x-full`;
-      const colors = { success:'bg-[var(--ok)]', error:'bg-red-600', info:'bg-[var(--blue)]', warning:'bg-[var(--soon)]' };
-      n.classList.add(colors[type]||colors.info); n.textContent = message; document.body.appendChild(n);
-      setTimeout(()=>n.classList.remove('translate-x-full'),100); 
-      setTimeout(()=>{ n.classList.add('translate-x-full'); setTimeout(()=>n.remove(),300); },3000);
+    // Global variables
+    let currentSession = null;
+    let currentQuestion = null;
+    let currentQuestionIndex = 0;
+    let sessionQuestions = [];
+    let sessionScore = 0;
+    let hintsUsed = 0;
+    let questionStartTime = null;
+    let userProgress = {};
+    
+    // Initialize
+    async function init() {
+      await loadUserInfo();
+      await loadDashboard();
+      setupEventListeners();
+      setupCharts();
     }
     
-    async function api(p,opts){ 
-      const r = await fetch(p, Object.assign({ headers:{'Content-Type':'application/json'} }, opts||{})); 
-      if (!r.ok) throw new Error(await r.text()); 
-      return r.json(); 
-    }
-    
-    async function me(){ 
-      const r = await api('/api/auth/me').catch(()=>({user:null})); 
-      const ub = document.getElementById('userBadge'); 
-      if (r.user){ 
-        ub.classList.remove('hidden'); 
-        ub.querySelector('.font-semibold').textContent = r.user.role==='teacher'?'Teacher':'Student'; 
-        ub.querySelector('.text-xs').textContent = r.user.email; 
-      } 
-    }
-    
-    function setup(){
-      me();
-      document.querySelectorAll('.nav-tab').forEach(tab=>tab.addEventListener('click',()=>switchTab(tab.dataset.tab)));
-      document.getElementById('gradeSelect').addEventListener('change', e=>{ userData.currentGrade=parseInt(e.target.value); renderLessons(); });
-      document.getElementById('lessonSearch').addEventListener('input', e=>filterLessons(e.target.value));
-      
-      window.addEventListener('message', ev=>{
-        if (!ev.data || ev.data.type!=='lesson-progress') return;
-        if (ev.data.total) {
-          const pct = Math.max(0, Math.min(100, Math.round(ev.data.slide/ev.data.total*100)));
-          document.getElementById('lessonProgressFill').style.width = pct+'%';
+    // Load user info
+    async function loadUserInfo() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (data.user) {
+          document.getElementById('userName').textContent = data.user.name || 'Student';
+          document.getElementById('userEmail').textContent = data.user.email;
         }
-        try{ 
-          fetch('/api/progress/event',{ 
-            method:'POST', 
-            body: JSON.stringify({ lessonId: currentLessonId, slide: ev.data.slide, total: ev.data.total, extra: { maybeCorrect: ev.data.maybeCorrect||false } }), 
-            headers:{'Content-Type':'application/json'} 
-          }); 
-        } catch(_){}
-      });
-      
-      document.getElementById('startAssessmentBtn').addEventListener('click', startAssessment);
-      document.getElementById('markCompleteBtn').addEventListener('click', () => {
-        if (!currentLessonId) return;
-        fetch('/api/progress/complete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lessonId: currentLessonId }) });
-        show('Lesson completed! 🎉','success'); 
-        closeLessonModal();
-      });
-      
-      document.getElementById('year').textContent = new Date().getFullYear();
-      renderLessons();
-    }
-    
-    function switchTab(tab){ 
-      document.querySelectorAll('.nav-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab)); 
-      document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('hidden', !c.id.startsWith(tab))); 
-      if (tab==='assessments') loadAssessments(); 
-    }
-    
-    // [Rest of JavaScript functions remain the same]
-    async function renderLessons(){
-      const r = await api('/api/lessons/catalog?grade='+userData.currentGrade).catch(()=>({units:[]}));
-      const container = document.getElementById('lessonsContent'); 
-      container.innerHTML='';
-      
-      for (const [i,unit] of (r.units||[]).entries()){
-        const unitDiv = document.createElement('div');
-        unitDiv.className='card p-5 mb-5';
-        unitDiv.innerHTML = `
-          <div class="flex items-center gap-3 mb-4">
-            <div class="rounded-xl bg-[var(--maroon)] text-white w-12 h-12 flex items-center justify-center text-xl font-bold">${unit.num||i+1}</div>
-            <div>
-              <h3 class="font-bold text-lg">${unit.name}</h3>
-              <div class="text-sm text-gray-600">${(unit.lessons||[]).length} lesson(s)</div>
-            </div>
-          </div>
-          <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3" id="unit-${i}-lessons"></div>`;
-        container.appendChild(unitDiv);
-        
-        const lc = unitDiv.querySelector(`#unit-${i}-lessons`);
-        (unit.lessons||[]).forEach(L=>{
-          const div=document.createElement('div'); 
-          div.className='interactive-row'; 
-          div.onclick = ()=>openLesson(`${L.grade}-${L.unit}-${L.order}`, L.title, L.src);
-          div.innerHTML = `<div class="flex-1"><div class="font-semibold text-sm">${L.title}</div></div><span class="status open">Start</span>`; 
-          lc.appendChild(div);
-        });
+      } catch (error) {
+        console.error('Error loading user info:', error);
       }
     }
     
-    function filterLessons(q){ 
-      document.querySelectorAll('#lessonsContent .interactive-row').forEach(l=>{ 
-        const m = l.textContent.toLowerCase().includes(q.toLowerCase()); 
-        l.style.display = m?'':'none'; 
-      }); 
+    // Load dashboard data
+    async function loadDashboard() {
+      try {
+        const res = await fetch('/api/practice/progress');
+        const data = await res.json();
+        userProgress = data;
+        
+        // Update overview cards
+        const stats = data.overall_stats;
+        const totalSkills = stats.total_skills_practiced || 0;
+        const mastered = stats.skills_mastered || 0;
+        const accuracy = stats.total_questions > 0 
+          ? Math.round((stats.correct_questions / stats.total_questions) * 100) : 0;
+        
+        document.getElementById('overallMastery').textContent = 
+          totalSkills > 0 ? Math.round((mastered / totalSkills) * 100) + '%' : '0%';
+        document.getElementById('skillsMastered').textContent = `${mastered}/${totalSkills}`;
+        document.getElementById('accuracyRate').textContent = accuracy + '%';
+        document.getElementById('questionsStats').textContent = 
+          `${stats.correct_questions || 0} correct / ${stats.total_questions || 0} total`;
+        document.getElementById('studyTime').textContent = 
+          Math.round(stats.total_hours || 0) + 'h';
+        
+        // Update streak
+        const streak = data.streak?.current_streak || 0;
+        document.getElementById('streakDisplay').textContent = 
+          streak + ' day' + (streak !== 1 ? 's' : '') + ' streak';
+        
+        // Update mastery count
+        document.getElementById('masteryCount').textContent = mastered;
+        
+        // Load recommendations
+        await loadRecommendations();
+        
+        // Load achievements
+        displayRecentAchievements(data.achievements);
+        
+        // Update learning path
+        updateLearningPath(data.units_progress);
+        
+        // Update charts
+        updateCharts(data);
+        
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      }
     }
     
-    // [All other functions remain the same]
-    function continueLastLesson() { show('Loading last lesson...', 'info'); }
-    function startPractice() { switchTab('practice'); }
-    function takeAssessment() { switchTab('assessments'); }
-    function viewProgress() { switchTab('progress'); }
-    
-    async function openLesson(lessonId, title, src){
-      currentLessonId = lessonId; 
-      userData.lastLesson = { lessonId, title };
-      document.getElementById('lessonTitle').textContent = title;
-      const frame = document.getElementById('lessonFrame'); 
-      frame.src='about:blank';
-      document.getElementById('lessonProgressFill').style.width='0%';
-      document.getElementById('lessonModal').classList.add('show');
-      
-      frame.onload = ()=>{ 
-        try{ 
-          const s = frame.contentDocument.createElement('script'); 
-          s.src='/js/lesson-bridge.js'; 
-          frame.contentDocument.head.appendChild(s); 
-        } catch(e){} 
-      };
-      
-      const [g,u,o] = lessonId.split('-'); 
-      const resolved = await api(`/api/lessons/resolve?grade=${g}&unit=${u}&order=${o}`).catch(()=>({src:'/lessons/grade'+userData.currentGrade+'/welcome.html'})); 
-      frame.src = src || resolved.src;
-      loadAssessments(lessonId);
+    // Load recommendations
+    async function loadRecommendations() {
+      try {
+        const res = await fetch('/api/practice/recommendations');
+        const data = await res.json();
+        
+        // Review needed
+        const reviewContainer = document.getElementById('reviewSkills');
+        reviewContainer.innerHTML = data.review_needed.map(skill => `
+          <div class="p-2 bg-white rounded cursor-pointer hover:bg-red-100" onclick="startTargetedPractice(${skill.id})">
+            <div class="font-semibold">${skill.name}</div>
+            <div class="text-xs text-gray-600">Mastery: ${Math.round(skill.mastery_level)}%</div>
+          </div>
+        `).join('') || '<p class="text-gray-500">All caught up!</p>';
+        
+        // Next skills
+        const nextContainer = document.getElementById('nextSkills');
+        nextContainer.innerHTML = data.next_skills.map(skill => `
+          <div class="p-2 bg-white rounded cursor-pointer hover:bg-blue-100" onclick="startTargetedPractice(${skill.id})">
+            <div class="font-semibold">${skill.name}</div>
+            <div class="text-xs text-gray-600">Grade ${skill.grade} Unit ${skill.unit}</div>
+          </div>
+        `).join('') || '<p class="text-gray-500">Complete prerequisites first</p>';
+        
+        // Challenge skills
+        const challengeContainer = document.getElementById('challengeSkills');
+        challengeContainer.innerHTML = data.challenge_skills.map(skill => `
+          <div class="p-2 bg-white rounded cursor-pointer hover:bg-purple-100" onclick="startTargetedPractice(${skill.id})">
+            <div class="font-semibold">${skill.name}</div>
+            <div class="text-xs text-gray-600">Advanced</div>
+          </div>
+        `).join('') || '<p class="text-gray-500">Master basics first</p>';
+        
+      } catch (error) {
+        console.error('Error loading recommendations:', error);
+      }
     }
     
-    function closeLessonModal(){ 
-      document.getElementById('lessonModal').classList.remove('show'); 
+    // Start practice session
+    async function startPractice(type) {
+      try {
+        const body = { session_type: type, num_questions: 10 };
+        if (type === 'targeted') {
+          // Show skill selector first
+          await showSkillSelector();
+          return;
+        }
+        
+        const res = await fetch('/api/practice/session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        
+        const data = await res.json();
+        currentSession = data;
+        sessionQuestions = data.questions;
+        currentQuestionIndex = 0;
+        sessionScore = 0;
+        
+        if (sessionQuestions.length === 0) {
+          alert('No questions available for this practice type. Try a different option.');
+          return;
+        }
+        
+        document.getElementById('practiceTitle').textContent = 
+          type.charAt(0).toUpperCase() + type.slice(1) + ' Practice';
+        showQuestion();
+        document.getElementById('practiceModal').classList.add('show');
+        
+      } catch (error) {
+        console.error('Error starting practice:', error);
+        alert('Failed to start practice session');
+      }
     }
     
-    async function loadAssessments(lessonId){
-      const l = lessonId || currentLessonId; 
-      if (!l) return;
+    // Show current question
+    function showQuestion() {
+      if (currentQuestionIndex >= sessionQuestions.length) {
+        endSession();
+        return;
+      }
       
-      const idParts = l.split('-'); 
-      const grade = parseInt(idParts[0]); 
-      const unit = parseInt(idParts[1]); 
-      const order = parseInt(idParts[2]);
-      const list = document.getElementById('assessmentsList'); 
-      list.innerHTML = '<div class="text-sm text-slate-600">Loading…</div>';
+      currentQuestion = sessionQuestions[currentQuestionIndex];
+      questionStartTime = Date.now();
+      hintsUsed = 0;
+      
+      document.getElementById('questionProgress').textContent = 
+        `${currentQuestionIndex + 1}/${sessionQuestions.length}`;
+      document.getElementById('progressBar').style.width = 
+        `${((currentQuestionIndex + 1) / sessionQuestions.length) * 100}%`;
+      
+      const container = document.getElementById('questionContainer');
+      container.innerHTML = `
+        <div class="mb-4">
+          <span class="text-sm text-gray-600">Skill: ${currentQuestion.skill_name}</span>
+          <span class="text-sm text-gray-600 ml-4">Difficulty: ${'⭐'.repeat(currentQuestion.difficulty_level)}</span>
+        </div>
+        <div class="text-lg font-semibold mb-4">${currentQuestion.question_text}</div>
+        ${renderQuestionInput(currentQuestion)}
+      `;
+      
+      document.getElementById('hintContainer').innerHTML = '';
+      document.getElementById('hintContainer').classList.add('hidden');
+      document.getElementById('hintsAvailable').textContent = 
+        currentQuestion.hints ? currentQuestion.hints.length : 0;
+    }
+    
+    // Render question input based on type
+    function renderQuestionInput(question) {
+      const data = question.question_data;
+      
+      switch(question.question_type) {
+        case 'mcq':
+          return `
+            <div class="space-y-2">
+              ${data.options.map((opt, i) => `
+                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input type="radio" name="answer" value="${i}" class="mr-3">
+                  <span>${opt}</span>
+                </label>
+              `).join('')}
+            </div>
+          `;
+        
+        case 'numeric':
+          return `
+            <input type="number" id="numericAnswer" step="any" 
+                   class="w-full px-4 py-2 border rounded-lg text-lg"
+                   placeholder="Enter your answer">
+          `;
+        
+        case 'text':
+          return `
+            <input type="text" id="textAnswer" 
+                   class="w-full px-4 py-2 border rounded-lg"
+                   placeholder="Enter your answer">
+          `;
+        
+        case 'multi_select':
+          return `
+            <div class="space-y-2">
+              ${data.options.map((opt, i) => `
+                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input type="checkbox" name="answer" value="${i}" class="mr-3">
+                  <span>${opt}</span>
+                </label>
+              `).join('')}
+            </div>
+          `;
+        
+        default:
+          return '<p>Question type not supported</p>';
+      }
+    }
+    
+    // Show hint
+    function showHint() {
+      if (!currentQuestion.hints || hintsUsed >= currentQuestion.hints.length) {
+        alert('No more hints available');
+        return;
+      }
+      
+      const hint = currentQuestion.hints[hintsUsed];
+      hintsUsed++;
+      
+      const container = document.getElementById('hintContainer');
+      container.classList.remove('hidden');
+      container.innerHTML += `
+        <div class="hint-box fade-in-up">
+          <i class="fas fa-lightbulb text-yellow-600 mr-2"></i>
+          <strong>Hint ${hintsUsed}:</strong> ${hint}
+        </div>
+      `;
+      
+      document.getElementById('hintsAvailable').textContent = 
+        currentQuestion.hints.length - hintsUsed;
+    }
+    
+    // Submit answer
+    async function submitAnswer() {
+      const answer = getAnswer();
+      if (answer === null) {
+        alert('Please select/enter an answer');
+        return;
+      }
+      
+      const timeSpent = Math.round((Date.now() - questionStartTime) / 1000);
       
       try {
-        const cat = await api('/api/lessons/catalog?grade='+grade);
-        let dbId = null;
-        for (const u of (cat.units||[])) if (u.num==unit) { 
-          const found = (u.lessons||[]).find(x=>x.order==order); 
-          dbId = found?.id; 
-          break; 
+        const res = await fetch('/api/practice/answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: currentSession.session_id,
+            question_id: currentQuestion.id,
+            user_answer: answer,
+            hints_used: hintsUsed,
+            time_taken_seconds: timeSpent
+          })
+        });
+        
+        const result = await res.json();
+        
+        if (result.is_correct) {
+          sessionScore += result.points_earned;
+          showFeedback(true, result);
+        } else {
+          showFeedback(false, result);
         }
         
-        if (!dbId){ 
-          list.innerHTML = '<div class="text-sm text-slate-600">No assessments yet.</div>'; 
-          return; 
+        document.getElementById('sessionScore').textContent = sessionScore;
+        
+        // Show achievements if earned
+        if (result.achievements_earned && result.achievements_earned.length > 0) {
+          showAchievementNotification(result.achievements_earned);
         }
         
-        const arr = await api('/api/assessments/for-lesson?lesson_id='+dbId);
-        if (!arr.length){ 
-          list.innerHTML = '<div class="text-sm text-slate-600">No assessments yet.</div>'; 
-          return; 
-        }
+        // Move to next question after delay
+        setTimeout(() => {
+          currentQuestionIndex++;
+          showQuestion();
+        }, 2000);
         
-        list.innerHTML = arr.map(a=>`
-          <div class="interactive-row" onclick="beginAssessment(${a.id})">
-            <div class="flex-1">
-              <div class="font-semibold">${a.title}</div>
-              <div class="text-xs text-slate-600">${a.num_questions} question(s) • pass ${a.pass_pct}%</div>
-            </div>
-            <span class="status open">Take</span>
-          </div>`).join('');
-        currentAssessmentId = arr[0].id;
-      } catch(e){ 
-        list.innerHTML = '<div class="text-sm text-slate-600">No assessments found.</div>'; 
+      } catch (error) {
+        console.error('Error submitting answer:', error);
+        alert('Failed to submit answer');
       }
     }
     
-    async function beginAssessment(id){ 
-      currentAssessmentId = id; 
-      closeLessonModal(); 
-      switchTab('assessments'); 
-      show('Assessment loaded','success'); 
-    }
-    
-    async function startAssessment(){ 
-      if (!currentAssessmentId){ 
-        show('No assessment bound to this lesson yet.','warning'); 
-        return; 
-      } 
-      const a = await api('/api/assessments/'+currentAssessmentId); 
-      renderAssessment(a); 
-    }
-    
-    function renderAssessment(a){
-      const cont = document.getElementById('assessmentsList'); 
-      cont.innerHTML = '';
-      const form = document.createElement('div'); 
-      form.className='space-y-3';
-      
-      a.questions.forEach(q=>{
-        const card = document.createElement('div'); 
-        card.className='card p-4';
-        card.innerHTML = `<div class="font-semibold mb-2">${q.prompt}</div><div class="space-y-2" id="q-${q.id}"></div>`;
-        const holder = card.querySelector(`#q-${q.id}`);
+    // Get answer from form
+    function getAnswer() {
+      switch(currentQuestion.question_type) {
+        case 'mcq':
+          const selected = document.querySelector('input[name="answer"]:checked');
+          return selected ? parseInt(selected.value) : null;
         
-        if (q.type==='mcq' || q.type==='tf'){
-          (q.options||[]).forEach((opt,i)=>{ 
-            const btn=document.createElement('button'); 
-            btn.className='interactive-row'; 
-            btn.textContent=opt; 
-            btn.onclick=()=>{ 
-              holder.querySelectorAll('button').forEach(b=>b.classList.remove('completed')); 
-              btn.classList.add('completed'); 
-              btn.dataset.value=String(i); 
-            }; 
-            holder.appendChild(btn); 
-          });
-        } else if (q.type==='multi'){
-          (q.options||[]).forEach((opt,i)=>{ 
-            const btn=document.createElement('button'); 
-            btn.className='interactive-row'; 
-            btn.textContent=opt; 
-            btn.onclick=()=>{ btn.classList.toggle('completed'); }; 
-            btn.dataset.index=i; 
-            holder.appendChild(btn); 
-          });
-        } else if (q.type==='num'){
-          holder.innerHTML = `<input type="number" step="any" class="rounded border px-3 py-2" placeholder="Your answer"/>`;
-        } else if (q.type==='text'){
-          holder.innerHTML = `<input type="text" class="rounded border px-3 py-2" placeholder="Your answer"/>`;
-        }
-        form.appendChild(card);
-      });
+        case 'numeric':
+          const num = document.getElementById('numericAnswer').value;
+          return num ? parseFloat(num) : null;
+        
+        case 'text':
+          const text = document.getElementById('textAnswer').value;
+          return text.trim() || null;
+        
+        case 'multi_select':
+          const checked = Array.from(document.querySelectorAll('input[name="answer"]:checked'));
+          return checked.map(c => parseInt(c.value));
+        
+        default:
+          return null;
+      }
+    }
+    
+    // Show feedback
+    function showFeedback(correct, result) {
+      const container = document.getElementById('questionContainer');
+      const feedbackDiv = document.createElement('div');
+      feedbackDiv.className = `mt-4 p-4 rounded-lg ${correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+      feedbackDiv.innerHTML = `
+        <div class="font-semibold mb-2">
+          ${correct ? '✅ Correct!' : '❌ Incorrect'}
+        </div>
+        ${!correct && result.correct_answer ? `
+          <div class="text-sm">Correct answer: ${JSON.stringify(result.correct_answer)}</div>
+        ` : ''}
+        ${result.solution_steps ? `
+          <div class="text-sm mt-2">
+            <strong>Solution:</strong> ${result.solution_steps}
+          </div>
+        ` : ''}
+      `;
+      container.appendChild(feedbackDiv);
       
-      const submit = document.createElement('button'); 
-      submit.className='bg-[var(--maroon)] text-white px-4 py-2 rounded'; 
-      submit.textContent='Submit';
-      submit.onclick = async ()=>{
-        const answers = a.questions.map(q=>{
-          const holder = document.getElementById('q-'+q.id);
-          if (q.type==='mcq' || q.type==='tf'){ 
-            const chosen = holder.querySelector('button.completed'); 
-            return { question_id:q.id, value: chosen ? parseInt(chosen.dataset.value) : null }; 
-          }
-          if (q.type==='multi'){ 
-            const chosen = Array.from(holder.querySelectorAll('button.completed')).map(b=>parseInt(b.dataset.index)); 
-            return { question_id:q.id, value: chosen }; 
-          }
-          if (q.type==='num'){ 
-            return { question_id:q.id, value: parseFloat(holder.querySelector('input').value) }; 
-          }
-          if (q.type==='text'){ 
-            return { question_id:q.id, value: holder.querySelector('input').value }; 
-          }
-          return { question_id:q.id, value:null };
+      // Disable submit button
+      document.getElementById('submitBtn').disabled = true;
+    }
+    
+    // End session
+    async function endSession() {
+      try {
+        const res = await fetch('/api/practice/session/end', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: currentSession.session_id })
         });
         
-        const r = await api('/api/assessments/'+a.assessment.id+'/submit', { method:'POST', body: JSON.stringify({ answers }) });
-        show(`Score: ${r.score_pct}% ${r.passed?'✅ Passed':'❌ Not passed'}`, r.passed?'success':'warning');
-      };
-      form.appendChild(submit);
-      cont.appendChild(form);
+        const summary = await res.json();
+        
+        // Show session summary
+        const container = document.getElementById('questionContainer');
+        container.innerHTML = `
+          <div class="text-center py-8">
+            <i class="fas fa-trophy text-6xl text-[var(--gold)] mb-4"></i>
+            <h3 class="text-2xl font-bold mb-4">Session Complete!</h3>
+            <div class="grid md:grid-cols-3 gap-4 mb-6">
+              <div class="p-4 bg-gray-100 rounded-lg">
+                <div class="text-2xl font-bold">${summary.session_stats.questions_correct}/${summary.session_stats.questions_attempted}</div>
+                <div class="text-sm text-gray-600">Questions Correct</div>
+              </div>
+              <div class="p-4 bg-gray-100 rounded-lg">
+                <div class="text-2xl font-bold">${summary.session_stats.accuracy}%</div>
+                <div class="text-sm text-gray-600">Accuracy</div>
+              </div>
+              <div class="p-4 bg-gray-100 rounded-lg">
+                <div class="text-2xl font-bold">${sessionScore}</div>
+                <div class="text-sm text-gray-600">Points Earned</div>
+              </div>
+            </div>
+            <button onclick="closePracticeModal()" class="bg-[var(--maroon)] text-white px-6 py-3 rounded-lg">
+              Continue Learning
+            </button>
+          </div>
+        `;
+        
+        // Reload dashboard
+        await loadDashboard();
+        
+      } catch (error) {
+        console.error('Error ending session:', error);
+      }
     }
     
-    async function logout(){ 
-      await fetch('/auth/logout', { method:'POST' }); 
-      location.href='/login'; 
+    // Close practice modal
+    function closePracticeModal() {
+      document.getElementById('practiceModal').classList.remove('show');
+      currentSession = null;
     }
     
-    document.addEventListener('DOMContentLoaded', setup);
+    // Update learning path
+    function updateLearningPath(unitsProgress) {
+      const container = document.getElementById('learningPath');
+      container.innerHTML = unitsProgress.map(unit => {
+        const percentage = unit.completion_percentage || 0;
+        const masteryClass = `skill-mastery-${Math.min(5, Math.floor(percentage / 20))}`;
+        
+        return `
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <div class="font-semibold">Grade ${unit.grade} - Unit ${unit.unit}</div>
+              <div class="text-sm text-gray-600">
+                ${unit.mastered_skills}/${unit.total_skills} skills mastered
+              </div>
+            </div>
+            <div class="w-48">
+              <div class="text-right text-sm font-semibold mb-1">${percentage}%</div>
+              <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="h-3 rounded-full ${masteryClass}" style="width:${percentage}%"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Display recent achievements
+    function displayRecentAchievements(achievements) {
+      const container = document.getElementById('recentAchievements');
+      if (!achievements || achievements.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">No achievements yet. Start practicing to earn your first badge!</p>';
+        return;
+      }
+      
+      container.innerHTML = achievements.slice(0, 5).map(ach => `
+        <div class="text-center">
+          <div class="achievement-badge mb-2">${ach.icon || '🏆'}</div>
+          <div class="font-semibold text-sm">${ach.display_name}</div>
+          <div class="text-xs text-gray-600">${ach.points} pts</div>
+        </div>
+      `).join('');
+    }
+    
+    // Setup charts
+    function setupCharts() {
+      // Mastery pie chart
+      const pieCtx = document.getElementById('masteryPieChart');
+      if (pieCtx) {
+        new Chart(pieCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Mastered', 'Learning', 'Not Started'],
+            datasets: [{
+              data: [0, 0, 0],
+              backgroundColor: ['#22c55e', '#f59e0b', '#e5e7eb']
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: false }
+            }
+          }
+        });
+      }
+    }
+    
+    // Update charts with data
+    function updateCharts(data) {
+      // Update pie chart
+      const pieChart = Chart.getChart('masteryPieChart');
+      if (pieChart && data.skills_progress) {
+        const mastered = data.skills_progress.filter(s => s.status === 'mastered').length;
+        const learning = data.skills_progress.filter(s => ['learning', 'practiced'].includes(s.status)).length;
+        const notStarted = Math.max(0, 20 - mastered - learning); // Assume 20 total skills
+        
+        pieChart.data.datasets[0].data = [mastered, learning, notStarted];
+        pieChart.update();
+      }
+    }
+    
+    // Show achievement notification
+    function showAchievementNotification(achievements) {
+      achievements.forEach(ach => {
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-gradient-to-r from-[var(--gold)] to-[var(--gold2)] text-white p-4 rounded-lg shadow-lg z-50 fade-in-up';
+        notification.innerHTML = `
+          <div class="flex items-center gap-3">
+            <i class="fas fa-trophy text-2xl"></i>
+            <div>
+              <div class="font-bold">Achievement Unlocked!</div>
+              <div>${ach}</div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 5000);
+      });
+    }
+    
+    // Setup event listeners
+    function setupEventListeners() {
+      // Tab switching
+      document.querySelectorAll('.nav-tab[data-tab]').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+          });
+          
+          const tabContent = document.getElementById(`${tab.dataset.tab}-tab`);
+          if (tabContent) {
+            tabContent.classList.remove('hidden');
+            
+            // Load tab-specific content
+            if (tab.dataset.tab === 'practice') {
+              loadPracticeTab();
+            } else if (tab.dataset.tab === 'progress') {
+              loadProgressTab();
+            } else if (tab.dataset.tab === 'achievements') {
+              loadAchievementsTab();
+            }
+          }
+        });
+      });
+      
+      // Grade selector
+      document.getElementById('gradeSelect').addEventListener('change', () => {
+        loadDashboard();
+      });
+    }
+    
+    // Load practice tab
+    async function loadPracticeTab() {
+      try {
+        const grade = document.getElementById('gradeSelect').value;
+        const res = await fetch(`/api/practice/skills?grade=${grade}`);
+        const skills = await res.json();
+        
+        const container = document.getElementById('skillsList');
+        container.innerHTML = skills.map(skill => {
+          const masteryClass = `skill-mastery-${Math.min(5, Math.floor(skill.mastery_level / 20))}`;
+          
+          return `
+            <div class="skill-card">
+              <div class="flex justify-between items-start mb-3">
+                <div>
+                  <h4 class="font-semibold">${skill.name}</h4>
+                  <p class="text-sm text-gray-600">Unit ${skill.unit} • ${skill.available_questions} questions</p>
+                </div>
+                <button onclick="startTargetedPractice(${skill.id})" 
+                        class="bg-[var(--maroon)] text-white px-3 py-1 rounded text-sm hover:opacity-90">
+                  Practice
+                </button>
+              </div>
+              <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                  <span>Mastery</span>
+                  <span class="font-semibold">${Math.round(skill.mastery_level || 0)}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="h-2 rounded-full ${masteryClass}" style="width:${skill.mastery_level || 0}%"></div>
+                </div>
+                ${skill.status ? `
+                  <div class="text-xs text-gray-600">
+                    Status: ${skill.status} • 
+                    ${skill.questions_attempted || 0} attempts • 
+                    ${skill.accuracy || 0}% accuracy
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('Error loading practice tab:', error);
+      }
+    }
+    
+    // Start targeted practice for specific skill
+    async function startTargetedPractice(skillId) {
+      try {
+        const res = await fetch('/api/practice/session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_type: 'targeted',
+            skill_id: skillId,
+            num_questions: 10
+          })
+        });
+        
+        const data = await res.json();
+        currentSession = data;
+        sessionQuestions = data.questions;
+        currentQuestionIndex = 0;
+        sessionScore = 0;
+        
+        if (sessionQuestions.length === 0) {
+          alert('No questions available for this skill.');
+          return;
+        }
+        
+        document.getElementById('practiceTitle').textContent = 'Targeted Practice';
+        showQuestion();
+        document.getElementById('practiceModal').classList.add('show');
+        
+      } catch (error) {
+        console.error('Error starting targeted practice:', error);
+      }
+    }
+    
+    // Load progress tab
+    async function loadProgressTab() {
+      // Implementation for detailed progress visualization
+      // This would include charts and detailed skill breakdowns
+    }
+    
+    // Load achievements tab
+    async function loadAchievementsTab() {
+      try {
+        const res = await fetch('/api/practice/progress');
+        const data = await res.json();
+        
+        const container = document.getElementById('allAchievements');
+        container.innerHTML = data.achievements.map(ach => `
+          <div class="text-center p-4 ${ach.earned_at ? '' : 'opacity-50'}">
+            <div class="achievement-badge mb-2 ${!ach.earned_at ? 'grayscale' : ''}">
+              ${ach.icon || '🏆'}
+            </div>
+            <div class="font-semibold">${ach.display_name}</div>
+            <div class="text-xs text-gray-600">${ach.description}</div>
+            <div class="text-sm font-bold mt-1">${ach.points} pts</div>
+            ${ach.earned_at ? `
+              <div class="text-xs text-green-600 mt-1">
+                Earned ${new Date(ach.earned_at).toLocaleDateString()}
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+        
+      } catch (error) {
+        console.error('Error loading achievements:', error);
+      }
+    }
+    
+    // Skip question
+    function skipQuestion() {
+      currentQuestionIndex++;
+      showQuestion();
+    }
+    
+    // Logout
+    async function logout() {
+      await fetch('/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    }
+    
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>

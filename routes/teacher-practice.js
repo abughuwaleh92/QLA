@@ -1,1154 +1,408 @@
-// routes/teacher-practice.js
+/**
+ * Teacher Practice API (FULL REWRITE)
+ * - Skills: list/create/update
+ * - Banks: list/create
+ * - Questions: list/create
+ * - HTML import (optional, uses "cheerio" if installed)
+ * - Build assessment from a bank (guarded)
+ *
+ * This file is defensive:
+ * - Detects whether you use "skills" or "practice_skills"
+ * - Returns 501 for importer if "cheerio" is not installed
+ * - Avoids redeclarations of express/router/pool
+ */
+
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.PGSSL === 'disable' ? false : { rejectUnauthorized: false }
-});
-
-// Optional cheerio for HTML import
-let cheerio;
-try {
-  cheerio = require('cheerio');
-} catch (err) {
-  console.warn('[teacher-practice] Optional dependency "cheerio" is missing. HTML import will be disabled.');
+let pool;
+// Try common db module locations
+try { pool = require('../db').pool || require('../db'); } catch (e) {}
+try { pool = pool || require('../lib/db').pool || require('../lib/db'); } catch (e) {}
+if (!pool) {
+  // Fallback to environment-based pg pool
+  const { Pool } = require('pg');
+  const ssl = process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : false;
+  pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl });
 }
 
-// Get all skills for management
+let cheerio;
+try { cheerio = require('cheerio'); }
+catch {
+  console.warn('[teacher-practice] Optional dependency "cheerio" not installed. HTML importer route will return 501 until installed.');
+}
+
+// --------- helpers ---------
+
+async function tableExists(name) {
+  const { rows } = await pool.query('SELECT to_regclass($1) AS r', [name]);
+  return !!rows?.[0]?.r;
+}
+
+async function skillTable() {
+  if (await tableExists('skills')) return 'skills';
+  if (await tableExists('practice_skills')) return 'practice_skills';
+  throw new Error('No "skills" or "practice_skills" table found.');
+}
+
+function toInt(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function bad(res, status, msg, detail) {
+  return res.status(status).json({ error: msg, detail: detail || null });
+}
+
+// --------- Skills ---------
+
+// GET /skills?grade=7
 router.get('/skills', async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { grade } = req.query;
-    let query = `
-      SELECT 
-        s.*,
-        COUNT(DISTINCT pq.id) as question_count,
-        COUNT(DISTINCT pb.id) as bank_count,
-        COUNT(DISTINCT sm.user_email) as students_practicing,
-        AVG(sm.mastery_level) as avg_mastery
-      FROM skills s
-      LEFT JOIN practice_questions pq ON pq.skill_id = s.id
-      LEFT JOIN practice_banks pb ON pb.skill_id = s.id
-      LEFT JOIN skill_mastery sm ON sm.skill_id = s.id
-      WHERE 1=1
-    `;
-    
+    const tbl = await skillTable();
+    const grade = toInt(req.query.grade);
     const params = [];
-    if (grade) {
-      params.push(parseInt(grade));
-      query += ` AND s.grade = $${params.length}`;
+    let where = 'WHERE is_active IS DISTINCT FROM false';
+    if (grade !== null) {
+      params.push(grade);
+      where += ` AND grade = $${params.length}`;
     }
-    
-    query += ` GROUP BY s.id ORDER BY s.grade, s.unit, s.order_index`;
-    
-    const { rows } = await pool.query(query, params);
-    res.json(rows);
-    
-  } catch (error) {
-    console.error('Error fetching skills:', error);
-    res.status(500).json({ error: 'Failed to fetch skills' });
-  }
-});
-
-// Create or update skill
-router.post('/skills', express.json(), async (req, res) => {
-  try {
-    const { name, description, grade, unit, order_index, prerequisite_skills } = req.body;
-    
-    const result = await pool.query(
-      `INSERT INTO skills (name, description, grade, unit, order_index, prerequisite_skills)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [name, description, grade, unit, order_index || 0, 
-       JSON.stringify(prerequisite_skills || [])]
+    const { rows } = await client.query(
+      `SELECT id, name, grade, unit
+         FROM ${tbl}
+        ${where}
+        ORDER BY COALESCE(unit, 1), name`,
+      params
     );
-    
-    res.json(result.rows[0]);
-    
-  } catch (error) {
-    console.error('Error creating skill:', error);
-    res.status(500).json({ error: 'Failed to create skill' });
+    res.json({ ok: true, skills: rows });
+  } catch (e) {
+    console.error('List skills failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
+  } finally {
+    client.release();
   }
 });
 
-// Update skill
-router.put('/skills/:id', express.json(), async (req, res) => {
+// POST /skills  { grade, unit, name, default_bank_name? }
+router.post('/skills', express.json({ limit: '64kb' }), async (req, res) => {
+  const client = await pool.connect();
   try {
-    const skillId = parseInt(req.params.id);
-    const { name, description, order_index, prerequisite_skills } = req.body;
-    
-    const updates = [];
-    const values = [];
-    let paramCount = 1;
-    
-    if (name !== undefined) {
-      updates.push(`name = $${paramCount}`);
-      values.push(name);
-      paramCount++;
-    }
-    
-    if (description !== undefined) {
-      updates.push(`description = $${paramCount}`);
-      values.push(description);
-      paramCount++;
-    }
-    
-    if (order_index !== undefined) {
-      updates.push(`order_index = $${paramCount}`);
-      values.push(order_index);
-      paramCount++;
-    }
-    
-    if (prerequisite_skills !== undefined) {
-      updates.push(`prerequisite_skills = $${paramCount}`);
-      values.push(JSON.stringify(prerequisite_skills));
-      paramCount++;
-    }
-    
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-    
-    values.push(skillId);
-    
-    const result = await pool.query(
-      `UPDATE skills 
-       SET ${updates.join(', ')}
-       WHERE id = $${paramCount}
-       RETURNING *`,
-      values
+    const { grade, unit, name, default_bank_name } = req.body || {};
+    const g = toInt(grade), u = toInt(unit);
+    if (!name || g === null || u === null) return bad(res, 400, 'invalid_input', { grade, unit, name });
+
+    const tbl = await skillTable();
+    await client.query('BEGIN');
+    const ins = await client.query(
+      `INSERT INTO ${tbl} (name, grade, unit, is_active)
+       VALUES ($1,$2,$3,true)
+       RETURNING id, name, grade, unit`,
+      [String(name).trim(), g, u]
     );
-    
-    res.json(result.rows[0]);
-    
-  } catch (error) {
-    console.error('Error updating skill:', error);
-    res.status(500).json({ error: 'Failed to update skill' });
+    const skill = ins.rows[0];
+
+    let bank = null;
+    if (default_bank_name && String(default_bank_name).trim()) {
+      if (!(await tableExists('practice_banks'))) throw new Error('practice_banks table missing');
+      const ib = await client.query(
+        `INSERT INTO practice_banks (skill_id, name, is_active)
+         VALUES ($1,$2,true)
+         RETURNING id, name, skill_id`,
+        [skill.id, String(default_bank_name).trim()]
+      );
+      bank = ib.rows[0];
+    }
+
+    await client.query('COMMIT');
+    res.json({ ok: true, skill, bank });
+  } catch (e) {
+    await pool.query('ROLLBACK').catch(()=>{});
+    console.error('Create skill failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
+  } finally {
+    client.release();
   }
 });
 
-// Delete skill
-router.delete('/skills/:id', async (req, res) => {
+// PATCH /skills/:id  { name?, grade?, unit?, is_active?, is_public? }
+router.patch('/skills/:id', express.json({ limit: '32kb' }), async (req, res) => {
+  const client = await pool.connect();
   try {
-    const skillId = parseInt(req.params.id);
-    
-    await pool.query('DELETE FROM skills WHERE id = $1', [skillId]);
-    res.json({ success: true });
-    
-  } catch (error) {
-    console.error('Error deleting skill:', error);
-    res.status(500).json({ error: 'Failed to delete skill' });
+    const id = toInt(req.params.id);
+    if (id === null) return bad(res, 400, 'invalid_id');
+
+    const tbl = await skillTable();
+    const fields = [];
+    const vals = [];
+    function set(col, val) {
+      vals.push(val);
+      fields.push(`${col} = $${vals.length}`);
+    }
+    if ('name' in req.body) set('name', String(req.body.name).trim());
+    if ('grade' in req.body) set('grade', toInt(req.body.grade));
+    if ('unit' in req.body) set('unit', toInt(req.body.unit));
+    if ('is_active' in req.body) set('is_active', !!req.body.is_active);
+    if ('is_public' in req.body && await tableExists(`${tbl}`)) set('is_public', !!req.body.is_public);
+
+    if (!fields.length) return bad(res, 400, 'no_fields');
+
+    vals.push(id);
+    const { rows } = await client.query(
+      `UPDATE ${tbl} SET ${fields.join(', ')} WHERE id = $${vals.length} RETURNING id, name, grade, unit, is_active`,
+      vals
+    );
+    res.json({ ok: true, skill: rows[0] || null });
+  } catch (e) {
+    console.error('Update skill failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
+  } finally {
+    client.release();
   }
 });
 
-// Get question banks
+// --------- Banks ---------
+
+// GET /banks?skillId=123
 router.get('/banks', async (req, res) => {
+  if (!(await tableExists('practice_banks'))) return bad(res, 500, 'no_practice_banks_table');
+  const client = await pool.connect();
   try {
-    const { skill_id } = req.query;
-    let query = `
-      SELECT 
-        pb.*,
-        s.name as skill_name,
-        COUNT(pq.id) as question_count
-      FROM practice_banks pb
-      JOIN skills s ON s.id = pb.skill_id
-      LEFT JOIN practice_questions pq ON pq.bank_id = pb.id
-      WHERE pb.is_active = true
-    `;
-    
+    const skillId = toInt(req.query.skillId);
     const params = [];
-    if (skill_id) {
-      params.push(parseInt(skill_id));
-      query += ` AND pb.skill_id = $${params.length}`;
-    }
-    
-    query += ` GROUP BY pb.id, s.name ORDER BY pb.created_at DESC`;
-    
-    const { rows } = await pool.query(query, params);
-    res.json(rows);
-    
-  } catch (error) {
-    console.error('Error fetching banks:', error);
-    res.status(500).json({ error: 'Failed to fetch question banks' });
-  }
-});
-
-// Create question bank
-router.post('/banks', express.json(), async (req, res) => {
-  try {
-    const { skill_id, title, difficulty = 'medium', metadata } = req.body;
-    
-    if (!skill_id || !title) {
-      return res.status(400).json({ error: 'Skill ID and title are required' });
-    }
-    
-    const result = await pool.query(
-      `INSERT INTO practice_banks (skill_id, title, difficulty, created_by, metadata)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [skill_id, title, difficulty, req.user?.email || 'system', 
-       JSON.stringify(metadata || {})]
+    let where = 'WHERE is_active IS DISTINCT FROM false';
+    if (skillId !== null) { params.push(skillId); where += ` AND skill_id = $${params.length}`; }
+    const { rows } = await client.query(
+      `SELECT id, name, skill_id FROM practice_banks ${where} ORDER BY id DESC`,
+      params
     );
-    
-    res.json(result.rows[0]);
-    
-  } catch (error) {
-    console.error('Error creating bank:', error);
-    res.status(500).json({ error: 'Failed to create question bank' });
+    res.json({ ok: true, banks: rows });
+  } catch (e) {
+    console.error('List banks failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
+  } finally {
+    client.release();
   }
 });
 
-// Update question bank
-router.put('/banks/:id', express.json(), async (req, res) => {
+// POST /banks { skill_id, name }
+router.post('/banks', express.json({ limit: '32kb' }), async (req, res) => {
+  if (!(await tableExists('practice_banks'))) return bad(res, 500, 'no_practice_banks_table');
+  const client = await pool.connect();
   try {
-    const bankId = parseInt(req.params.id);
-    const { title, difficulty, is_active, metadata } = req.body;
-    
-    const updates = [];
-    const values = [];
-    let paramCount = 1;
-    
-    if (title !== undefined) {
-      updates.push(`title = $${paramCount}`);
-      values.push(title);
-      paramCount++;
-    }
-    
-    if (difficulty !== undefined) {
-      updates.push(`difficulty = $${paramCount}`);
-      values.push(difficulty);
-      paramCount++;
-    }
-    
-    if (is_active !== undefined) {
-      updates.push(`is_active = $${paramCount}`);
-      values.push(is_active);
-      paramCount++;
-    }
-    
-    if (metadata !== undefined) {
-      updates.push(`metadata = $${paramCount}`);
-      values.push(JSON.stringify(metadata));
-      paramCount++;
-    }
-    
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-    
-    values.push(bankId);
-    
-    const result = await pool.query(
-      `UPDATE practice_banks 
-       SET ${updates.join(', ')}
-       WHERE id = $${paramCount}
-       RETURNING *`,
-      values
+    const { skill_id, name } = req.body || {};
+    const sid = toInt(skill_id);
+    if (sid === null || !name) return bad(res, 400, 'invalid_input');
+    const { rows } = await client.query(
+      `INSERT INTO practice_banks (skill_id, name, is_active)
+       VALUES ($1,$2,true) RETURNING id, name, skill_id`,
+      [sid, String(name).trim()]
     );
-    
-    res.json(result.rows[0]);
-    
-  } catch (error) {
-    console.error('Error updating bank:', error);
-    res.status(500).json({ error: 'Failed to update bank' });
+    res.json({ ok: true, bank: rows[0] });
+  } catch (e) {
+    console.error('Create bank failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
+  } finally {
+    client.release();
   }
 });
 
-// Delete question bank
-router.delete('/banks/:id', async (req, res) => {
-  try {
-    const bankId = parseInt(req.params.id);
-    
-    await pool.query('DELETE FROM practice_banks WHERE id = $1', [bankId]);
-    res.json({ success: true });
-    
-  } catch (error) {
-    console.error('Error deleting bank:', error);
-    res.status(500).json({ error: 'Failed to delete bank' });
-  }
-});
+// --------- Questions ---------
 
-// Get questions for a bank
+// GET /banks/:bankId/questions
 router.get('/banks/:bankId/questions', async (req, res) => {
+  if (!(await tableExists('practice_questions'))) return bad(res, 500, 'no_practice_questions_table');
+  const client = await pool.connect();
   try {
-    const bankId = parseInt(req.params.bankId);
-    
-    const questions = await pool.query(
-      `SELECT pq.*, s.name as skill_name
-       FROM practice_questions pq
-       JOIN skills s ON s.id = pq.skill_id
-       WHERE pq.bank_id = $1
-       ORDER BY pq.difficulty_level, pq.created_at`,
+    const bankId = toInt(req.params.bankId);
+    if (bankId === null) return bad(res, 400, 'invalid_bank');
+
+    const { rows } = await client.query(
+      `SELECT id, question_type, question_text, question_data, correct_answer, difficulty_level, points
+         FROM practice_questions
+        WHERE bank_id = $1
+        ORDER BY id DESC`,
       [bankId]
     );
-    
-    res.json(questions.rows);
-    
-  } catch (error) {
-    console.error('Error fetching questions:', error);
-    res.status(500).json({ error: 'Failed to fetch questions' });
+    res.json({ ok: true, questions: rows });
+  } catch (e) {
+    console.error('List questions failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
+  } finally {
+    client.release();
   }
 });
 
-// Import questions from HTML
-router.post('/banks/:bankId/import-html', express.json({ limit: '2mb' }), async (req, res) => {
+// POST /questions
+// { bank_id, skill_id, question_type, question_text, question_data, correct_answer, solution_steps?, hints? }
+router.post('/questions', express.json({ limit: '256kb' }), async (req, res) => {
+  if (!(await tableExists('practice_questions'))) return bad(res, 500, 'no_practice_questions_table');
+  const client = await pool.connect();
+  try {
+    const b = toInt(req.body.bank_id);
+    const s = toInt(req.body.skill_id);
+    const t = String(req.body.question_type || '').trim();
+    const text = String(req.body.question_text || '').trim();
+    if (b === null || s === null || !t || !text) return bad(res, 400, 'invalid_input');
+
+    const qd = req.body.question_data ? JSON.stringify(req.body.question_data) : '{}';
+    const ca = JSON.stringify(req.body.correct_answer);
+    const steps = req.body.solution_steps ? JSON.stringify(req.body.solution_steps) : null;
+    const hints = req.body.hints ? JSON.stringify(req.body.hints) : '[]';
+    const diff = toInt(req.body.difficulty_level) ?? 3;
+    const pts = toInt(req.body.points) ?? 10;
+
+    const { rows } = await client.query(
+      `INSERT INTO practice_questions
+       (bank_id, skill_id, question_type, question_text, question_data, correct_answer, solution_steps, hints, difficulty_level, points)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       RETURNING id`,
+      [b, s, t, text, qd, ca, steps, hints, diff, pts]
+    );
+    res.json({ ok: true, id: rows[0].id });
+  } catch (e) {
+    console.error('Create question failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
+  } finally {
+    client.release();
+  }
+});
+
+// --------- HTML Importer (optional cheerio) ---------
+
+// POST /banks/:bankId/import-html  { html }
+router.post('/banks/:bankId/import-html', express.json({ limit: '5mb' }), async (req, res) => {
   if (!cheerio) {
     return res.status(501).json({
-      error: 'html_import_disabled',
-      message: 'HTML import is disabled. Install cheerio: npm install cheerio'
+      error: 'html_import_disabled_missing_dependency',
+      fix: 'Install cheerio: npm i cheerio (ensure it is in dependencies), then rebuild/redeploy'
     });
+  }
+  if (!(await tableExists('practice_banks')) || !(await tableExists('practice_questions'))) {
+    return bad(res, 500, 'missing_practice_tables');
   }
 
   const client = await pool.connect();
-  
   try {
-    const bankId = parseInt(req.params.bankId);
-    const { html } = req.body;
-    
-    if (!html) {
-      return res.status(400).json({ error: 'HTML content is required' });
-    }
+    const bankId = toInt(req.params.bankId);
+    const { html } = req.body || {};
+    if (bankId === null || !html) return bad(res, 400, 'missing_bank_or_html');
 
     await client.query('BEGIN');
+    const { rows: b } = await client.query('SELECT id, skill_id FROM practice_banks WHERE id = $1', [bankId]);
+    if (!b.length) throw new Error('bank_not_found');
+    const skillId = b[0].skill_id;
 
-    // Get bank and skill info
-    const { rows: bankRows } = await client.query(
-      'SELECT skill_id FROM practice_banks WHERE id = $1',
-      [bankId]
-    );
-    
-    if (!bankRows.length) {
-      throw new Error('Bank not found');
-    }
-    
-    const skillId = bankRows[0].skill_id;
-
-    // Parse HTML
     const $ = cheerio.load(html);
-    const questions = [];
-
-    // Extract questions
-    $('.q, .question').each((_, element) => {
-      const $q = $(element);
-      
-      // Extract question data
-      const question_type = $q.attr('data-type') || 'mcq';
-      const prompt = $q.find('.prompt, .question-text').first().text().trim();
-      
+    const jobs = [];
+    $('.q').each((_, el) => {
+      const $q = $(el);
+      let type = String($q.attr('data-type') || 'mcq').trim();
+      const prompt = $q.find('.prompt').first().text().trim();
       if (!prompt) return;
 
-      // Extract options
-      const options = [];
-      $q.find('.options li, .option').each((_, opt) => {
-        options.push($(opt).text().trim());
-      });
+      const options = $q.find('.options li').toArray().map(li => $(li).text().trim());
+      const ansRaw = $q.find('.answer').first().text().trim();
+      const hints = $q.find('.hints div').toArray().map(d => $(d).text().trim()).filter(Boolean);
+      const steps = $q.find('.steps div').toArray().map(d => $(d).text().trim()).filter(Boolean);
 
-      // Extract answer
-      const answerText = $q.find('.answer, .correct-answer').first().text().trim();
-      
-      // Extract hints
-      const hints = [];
-      $q.find('.hints li, .hint').each((_, hint) => {
-        const hintText = $(hint).text().trim();
-        if (hintText) hints.push(hintText);
-      });
+      const qd = {};
+      let ca = null;
 
-      // Extract solution steps
-      const steps = [];
-      $q.find('.solution li, .step').each((_, step) => {
-        const stepText = $(step).text().trim();
-        if (stepText) steps.push(stepText);
-      });
-
-      // Build question data
-      let question_data = {};
-      let correct_answer = null;
-
-      if (['mcq', 'true_false', 'multi_select'].includes(question_type)) {
-        question_data.options = options.length > 0 ? options : ['Option A', 'Option B', 'Option C', 'Option D'];
-        
-        if (question_type === 'multi_select') {
-          correct_answer = answerText.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+      if (['mcq','true_false','multi_select'].includes(type)) {
+        qd.options = options;
+        if (type === 'multi_select') {
+          ca = (ansRaw || '').split(',').map(s => Number(s.trim())).filter(Number.isFinite);
         } else {
-          const answerNum = parseInt(answerText);
-          correct_answer = !isNaN(answerNum) ? answerNum : 0;
+          const idx = Number(ansRaw);
+          ca = Number.isFinite(idx) ? idx : 0;
         }
-      } else if (question_type === 'numeric') {
-        const value = parseFloat(answerText);
-        correct_answer = { 
-          value: !isNaN(value) ? value : 0, 
-          tolerance: 0.01 
-        };
-      } else if (question_type === 'text') {
-        correct_answer = { accept: [answerText] };
+      } else if (type === 'numeric') {
+        ca = { value: Number(ansRaw), tolerance: 0 };
+      } else if (type === 'text') {
+        ca = { accept: [ansRaw] };
+      } else {
+        // fallback to mcq
+        type = 'mcq';
+        qd.options = options;
+        const idx = Number(ansRaw);
+        ca = Number.isFinite(idx) ? idx : 0;
       }
 
-      questions.push({
-        bank_id: bankId,
-        skill_id: skillId,
-        question_type,
-        question_text: prompt,
-        question_data,
-        correct_answer,
-        solution_steps: steps.length > 0 ? steps : null,
-        hints: hints.length > 0 ? hints : [],
-        difficulty_level: 3,
-        points: 10
-      });
-    });
-
-    // Insert questions
-    for (const q of questions) {
-      await client.query(
+      jobs.push(client.query(
         `INSERT INTO practice_questions
-         (bank_id, skill_id, question_type, question_text, question_data, correct_answer,
-          solution_steps, hints, difficulty_level, points)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+         (bank_id, skill_id, question_type, question_text, question_data, correct_answer, solution_steps, hints, difficulty_level, points)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
         [
-          q.bank_id,
-          q.skill_id,
-          q.question_type,
-          q.question_text,
-          JSON.stringify(q.question_data),
-          JSON.stringify(q.correct_answer),
-          q.solution_steps ? JSON.stringify(q.solution_steps) : null,
-          JSON.stringify(q.hints),
-          q.difficulty_level,
-          q.points
+          bankId,
+          skillId,
+          type,
+          prompt,
+          JSON.stringify(qd),
+          JSON.stringify(ca),
+          steps.length ? JSON.stringify(steps) : null,
+          JSON.stringify(hints || []),
+          3,
+          10
         ]
-      );
-    }
-
-    await client.query('COMMIT');
-    
-    res.json({ 
-      success: true, 
-      imported: questions.length,
-      message: `Successfully imported ${questions.length} questions`
+      ));
     });
-    
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('HTML import failed:', error);
-    res.status(500).json({ error: error.message || 'Failed to import questions' });
+
+    const results = await Promise.all(jobs);
+    await client.query('COMMIT');
+    res.json({ ok: true, inserted: results.length });
+  } catch (e) {
+    await client.query('ROLLBACK').catch(()=>{});
+    console.error('HTML import failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
   } finally {
     client.release();
   }
 });
 
-// Create practice question
-router.post('/questions', express.json(), async (req, res) => {
+// --------- Build assessment from a bank (optional) ---------
+
+// POST /assessments/from-bank { bank_id, name?, points_per_q? }
+router.post('/assessments/from-bank', express.json({ limit: '64kb' }), async (req, res) => {
+  const hasAssess = await tableExists('assessments');
+  if (!hasAssess) return res.status(501).json({ error: 'assessments_table_missing' });
+
   const client = await pool.connect();
-  
   try {
+    const bankId = toInt(req.body.bank_id);
+    if (bankId === null) return bad(res, 400, 'invalid_bank');
+
+    // get questions
+    const { rows: qs } = await client.query(
+      `SELECT id FROM practice_questions WHERE bank_id = $1 ORDER BY id`, [bankId]
+    );
+    if (!qs.length) return bad(res, 400, 'bank_empty');
+
     await client.query('BEGIN');
-    
-    const {
-      bank_id,
-      skill_id,
-      question_type,
-      question_text,
-      question_data,
-      correct_answer,
-      solution_steps,
-      hints,
-      difficulty_level,
-      points,
-      estimated_time_seconds,
-      tags
-    } = req.body;
-    
-    // Validation
-    if (!question_text || !correct_answer) {
-      throw new Error('Question text and correct answer are required');
-    }
-    
-    if (!bank_id || !skill_id) {
-      throw new Error('Bank ID and Skill ID are required');
-    }
-    
-    // Insert question
-    const result = await client.query(
-      `INSERT INTO practice_questions 
-       (bank_id, skill_id, question_type, question_text, question_data, 
-        correct_answer, solution_steps, hints, difficulty_level, points, 
-        estimated_time_seconds, tags)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       RETURNING *`,
-      [
-        bank_id, 
-        skill_id, 
-        question_type || 'mcq', 
-        question_text, 
-        JSON.stringify(question_data || {}),
-        JSON.stringify(correct_answer),
-        solution_steps ? JSON.stringify(solution_steps) : null,
-        hints ? JSON.stringify(hints) : '[]',
-        difficulty_level || 3, 
-        points || 10,
-        estimated_time_seconds || 60, 
-        tags || []
-      ]
-    );
-    
-    await client.query('COMMIT');
-    res.json(result.rows[0]);
-    
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error creating question:', error);
-    res.status(500).json({ error: error.message || 'Failed to create question' });
-  } finally {
-    client.release();
-  }
-});
 
-// Update question
-router.put('/questions/:id', express.json(), async (req, res) => {
-  try {
-    const questionId = parseInt(req.params.id);
-    const updates = [];
-    const values = [];
-    let paramCount = 1;
-    
-    const allowedFields = [
-      'question_text', 'question_data', 'correct_answer', 
-      'solution_steps', 'hints', 'difficulty_level', 'points',
-      'estimated_time_seconds', 'tags'
-    ];
-    
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
-        updates.push(`${field} = $${paramCount}`);
-        values.push(
-          typeof req.body[field] === 'object' 
-            ? JSON.stringify(req.body[field]) 
-            : req.body[field]
-        );
-        paramCount++;
-      }
-    }
-    
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-    
-    values.push(questionId);
-    
-    const result = await pool.query(
-      `UPDATE practice_questions 
-       SET ${updates.join(', ')}
-       WHERE id = $${paramCount}
-       RETURNING *`,
-      values
+    const aName = String(req.body.name || `Assessment from bank ${bankId}`).trim();
+    const { rows: a } = await client.query(
+      `INSERT INTO assessments (name, is_active) VALUES ($1, true) RETURNING id, name`,
+      [aName]
     );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Question not found' });
-    }
-    
-    res.json(result.rows[0]);
-    
-  } catch (error) {
-    console.error('Error updating question:', error);
-    res.status(500).json({ error: 'Failed to update question' });
-  }
-});
+    const assess = a[0];
 
-// Delete question
-router.delete('/questions/:id', async (req, res) => {
-  try {
-    const questionId = parseInt(req.params.id);
-    
-    const result = await pool.query(
-      'DELETE FROM practice_questions WHERE id = $1 RETURNING id',
-      [questionId]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Question not found' });
-    }
-    
-    res.json({ success: true, deleted: questionId });
-    
-  } catch (error) {
-    console.error('Error deleting question:', error);
-    res.status(500).json({ error: 'Failed to delete question' });
-  }
-});
-
-// Get class progress overview
-router.get('/class-progress/:classCode', async (req, res) => {
-  try {
-    const classCode = req.params.classCode;
-    
-    // Get students in class
-    const studentsResult = await pool.query(
-      `SELECT e.student_email
-       FROM enrollments e
-       JOIN classes c ON c.id = e.class_id
-       WHERE c.code = $1`,
-      [classCode]
-    );
-    
-    const studentEmails = studentsResult.rows.map(r => r.student_email);
-    
-    if (studentEmails.length === 0) {
-      return res.json({ 
-        class_code: classCode,
-        students: [],
-        message: 'No students enrolled in this class'
-      });
-    }
-    
-    // Get detailed progress for each student
-    const progressResult = await pool.query(
-      `SELECT 
-         sm.user_email,
-         s.grade,
-         s.unit,
-         s.name as skill_name,
-         sm.mastery_level,
-         sm.status,
-         sm.questions_attempted,
-         sm.questions_correct,
-         sm.last_practiced,
-         sm.time_spent_seconds
-       FROM skill_mastery sm
-       JOIN skills s ON s.id = sm.skill_id
-       WHERE sm.user_email = ANY($1)
-       ORDER BY sm.user_email, s.grade, s.unit, s.order_index`,
-      [studentEmails]
-    );
-    
-    // Get session statistics
-    const sessionsResult = await pool.query(
-      `SELECT 
-         user_email,
-         COUNT(*) as total_sessions,
-         AVG(session_score) as avg_score,
-         SUM(questions_attempted) as total_questions,
-         SUM(questions_correct) as correct_questions
-       FROM practice_sessions
-       WHERE user_email = ANY($1) AND ended_at IS NOT NULL
-       GROUP BY user_email`,
-      [studentEmails]
-    );
-    
-    // Get achievements
-    const achievementsResult = await pool.query(
-      `SELECT 
-         sa.user_email,
-         COUNT(*) as achievement_count,
-         SUM(ad.points) as total_points
-       FROM student_achievements sa
-       JOIN achievement_definitions ad ON ad.id = sa.achievement_id
-       WHERE sa.user_email = ANY($1)
-       GROUP BY sa.user_email`,
-      [studentEmails]
-    );
-    
-    // Organize data by student
-    const studentMap = new Map();
-    
-    // Initialize students
-    studentEmails.forEach(email => {
-      studentMap.set(email, {
-        email,
-        skills: [],
-        overall_mastery: 0,
-        total_time_hours: 0,
-        sessions: { total: 0, avg_score: 0, accuracy: 0 },
-        achievements: { count: 0, points: 0 }
-      });
-    });
-    
-    // Add skill progress
-    progressResult.rows.forEach(row => {
-      const student = studentMap.get(row.user_email);
-      if (student) {
-        student.skills.push({
-          skill_name: row.skill_name,
-          grade: row.grade,
-          unit: row.unit,
-          mastery_level: parseFloat(row.mastery_level) || 0,
-          status: row.status,
-          questions_attempted: parseInt(row.questions_attempted) || 0,
-          questions_correct: parseInt(row.questions_correct) || 0,
-          accuracy: row.questions_attempted > 0 
-            ? Math.round((row.questions_correct / row.questions_attempted) * 100)
-            : 0,
-          last_practiced: row.last_practiced
-        });
-        student.total_time_hours += (parseInt(row.time_spent_seconds) || 0) / 3600;
-      }
-    });
-    
-    // Add session stats
-    sessionsResult.rows.forEach(row => {
-      const student = studentMap.get(row.user_email);
-      if (student) {
-        student.sessions = {
-          total: parseInt(row.total_sessions) || 0,
-          avg_score: Math.round(parseFloat(row.avg_score) || 0),
-          total_questions: parseInt(row.total_questions) || 0,
-          correct_questions: parseInt(row.correct_questions) || 0,
-          accuracy: row.total_questions > 0
-            ? Math.round((row.correct_questions / row.total_questions) * 100)
-            : 0
-        };
-      }
-    });
-    
-    // Add achievements
-    achievementsResult.rows.forEach(row => {
-      const student = studentMap.get(row.user_email);
-      if (student) {
-        student.achievements = {
-          count: parseInt(row.achievement_count) || 0,
-          points: parseInt(row.total_points) || 0
-        };
-      }
-    });
-    
-    // Calculate overall mastery for each student
-    studentMap.forEach(student => {
-      if (student.skills.length > 0) {
-        const totalMastery = student.skills.reduce((sum, skill) => 
-          sum + skill.mastery_level, 0);
-        student.overall_mastery = Math.round(totalMastery / student.skills.length);
-      }
-      student.total_time_hours = Math.round(student.total_time_hours * 10) / 10;
-    });
-    
-    res.json({
-      class_code: classCode,
-      student_count: studentEmails.length,
-      students: Array.from(studentMap.values())
-    });
-    
-  } catch (error) {
-    console.error('Error fetching class progress:', error);
-    res.status(500).json({ error: 'Failed to fetch class progress' });
-  }
-});
-
-// Get detailed student progress
-router.get('/student-progress/:email', async (req, res) => {
-  try {
-    const studentEmail = req.params.email;
-    
-    // Get skill mastery details
-    const skillsResult = await pool.query(
-      `SELECT 
-         s.*,
-         sm.mastery_level,
-         sm.status,
-         sm.questions_attempted,
-         sm.questions_correct,
-         sm.current_streak,
-         sm.best_streak,
-         sm.last_practiced,
-         sm.time_spent_seconds
-       FROM skills s
-       LEFT JOIN skill_mastery sm ON sm.skill_id = s.id AND sm.user_email = $1
-       ORDER BY s.grade, s.unit, s.order_index`,
-      [studentEmail]
-    );
-    
-    // Get recent practice sessions
-    const sessionsResult = await pool.query(
-      `SELECT 
-         ps.*,
-         s.name as skill_name
-       FROM practice_sessions ps
-       LEFT JOIN skills s ON s.id = ps.skill_id
-       WHERE ps.user_email = $1
-       ORDER BY ps.started_at DESC
-       LIMIT 20`,
-      [studentEmail]
-    );
-    
-    // Get recent attempts with details
-    const attemptsResult = await pool.query(
-      `SELECT 
-         pa.*,
-         pq.question_text,
-         pq.difficulty_level,
-         s.name as skill_name
-       FROM practice_attempts pa
-       JOIN practice_questions pq ON pq.id = pa.question_id
-       JOIN skills s ON s.id = pa.skill_id
-       WHERE pa.user_email = $1
-       ORDER BY pa.created_at DESC
-       LIMIT 50`,
-      [studentEmail]
-    );
-    
-    // Get achievements
-    const achievementsResult = await pool.query(
-      `SELECT 
-         ad.*,
-         sa.earned_at,
-         sa.progress
-       FROM student_achievements sa
-       JOIN achievement_definitions ad ON ad.id = sa.achievement_id
-       WHERE sa.user_email = $1
-       ORDER BY sa.earned_at DESC`,
-      [studentEmail]
-    );
-    
-    // Get learning analytics
-    const analyticsResult = await pool.query(
-      `WITH daily_stats AS (
-         SELECT 
-           DATE(created_at) as practice_date,
-           COUNT(DISTINCT session_id) as sessions,
-           COUNT(*) as questions,
-           SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as correct,
-           AVG(time_taken_seconds) as avg_time
-         FROM practice_attempts
-         WHERE user_email = $1 
-           AND created_at > NOW() - INTERVAL '30 days'
-         GROUP BY DATE(created_at)
-       )
-       SELECT * FROM daily_stats ORDER BY practice_date DESC`,
-      [studentEmail]
-    );
-    
-    res.json({
-      student_email: studentEmail,
-      skills: skillsResult.rows,
-      recent_sessions: sessionsResult.rows,
-      recent_attempts: attemptsResult.rows,
-      achievements: achievementsResult.rows,
-      daily_analytics: analyticsResult.rows
-    });
-    
-  } catch (error) {
-    console.error('Error fetching student progress:', error);
-    res.status(500).json({ error: 'Failed to fetch student progress' });
-  }
-});
-
-// Create assessment from practice questions
-router.post('/create-assessment', express.json(), async (req, res) => {
-  const client = await pool.connect();
-  
-  try {
-    await client.query('BEGIN');
-    
-    const { 
-      lesson_id, 
-      bank_id,
-      title, 
-      pass_pct = 70,
-      question_ids,
-      skill_ids,
-      num_questions = 10
-    } = req.body;
-    
-    const teacherEmail = req.user?.email;
-    
-    if (!title) {
-      throw new Error('Assessment title is required');
-    }
-    
-    // Create question bank for assessment
-    const bankResult = await client.query(
-      `INSERT INTO question_banks (title, created_by)
-       VALUES ($1, $2)
-       RETURNING id`,
-      [title, teacherEmail]
-    );
-    
-    const assessmentBankId = bankResult.rows[0].id;
-    
-    // Copy questions based on input
-    let questions = [];
-    
-    if (bank_id) {
-      // Copy all questions from existing practice bank
-      const { rows } = await client.query(
-        `SELECT * FROM practice_questions WHERE bank_id = $1`,
-        [bank_id]
-      );
-      questions = rows;
-      
-    } else if (question_ids && question_ids.length > 0) {
-      // Copy specific questions
-      const { rows } = await client.query(
-        `SELECT * FROM practice_questions WHERE id = ANY($1)`,
-        [question_ids]
-      );
-      questions = rows;
-      
-    } else if (skill_ids && skill_ids.length > 0) {
-      // Auto-select questions from skills
-      const { rows } = await client.query(
-        `SELECT * FROM practice_questions 
-         WHERE skill_id = ANY($1)
-         ORDER BY difficulty_level, RANDOM()
-         LIMIT $2`,
-        [skill_ids, num_questions]
-      );
-      questions = rows;
-    }
-    
-    // Insert questions into assessment bank
-    for (const pq of questions) {
+    const pts = toInt(req.body.points_per_q) ?? 1;
+    for (const row of qs) {
       await client.query(
-        `INSERT INTO questions (bank_id, type, prompt, options, answer, points)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          assessmentBankId, 
-          pq.question_type, 
-          pq.question_text,
-          pq.question_data?.options || null,
-          pq.correct_answer, 
-          pq.points
-        ]
+        `INSERT INTO assessment_questions (assessment_id, question_id, points) VALUES ($1,$2,$3)`,
+        [assess.id, row.id, pts]
       );
     }
-    
-    // Create assessment
-    const assessmentResult = await client.query(
-      `INSERT INTO assessments (lesson_id, bank_id, title, pass_pct, created_by)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [lesson_id || null, assessmentBankId, title, pass_pct, teacherEmail]
-    );
-    
+
     await client.query('COMMIT');
-    
-    res.json({
-      ...assessmentResult.rows[0],
-      question_count: questions.length,
-      message: `Assessment created with ${questions.length} questions`
-    });
-    
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error creating assessment:', error);
-    res.status(500).json({ error: error.message || 'Failed to create assessment' });
+    res.json({ ok: true, assessment: assess, count: qs.length });
+  } catch (e) {
+    await client.query('ROLLBACK').catch(()=>{});
+    console.error('Create assessment from bank failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
   } finally {
     client.release();
-  }
-});
-
-// Get analytics summary
-router.get('/analytics', async (req, res) => {
-  try {
-    const { start_date, end_date, class_code, grade, unit } = req.query;
-    
-    let studentFilter = '';
-    let dateFilter = '';
-    const params = [];
-    
-    // Build filters
-    if (class_code) {
-      const classResult = await pool.query(
-        `SELECT e.student_email
-         FROM enrollments e
-         JOIN classes c ON c.id = e.class_id
-         WHERE c.code = $1`,
-        [class_code]
-      );
-      
-      const emails = classResult.rows.map(r => r.student_email);
-      if (emails.length > 0) {
-        params.push(emails);
-        studentFilter = ` AND user_email = ANY($${params.length})`;
-      }
-    }
-    
-    if (start_date) {
-      params.push(start_date);
-      dateFilter += ` AND created_at >= $${params.length}`;
-    }
-    
-    if (end_date) {
-      params.push(end_date);
-      dateFilter += ` AND created_at <= $${params.length}`;
-    }
-    
-    // Overall statistics
-    const overallQuery = `
-      SELECT 
-        COUNT(DISTINCT user_email) as total_students,
-        COUNT(DISTINCT skill_id) as skills_practiced,
-        SUM(questions_attempted) as total_questions,
-        SUM(questions_correct) as correct_questions,
-        AVG(mastery_level) as avg_mastery,
-        SUM(time_spent_seconds) / 3600.0 as total_hours
-      FROM skill_mastery
-      WHERE 1=1 ${studentFilter}
-    `;
-    
-    const overallResult = await pool.query(overallQuery, params);
-    
-    // Most practiced skills
-    const topSkillsQuery = `
-      SELECT 
-        s.name,
-        s.grade,
-        s.unit,
-        COUNT(DISTINCT pa.user_email) as students,
-        COUNT(pa.id) as attempts,
-        AVG(CASE WHEN pa.is_correct THEN 100.0 ELSE 0 END) as success_rate
-      FROM practice_attempts pa
-      JOIN skills s ON s.id = pa.skill_id
-      WHERE 1=1 ${studentFilter.replace('user_email', 'pa.user_email')}
-      GROUP BY s.id, s.name, s.grade, s.unit
-      ORDER BY attempts DESC
-      LIMIT 10
-    `;
-    
-    const topSkillsResult = await pool.query(topSkillsQuery, params);
-    
-    // Struggling skills (lowest success rate)
-    const strugglingQuery = `
-      SELECT 
-        s.name,
-        s.grade,
-        s.unit,
-        AVG(sm.mastery_level) as avg_mastery,
-        COUNT(DISTINCT sm.user_email) as students,
-        AVG(CASE WHEN sm.questions_attempted > 0 
-            THEN sm.questions_correct::float / sm.questions_attempted * 100 
-            ELSE 0 END) as accuracy
-      FROM skill_mastery sm
-      JOIN skills s ON s.id = sm.skill_id
-      WHERE sm.questions_attempted > 5 ${studentFilter.replace('user_email', 'sm.user_email')}
-      GROUP BY s.id, s.name, s.grade, s.unit
-      HAVING AVG(sm.mastery_level) < 50
-      ORDER BY avg_mastery ASC
-      LIMIT 10
-    `;
-    
-    const strugglingResult = await pool.query(strugglingQuery, params);
-    
-    // Time-based activity
-    const activityQuery = `
-      SELECT 
-        DATE(created_at) as date,
-        COUNT(DISTINCT user_email) as active_students,
-        COUNT(*) as total_attempts,
-        SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as correct_attempts
-      FROM practice_attempts
-      WHERE created_at > NOW() - INTERVAL '30 days'
-        ${studentFilter.replace('user_email', 'user_email')}
-      GROUP BY DATE(created_at)
-      ORDER BY date DESC
-    `;
-    
-    const activityResult = await pool.query(activityQuery, params);
-    
-    res.json({
-      overall: overallResult.rows[0],
-      top_skills: topSkillsResult.rows,
-      struggling_skills: strugglingResult.rows,
-      recent_activity: activityResult.rows,
-      filters_applied: {
-        class_code,
-        start_date,
-        end_date,
-        grade,
-        unit
-      }
-    });
-    
-  } catch (error) {
-    console.error('Error fetching analytics:', error);
-    res.status(500).json({ error: 'Failed to fetch analytics' });
-  }
-});
-
-// Export practice data as CSV
-router.get('/export/:type', async (req, res) => {
-  try {
-    const { type } = req.params;
-    const { class_code, start_date, end_date } = req.query;
-    
-    let data = [];
-    let filename = '';
-    
-    if (type === 'skills') {
-      const result = await pool.query(
-        `SELECT 
-           s.name as skill_name,
-           s.grade,
-           s.unit,
-           COUNT(DISTINCT sm.user_email) as students_practiced,
-           AVG(sm.mastery_level) as avg_mastery,
-           SUM(sm.questions_attempted) as total_attempts,
-           SUM(sm.questions_correct) as total_correct
-         FROM skills s
-         LEFT JOIN skill_mastery sm ON sm.skill_id = s.id
-         GROUP BY s.id, s.name, s.grade, s.unit
-         ORDER BY s.grade, s.unit, s.order_index`
-      );
-      data = result.rows;
-      filename = 'skills_report.csv';
-      
-    } else if (type === 'students') {
-      let query = `
-        SELECT 
-          user_email,
-          COUNT(DISTINCT skill_id) as skills_practiced,
-          AVG(mastery_level) as avg_mastery,
-          SUM(questions_attempted) as total_questions,
-          SUM(questions_correct) as correct_questions,
-          MAX(last_practiced) as last_active
-        FROM skill_mastery
-        WHERE 1=1
-      `;
-      
-      const params = [];
-      if (class_code) {
-        const classResult = await pool.query(
-          `SELECT e.student_email
-           FROM enrollments e
-           JOIN classes c ON c.id = e.class_id
-           WHERE c.code = $1`,
-          [class_code]
-        );
-        const emails = classResult.rows.map(r => r.student_email);
-        if (emails.length > 0) {
-          params.push(emails);
-          query += ` AND user_email = ANY($${params.length})`;
-        }
-      }
-      
-      query += ' GROUP BY user_email ORDER BY avg_mastery DESC';
-      
-      const result = await pool.query(query, params);
-      data = result.rows;
-      filename = 'students_progress.csv';
-    }
-    
-    // Convert to CSV
-    if (data.length > 0) {
-      const headers = Object.keys(data[0]).join(',');
-      const rows = data.map(row => 
-        Object.values(row).map(val => 
-          typeof val === 'string' && val.includes(',') ? `"${val}"` : val
-        ).join(',')
-      );
-      
-      const csv = [headers, ...rows].join('\n');
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.send(csv);
-    } else {
-      res.status(404).json({ error: 'No data to export' });
-    }
-    
-  } catch (error) {
-    console.error('Error exporting data:', error);
-    res.status(500).json({ error: 'Failed to export data' });
   }
 });
 

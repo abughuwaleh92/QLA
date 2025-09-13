@@ -27,6 +27,7 @@ const lessonPlanGeneratorRouter = require('./routes/lesson-plan-generator');
 const lessonPlanExportRouter = require('./routes/lesson-plan-export');
 const practiceRouter = require('./routes/practice');
 const teacherPracticeRouter = require('./routes/teacher-practice');
+const path = require('path');
 
 
 // Enhanced Configuration with fixes
@@ -238,6 +239,9 @@ app.use('/api/lesson-plan-generator', requireAuth, requireTeacher, lessonPlanGen
 app.use('/api/lesson-plan-export', requireAuth, requireTeacher, lessonPlanExportRouter);
 app.use('/api/practice', requireAuth, practiceRouter);
 app.use('/api/teacher/practice', requireAuth, requireTeacher, teacherPracticeRouter);
+app.use('/api/teacher/practice', require('./routes/teacher-practice'));   // << mount API
+app.use('/js', express.static(path.join(__dirname, 'public/js')));       // << serve UI script (optional)
+
 
 // Protected portals
 app.get('/portal/student', requireAuth, (req, res) => {

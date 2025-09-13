@@ -96,6 +96,85 @@ router.get('/banks', async (req, res) => {
   }
 });
 
+// === HTML Importer for Question Banks ===
+// Paste this block into routes/teacher-practice.js (e.g., after GET '/banks/:bankId/questions')
+const cheerio = require('cheerio');
+
+router.post('/banks/:bankId/import-html', express.json({ limit:'2mb' }), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const bankId = parseInt(req.params.bankId);
+    const { html } = req.body || {};
+    if (!bankId || !html) return res.status(400).json({ error: 'missing_bank_or_html' });
+
+    await client.query('BEGIN');
+
+    const { rows: bankRows } = await client.query('SELECT skill_id FROM practice_banks WHERE id = $1', [bankId]);
+    if (!bankRows.length) throw new Error('bank_not_found');
+    const skillId = bankRows[0].skill_id;
+
+    const $ = cheerio.load(html);
+    let inserted = 0;
+
+    $('.q').each((_, qel) => {
+      const $q = $(qel);
+      const type = String($q.attr('data-type') || '').trim() || 'mcq';
+      const prompt = $q.find('.prompt').first().text().trim();
+      const options = $q.find('.options li').toArray().map(li => $(li).text().trim());
+      const ansText = $q.find('.answer').first().text().trim();
+      const hints  = $q.find('.hints div').toArray().map(d => $(d).text().trim()).filter(Boolean);
+      const steps  = $q.find('.steps div').toArray().map(d => $(d).text().trim()).filter(Boolean);
+
+      let question_type = type;
+      let question_data = {};
+      let correct_answer = null;
+
+      if (!prompt) return; // skip
+
+      if (['mcq','true_false','multi_select'].includes(question_type)) {
+        question_data.options = options;
+        if (question_type === 'multi_select') {
+          correct_answer = (ansText || '').split(',').map(s => Number(s.trim())).filter(v => !Number.isNaN(v));
+        } else {
+          const idx = Number(ansText);
+          correct_answer = Number.isNaN(idx) ? 0 : idx;
+        }
+      } else if (question_type === 'numeric') {
+        correct_answer = { value: Number(ansText), tolerance: 0 };
+      } else if (question_type === 'text') {
+        correct_answer = { accept: [ansText] };
+      } else {
+        // default to MCQ if unspecified
+        question_type = 'mcq';
+        question_data.options = options;
+        correct_answer = Number(ansText) || 0;
+      }
+
+      client.query(
+        `INSERT INTO practice_questions 
+         (bank_id, skill_id, question_type, question_text, question_data, correct_answer, solution_steps, hints, difficulty_level, points)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [
+          bankId, skillId, question_type, prompt, JSON.stringify(question_data), JSON.stringify(correct_answer),
+          steps.length ? JSON.stringify(steps) : null,
+          hints.length ? JSON.stringify(hints) : '[]',
+          3, 10
+        ]
+      );
+      inserted += 1;
+    });
+
+    await client.query('COMMIT');
+    res.json({ ok: true, inserted });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('HTML import failed:', e);
+    res.status(500).json({ error: String(e.message || e) });
+  } finally {
+    client.release();
+  }
+});
+
 // Create question bank
 router.post('/banks', express.json(), async (req, res) => {
   try {

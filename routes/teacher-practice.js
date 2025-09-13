@@ -66,7 +66,7 @@ router.get('/skills', async (req, res) => {
       `SELECT id, name, grade, unit, description
          FROM ${tbl}
         ${where}
-        ORDER BY grade, unit, COALESCE(order_index, 0), name`,
+        ORDER BY unit NULLS LAST, name`, 
       params
     );
     

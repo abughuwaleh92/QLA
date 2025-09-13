@@ -11,6 +11,7 @@ const { Pool } = require('pg');
 const dayjs = require('dayjs');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
+const path    = require('path');
 
 // Import modules
 const { mountAuth, requireAuth, requireTeacher, requireAdmin } = require('./auth');
@@ -27,8 +28,6 @@ const lessonPlanGeneratorRouter = require('./routes/lesson-plan-generator');
 const lessonPlanExportRouter = require('./routes/lesson-plan-export');
 const practiceRouter = require('./routes/practice');
 const teacherPracticeRouter = require('./routes/teacher-practice');
-const path = require('path');
-
 
 // Enhanced Configuration with fixes
 const config = {
@@ -239,8 +238,8 @@ app.use('/api/lesson-plan-generator', requireAuth, requireTeacher, lessonPlanGen
 app.use('/api/lesson-plan-export', requireAuth, requireTeacher, lessonPlanExportRouter);
 app.use('/api/practice', requireAuth, practiceRouter);
 app.use('/api/teacher/practice', requireAuth, requireTeacher, teacherPracticeRouter);
-app.use('/api/teacher/practice', require('./routes/teacher-practice'));   // << mount API
 app.use('/js', express.static(path.join(__dirname, 'public/js')));       // << serve UI script (optional)
+app.use(express.static(path.join(__dirname, 'public')));
 
 
 // Protected portals
@@ -279,6 +278,7 @@ app.use('/api/progress', requireAuth, progressRouter);
 app.use('/api/classes', requireAuth, requireTeacher, classesRouter);
 app.use('/api/admin', requireAuth, requireAdmin, adminRouter);
 app.use('/api/interactive', requireAuth, interactiveLessonsRouter);
+app.use('/api/teacher/practice', require('./routes/teacher-practice'));
 
 // Enhanced health check
 app.get('/api/health', async (req, res) => {

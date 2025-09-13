@@ -1270,6 +1270,11 @@ document.addEventListener('keydown', (e) => {
 
 console.log('Teacher Portal script loaded successfully');
 </script>
+<script>
+  // Safe defaults for Teacher pages
+  window.isStudent = window.isStudent ?? false;
+  window.isTeacher = window.isTeacher ?? true;
+</script>
 <script src="/js/upgrade-practice-ui.js"></script>
 <script src="/js/teacher-practice-ui.js"></script>
 <script src="/js/teacher-practice-fix.js"></script>

@@ -59,7 +59,7 @@
   }
 
   // ---------- Student Portal: Practice & Progress ----------
-  if (isStudent) {
+  if (typeof isStudent !== 'undefined' && isStudent) {
     // Replace the placeholder "Practice modules coming..." with full UI
     const practiceTab = document.getElementById('practice-tab');
     if (practiceTab) {

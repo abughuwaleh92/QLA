@@ -34,18 +34,6 @@ async function skillTable() {
   throw new Error('No "skills" or "practice_skills" table exists.');
 }
 function bad(res, status, msg, detail) { return res.status(status).json({ error: msg, detail: detail || null }); }
-async function getBankColumns(client) {
-  const { rows } = await client.query(`
-    SELECT column_name FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='practice_banks'
-  `);
-  const cols = rows.map(r => r.column_name);
-  return {
-    hasName: cols.includes('name'),
-    hasTitle: cols.includes('title'),
-    hasIsActive: cols.includes('is_active')
-  };
-}
 
 // --------------- SKILLS -------------------
 
@@ -209,25 +197,6 @@ router.post('/skills', async (req, res) => {
 // --------------- BANKS --------------------
 
 // GET /api/teacher/practice/banks?skill_id=123
-const client = await pool.connect();
-try {
-  const { hasName, hasTitle, hasIsActive } = await getBankColumns(client);
-  const nameCol = hasName ? 'name' : (hasTitle ? 'title' : null);
-  if (!nameCol) throw new Error('practice_banks needs a "name" or "title" column');
-
-  const skillId = toInt(req.query.skillId ?? req.query.skill_id);
-  const params = [];
-  let where = 'WHERE 1=1';
-  if (hasIsActive) where += ' AND is_active IS DISTINCT FROM false';
-  if (skillId !== null) { params.push(skillId); where += ` AND skill_id = $${params.length}`; }
-
-  const { rows } = await client.query(
-    `SELECT id, ${nameCol} AS name, skill_id FROM practice_banks
-      ${where}
-     ORDER BY id DESC`, params
-  );
-  res.json({ ok: true, banks: rows });
-} finally { client.release(); }
 router.get('/banks', async (req, res) => {
   if (!(await tableExists('practice_banks'))) return bad(res, 500, 'no_practice_banks_table');
   const client = await pool.connect();

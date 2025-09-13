@@ -238,6 +238,8 @@ app.use('/api/lesson-plan-generator', requireAuth, requireTeacher, lessonPlanGen
 app.use('/api/lesson-plan-export', requireAuth, requireTeacher, lessonPlanExportRouter);
 app.use('/api/practice', requireAuth, practiceRouter);
 app.use('/api/teacher/practice', requireAuth, requireTeacher, teacherPracticeRouter);
+app.use('/js', express.static(path.join(__dirname, 'public/js')));
+
 
 // Protected portals
 app.get('/portal/student', requireAuth, (req, res) => {
